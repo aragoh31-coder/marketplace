@@ -74,7 +74,7 @@ def user_detail(request, user_id):
     
     user = User.objects.get(id=user_id)
     wallet = Wallet.objects.filter(user=user).first()
-    orders = Order.objects.filter(buyer=user)
+    orders = Order.objects.filter(user=user)
     messages_sent = Message.objects.filter(sender=user).count()
     context = {
         'user': user,
