@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Products - Secure Marketplace{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>🎁 Gift Cards & Digital Products</h1>
+    
+    <!-- Category Filter -->
+    <form method="get" class="filter-form">
+        <div class="filter-row">
+            <select name="category" onchange="this.form.submit()">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
+                    {{ category.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <input type="text" name="search" placeholder="Search products..." value="{{ request.GET.search }}">
+            <button type="submit">Search</button>
+        </div>
+    </form>
+
+    <!-- Products Grid -->
+    <div class="products-grid">
+        {% for product in page_obj %}
+        <div class="product-card">
+            <div class="product-header">
+                <h3><a href="{% url 'products:detail' product.id %}">{{ product.name }}</a></h3>
+                <span class="product-type">{{ product.get_product_type_display }}</span>
+            </div>
+            
+            <div class="product-info">
+                <div class="vendor-info">
+                    <strong>Vendor:</strong> 
+                    <a href="{% url 'vendors:profile' product.vendor.id %}">{{ product.vendor.vendor_name }}</a>
+                    <span class="trust-level">(Trust: {{ product.vendor.trust_level }})</span>
+                </div>
+                
+                <div class="category">
+                    <strong>Category:</strong> {{ product.category.name }}
+                </div>
+                
+                <div class="description">
+                    {{ product.description|truncatewords:20 }}
+                </div>
+            </div>
+            
+            <div class="product-pricing">
+                <div class="prices">
+                    <div class="price-btc">₿ {{ product.price_btc }}</div>
+                    <div class="price-xmr">ɱ {{ product.price_xmr }}</div>
+                </div>
+                
+                <div class="stock-info">
+                    {% if product.stock_quantity > 0 %}
+                        <span class="in-stock">{{ product.stock_quantity }} in stock</span>
+                    {% else %}
+                        <span class="out-of-stock">Out of Stock</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="product-actions">
+                {% if product.stock_quantity > 0 and product.is_available %}
+                    <a href="{% url 'products:detail' product.id %}" class="btn-primary">View Details</a>
+                {% else %}
+                    <button disabled class="btn-disabled">Unavailable</button>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <h3>No products found</h3>
+            <p>Try adjusting your search or category filter.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">« First</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">Previous</a>
+        {% endif %}
+        
+        <span class="page-current">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+        
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">Last »</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .filter-form {
+        background: #1a1a1a;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        border: 1px solid #333;
+    }
+    
+    .filter-row {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .filter-form select, .filter-form input {
+        background: #2a2a2a;
+        border: 1px solid #444;
+        color: #e0e0e0;
+        padding: 10px 15px;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+    
+    .filter-form button {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .filter-form button:hover {
+        background: #45a049;
+    }
+    
+    .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+    }
+    
+    .product-card {
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 20px;
+        transition: border-color 0.3s;
+    }
+    
+    .product-card:hover {
+        border-color: #4CAF50;
+    }
+    
+    .product-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+    }
+    
+    .product-header h3 {
+        margin: 0;
+        font-size: 18px;
+    }
+    
+    .product-header h3 a {
+        color: #4CAF50;
+        text-decoration: none;
+    }
+    
+    .product-header h3 a:hover {
+        text-decoration: underline;
+    }
+    
+    .product-type {
+        background: #2a2a2a;
+        color: #888;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+    
+    .product-info {
+        margin-bottom: 15px;
+    }
+    
+    .product-info > div {
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+    
+    .vendor-info a {
+        color: #4CAF50;
+        text-decoration: none;
+    }
+    
+    .trust-level {
+        color: #888;
+        font-size: 12px;
+    }
+    
+    .description {
+        color: #ccc;
+        line-height: 1.4;
+    }
+    
+    .product-pricing {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 10px 0;
+        border-top: 1px solid #333;
+    }
+    
+    .prices {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .price-btc, .price-xmr {
+        font-weight: bold;
+        font-size: 16px;
+    }
+    
+    .price-btc {
+        color: #f7931a;
+    }
+    
+    .price-xmr {
+        color: #ff6600;
+    }
+    
+    .in-stock {
+        color: #4CAF50;
+        font-weight: bold;
+        font-size: 14px;
+    }
+    
+    .out-of-stock {
+        color: #f44336;
+        font-weight: bold;
+        font-size: 14px;
+    }
+    
+    .product-actions {
+        text-align: center;
+    }
+    
+    .btn-primary {
+        background: #4CAF50;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        font-weight: bold;
+    }
+    
+    .btn-primary:hover {
+        background: #45a049;
+    }
+    
+    .btn-disabled {
+        background: #666;
+        color: #999;
+        padding: 10px 20px;
+        border-radius: 5px;
+        border: none;
+        cursor: not-allowed;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #888;
+        grid-column: 1 / -1;
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin-top: 40px;
+    }
+    
+    .page-link {
+        color: #4CAF50;
+        padding: 8px 16px;
+        text-decoration: none;
+        border: 1px solid #444;
+        border-radius: 5px;
+        background: #1a1a1a;
+    }
+    
+    .page-link:hover {
+        background: #2a2a2a;
+        border-color: #4CAF50;
+    }
+    
+    .page-current {
+        padding: 8px 16px;
+        color: #e0e0e0;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
