@@ -92,7 +92,7 @@
     </div>
 
     <div class="container">
-        {% if messages %}
+        {% if messages and request.resolver_match.url_name != 'list' %}
             {% for message in messages %}
                 <div class="card" style="background-color: {% if message.tags == 'error' %}#dc3545{% else %}#28a745{% endif %};">
                     {{ message }}

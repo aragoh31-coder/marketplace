@@ -15,8 +15,7 @@
             
             <div class="conversations-list">
                 {% for conversation in conversations %}
-                <div class="conversation-item {% if conversation.unread_count > 0 %}unread{% endif %}" 
-                     onclick="location.href='{% url 'messaging:detail' conversation.last_message.id %}'">
+                <a href="{% url 'messaging:conversation' conversation.other_user.id %}" class="conversation-item {% if conversation.unread_count > 0 %}unread{% endif %}">
                     <div class="conversation-header">
                         <span class="username">{{ conversation.other_user.username }}</span>
                         <span class="time">{{ conversation.last_message.created_at|timesince }} ago</span>
@@ -28,7 +27,7 @@
                     {% if conversation.unread_count > 0 %}
                     <div class="unread-badge">{{ conversation.unread_count }}</div>
                     {% endif %}
-                </div>
+                </a>
                 {% empty %}
                 <div class="empty-conversations">
                     <p>No conversations yet</p>
@@ -132,6 +131,9 @@
         border-bottom: 1px solid #333;
         cursor: pointer;
         transition: background 0.2s;
+        text-decoration: none;
+        color: inherit;
+        display: block;
     }
     
     .conversation-item:hover {
