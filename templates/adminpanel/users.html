@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Users - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Users</h2>
+    <table>
+        <thead><tr><th>Username</th><th>Last Activity</th><th>Actions</th></tr></thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td><a href="{% url 'adminpanel:user_detail' user.id %}">{{ user.username }}</a></td>
+                <td>{{ user.last_activity }}</td>
+                <td>
+                    <form method="post" action="{% url 'adminpanel:ban_user' user.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn">Ban</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

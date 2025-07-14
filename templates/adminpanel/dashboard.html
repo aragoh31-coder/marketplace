@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Secure Marketplace{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Admin Dashboard</h2>
+    <div class="metrics">
+        <div>Users: {{ users_count }} (Active: {{ active_users }})</div>
+        <div>Vendors: {{ vendors_count }} (Approved: {{ approved_vendors }})</div>
+        <div>Products: {{ products_count }}</div>
+        <div>Orders: {{ orders_count }}</div>
+        <div>Open Disputes: {{ open_disputes }}</div>
+        <div>Total Escrow: {{ total_escrow }}</div>
+        <div>Total Balance: {{ total_balance }}</div>
+        <div>Avg Order Value: {{ avg_order_value }}</div>
+    </div>
+    
+    <h3>Order Status Counts</h3>
+    <table>
+        {% for status in order_status_counts %}
+        <tr><td>{{ status.status }}</td><td>{{ status.count }}</td></tr>
+        {% endfor %}
+    </table>
+    
+    <h3>Recent Orders</h3>
+    <table>
+        <thead><tr><th>ID</th><th>Buyer</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody>
+            {% for order in recent_orders %}
+            <tr><td>{{ order.id }}</td><td>{{ order.buyer.username }}</td><td>{{ order.total }}</td><td>{{ order.status }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <h3>Maintenance Actions</h3>
+    <form method="post" action="{% url 'adminpanel:maintenance' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="vacuum">
+        <button type="submit" class="btn">Run VACUUM</button>
+    </form>
+    <form method="post" action="{% url 'adminpanel:maintenance' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reconcile">
+        <button type="submit" class="btn">Reconcile Wallets</button>
+    </form>
+    <form method="post" action="{% url 'adminpanel:maintenance' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="expire">
+        <button type="submit" class="btn">Expire Data</button>
+    </form>
+</div>
+{% endblock %}

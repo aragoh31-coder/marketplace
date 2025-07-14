@@ -27,4 +27,5 @@ urlpatterns = [
     path('vendors/', include('vendors.urls')),
     path('messaging/', include('messaging.urls')),
     path('support/', include('support.urls')),
+    path('adminpanel/', include('adminpanel.urls')),
 ]

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}User Detail - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>User Detail: {{ user.username }}</h2>
+    <div>PGP Key: {{ user.pgp_public_key|truncatechars:50 }}</div>
+    <div>Last Activity: {{ user.last_activity }}</div>
+    {% if wallet %}
+    <div>Wallet BTC: {{ wallet.btc_balance }} | XMR: {{ wallet.xmr_balance }}</div>
+    {% endif %}
+    <h3>Orders</h3>
+    <table>
+        <thead><tr><th>ID</th><th>Total</th><th>Status</th><th>Created</th></tr></thead>
+        <tbody>
+            {% for order in orders %}
+            <tr><td>{{ order.id }}</td><td>{{ order.total }}</td><td>{{ order.status }}</td><td>{{ order.created_at }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h3>Messages Sent: {{ messages_sent }}</h3>
+</div>
+{% endblock %}
