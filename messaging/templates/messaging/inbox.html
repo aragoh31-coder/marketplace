@@ -15,20 +15,24 @@
             
             <div class="conversations-list">
                 {% for conversation in conversations %}
-                <div class="conversation-item {% if not conversation.is_read %}unread{% endif %}" 
-                     onclick="location.href='?conversation={{ conversation.id }}'">
+                <div class="conversation-item {% if conversation.unread_count > 0 %}unread{% endif %}" 
+                     onclick="location.href='{% url 'messaging:detail' conversation.last_message.id %}'">
                     <div class="conversation-header">
                         <span class="username">{{ conversation.other_user.username }}</span>
-                        <span class="time">{{ conversation.last_message_time|timesince }} ago</span>
+                        <span class="time">{{ conversation.last_message.created_at|timesince }} ago</span>
                     </div>
-                    <div class="last-message">{{ conversation.last_message|truncatechars:50 }}</div>
+                    <div class="last-message">{{ conversation.last_message.content|truncatechars:50 }}</div>
                     {% if conversation.other_user.pgp_public_key %}
                     <div class="pgp-indicator">🔒 PGP</div>
+                    {% endif %}
+                    {% if conversation.unread_count > 0 %}
+                    <div class="unread-badge">{{ conversation.unread_count }}</div>
                     {% endif %}
                 </div>
                 {% empty %}
                 <div class="empty-conversations">
                     <p>No conversations yet</p>
+                    <a href="{% url 'messaging:compose' %}" class="btn btn-primary">Send your first message</a>
                 </div>
                 {% endfor %}
             </div>
@@ -264,6 +268,26 @@
         text-align: center;
         padding: 40px;
         color: #666;
+    }
+    
+    .unread-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: #4CAF50;
+        color: white;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .conversation-item {
+        position: relative;
     }
     
     .pgp-indicator {

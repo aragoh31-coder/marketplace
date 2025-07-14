@@ -10,8 +10,44 @@ from accounts.models import User
 
 @login_required
 def message_list(request):
-    messages = Message.objects.filter(recipient=request.user).order_by('-created_at')
-    return render(request, 'messaging/list.html', {'messages': messages})
+    messages = Message.objects.filter(
+        Q(sender=request.user) | Q(recipient=request.user)
+    ).select_related('sender', 'recipient').order_by('-created_at')
+    
+    conversations = {}
+    for message in messages:
+        if message.sender == request.user:
+            other_user = message.recipient
+        else:
+            other_user = message.sender
+            
+        if not other_user:
+            continue
+            
+        if other_user.id not in conversations:
+            conversations[other_user.id] = {
+                'other_user': other_user,
+                'last_message': message,
+                'messages': [],
+                'unread_count': 0
+            }
+        
+        conversations[other_user.id]['messages'].append(message)
+        
+        if message.recipient == request.user and not message.is_read:
+            conversations[other_user.id]['unread_count'] += 1
+    
+    conversation_list = sorted(
+        conversations.values(), 
+        key=lambda x: x['last_message'].created_at, 
+        reverse=True
+    )
+    
+    return render(request, 'messaging/inbox.html', {
+        'conversations': conversation_list,
+        'total_messages': messages.count(),
+        'messages': messages[:10]
+    })
 
 
 @login_required
