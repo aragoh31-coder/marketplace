@@ -11,7 +11,7 @@ SECRET_KEY = env('DJANGO_SECRET_KEY')
 
 DEBUG = env.bool('DEBUG', default=False)
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '[::1]', '*.onion'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '[::1]', '*.onion', 'uw3va4m7ryfl26bfdywucyw2bxorelmzc3g46d7sbmgbycvynz4ylxid.onion'])
 
 INSTALLED_APPS = [
     'django.contrib.admin',
