@@ -11,6 +11,7 @@ from .views import (
 
 app_name = 'adminpanel'
 urlpatterns = [
+    path('', dashboard, name='dashboard'),
     path('dashboard/', dashboard, name='dashboard'),
     path('users/', users_list, name='users'),
     path('user/<uuid:user_id>/', user_detail, name='user_detail'),

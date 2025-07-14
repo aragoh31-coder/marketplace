@@ -17,10 +17,12 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('accounts.urls')),
+    path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
     path('products/', include('products.urls')),
     path('orders/', include('orders.urls')),
     path('wallets/', include('wallets.urls')),
@@ -28,4 +30,5 @@ urlpatterns = [
     path('messaging/', include('messaging.urls')),
     path('support/', include('support.urls')),
     path('adminpanel/', include('adminpanel.urls')),
+    path('disputes/', include('disputes.urls')),
 ]

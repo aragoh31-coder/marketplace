@@ -42,7 +42,9 @@
                     <div class="stat-label">Total Products</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{{ vendor.products.filter.is_available=True.count }}</div>
+                    {% with active_products=vendor.products.all %}
+                        <div class="stat-value">{{ active_products|length }}</div>
+                    {% endwith %}
                     <div class="stat-label">Active Products</div>
                 </div>
                 <div class="stat-card">
