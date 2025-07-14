@@ -52,11 +52,7 @@
         
         <div class="message-actions">
             <a href="{% url 'messaging:compose' %}?reply_to={{ message.id }}" class="btn btn-primary">Reply</a>
-            <form method="post" action="{% url 'messaging:delete' message.id %}" class="inline-form">
-                {% csrf_token %}
-                <input type="hidden" name="honeypot_field" class="honeypot">
-                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this message?')">Delete</button>
-            </form>
+            <a href="{% url 'messaging:list' %}" class="btn btn-secondary">Back to Inbox</a>
         </div>
     </div>
 </div>
