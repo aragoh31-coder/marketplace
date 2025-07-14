@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - Secure Marketplace{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Login</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="{{ form.username.id_for_label }}">Username:</label>
+            {{ form.username }}
+        </div>
+        <div class="form-group">
+            <label for="{{ form.password.id_for_label }}">Password:</label>
+            {{ form.password }}
+        </div>
+        <button type="submit" class="btn">Login</button>
+    </form>
+    <p><a href="{% url 'accounts:register' %}">Don't have an account? Register here</a></p>
+</div>
+{% endblock %}

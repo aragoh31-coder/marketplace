@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - Secure Marketplace{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>User Profile</h2>
+    <p><strong>Username:</strong> {{ user.username }}</p>
+    <p><strong>Email:</strong> {{ user.email }}</p>
+    <p><strong>Member since:</strong> {{ user.date_joined|date:"F d, Y" }}</p>
+    <p><strong>Last login:</strong> {{ user.last_login|date:"F d, Y H:i" }}</p>
+    
+    {% if user.is_vendor %}
+        <p><strong>Vendor Status:</strong> Active</p>
+        <a href="{% url 'vendors:dashboard' %}" class="btn">Vendor Dashboard</a>
+    {% else %}
+        <a href="{% url 'vendors:apply' %}" class="btn">Apply to become a vendor</a>
+    {% endif %}
+</div>
+{% endblock %}
