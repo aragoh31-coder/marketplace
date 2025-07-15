@@ -22,10 +22,6 @@
                     <button onclick="copyToClipboard('btc-address')" class="btn-copy">Copy</button>
                 </div>
                 
-                <div class="qr-code">
-                    <div class="qr-placeholder">QR Code</div>
-                </div>
-                
                 <div class="deposit-notes">
                     <p>⚠️ Important:</p>
                     <ul>
@@ -51,10 +47,6 @@
                 <div class="address-box">
                     <code id="xmr-address">{{ wallet.xmr_address|default:"4AdUndXHHZ6cfufTMvppY6JwXNouMBzSkbLYfpAV5Usx3skxNgYeYTRJ5BNjPiQCI9bA3swRn5n6GyGiGtx6yiA1VPLLbQ7" }}</code>
                     <button onclick="copyToClipboard('xmr-address')" class="btn-copy">Copy</button>
-                </div>
-                
-                <div class="qr-code">
-                    <div class="qr-placeholder">QR Code</div>
                 </div>
                 
                 <div class="deposit-notes">
@@ -199,23 +191,6 @@ function copyToClipboard(elementId) {
         white-space: nowrap;
     }
     
-    .qr-code {
-        text-align: center;
-        margin: 20px 0;
-    }
-    
-    .qr-placeholder {
-        width: 150px;
-        height: 150px;
-        background: #2a2a2a;
-        border: 2px dashed #444;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto;
-        color: #888;
-        border-radius: 5px;
-    }
     
     .deposit-notes {
         background: #2a2a2a;
