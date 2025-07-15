@@ -391,6 +391,59 @@
             }
         }
         
+        /* Touch Interactions */
+        @media (hover: none) and (pointer: coarse) {
+            /* Remove hover effects on touch devices */
+            .btn:hover,
+            a:hover {
+                background: inherit;
+                color: inherit;
+            }
+            
+            /* Larger touch targets */
+            .btn,
+            input[type="submit"],
+            input[type="button"],
+            button {
+                min-height: 48px;
+                min-width: 48px;
+            }
+            
+            /* Smooth scrolling */
+            .mobile-menu,
+            .container {
+                -webkit-overflow-scrolling: touch;
+                scroll-behavior: smooth;
+            }
+            
+            /* Prevent text selection on buttons */
+            .btn,
+            button {
+                -webkit-user-select: none;
+                user-select: none;
+            }
+            
+            /* Active states for better feedback */
+            .btn:active,
+            button:active,
+            a:active {
+                opacity: 0.8;
+                transform: scale(0.98);
+            }
+        }
+
+        /* Prevent zoom on input focus (iOS) */
+        @media screen and (max-width: 768px) {
+            input[type="text"],
+            input[type="password"],
+            input[type="email"],
+            input[type="number"],
+            textarea,
+            select {
+                font-size: 16px !important;
+            }
+        }
+
         /* Safe area insets for notched devices */
         @supports (padding: max(0px)) {
             .header {
