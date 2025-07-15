@@ -354,3 +354,20 @@ def pgp_challenge_view(request):
         'challenge': challenge,
         'user': user
     })
+
+
+def switch_theme(request):
+    """Switch between classic and premium themes"""
+    if request.method == 'POST':
+        theme = request.POST.get('theme', 'classic')
+        
+        if theme in ['classic', 'premium']:
+            if request.user.is_authenticated:
+                request.user.theme_preference = theme
+                request.user.save()
+            else:
+                request.session['theme'] = theme
+            
+            messages.success(request, f'Switched to {theme.title()} theme!')
+        
+    return redirect(request.META.get('HTTP_REFERER', '/'))

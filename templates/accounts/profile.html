@@ -1,3 +1,6 @@
+{% if request.theme == 'premium' %}
+    {% include 'accounts/profile_premium.html' %}
+{% else %}
 {% extends "base.html" %}
 {% block title %}Profile - {{ user.username }}{% endblock %}
 {% block content %}
@@ -215,6 +218,9 @@
         </a>
     </div>
 </div>
+{% endblock %}
+{% endif %}
+{% endif %}
 
 <style>
     /* Mobile Profile Navigation */

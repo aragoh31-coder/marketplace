@@ -1,3 +1,6 @@
+{% if request.theme == 'premium' %}
+    {% include 'base_premium.html' %}
+{% else %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -537,6 +540,17 @@
     <!-- Mobile Navigation Overlay -->
     <label for="mobile-nav-toggle" class="mobile-nav-overlay"></label>
 
+    <!-- Theme Switcher -->
+    <div style="position: fixed; top: 1rem; right: 1rem; z-index: 1001; background: #1a1a1a; border: 1px solid #333; border-radius: 0.5rem; padding: 0.5rem;">
+        <form method="post" action="{% url 'accounts:switch_theme' %}">
+            {% csrf_token %}
+            <input type="hidden" name="theme" value="{% if request.theme == 'premium' %}classic{% else %}premium{% endif %}">
+            <button type="submit" style="background: #4CAF50; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">
+                {% if request.theme == 'premium' %}Classic{% else %}Premium{% endif %}
+            </button>
+        </form>
+    </div>
+
     <!-- Main Content -->
     <div class="main-content">
         <div class="container">
@@ -583,3 +597,4 @@
 
 </body>
 </html>
+{% endif %}

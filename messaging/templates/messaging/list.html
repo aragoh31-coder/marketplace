@@ -1,3 +1,6 @@
+{% if request.theme == 'premium' %}
+    {% include 'messaging/list_premium.html' %}
+{% else %}
 {% extends "base.html" %}
 
 {% block title %}Messages - Secure Marketplace{% endblock %}
@@ -248,3 +251,4 @@
     }
 </style>
 {% endblock %}
+{% endif %}

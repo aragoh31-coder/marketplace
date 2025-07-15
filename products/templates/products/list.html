@@ -1,3 +1,6 @@
+{% if request.theme == 'premium' %}
+    {% include 'products/list_premium.html' %}
+{% else %}
 {% extends "base.html" %}
 {% block title %}Products{% endblock %}
 {% block content %}
@@ -289,3 +292,4 @@
     }
 </style>
 {% endblock %}
+{% endif %}
