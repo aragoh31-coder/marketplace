@@ -720,16 +720,6 @@
     <!-- Mobile Navigation Checkbox -->
     <input type="checkbox" id="mobile-nav-toggle" class="mobile-nav-checkbox">
     
-    <!-- Theme Switcher -->
-    <div class="theme-switcher">
-        <form method="post" action="{% url 'accounts:switch_theme' %}">
-            {% csrf_token %}
-            <input type="hidden" name="theme" value="{% if request.theme == 'premium' %}classic{% else %}premium{% endif %}">
-            <button type="submit" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                {% if request.theme == 'premium' %}Classic{% else %}Premium{% endif %}
-            </button>
-        </form>
-    </div>
     
     <!-- Header -->
     <header class="header">

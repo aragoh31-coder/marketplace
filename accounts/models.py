@@ -38,14 +38,6 @@ class User(AbstractUser, PrivacyModel):
     account_created = models.DateTimeField(auto_now_add=True)
     last_activity = models.DateTimeField(default=timezone.now)
     
-    theme_preference = models.CharField(
-        max_length=20,
-        choices=[
-            ('classic', 'Classic Dark'),
-            ('premium', 'Premium Glass'),
-        ],
-        default='classic'
-    )
     
     def get_trust_level(self):
         """Calculate trust level based on trades and feedback"""

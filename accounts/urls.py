@@ -15,5 +15,4 @@ urlpatterns = [
     path('profile/delete/', views.delete_account, name='delete_account'),
     path('profile/login-history/', views.login_history_view, name='login_history'),
     path('pgp-challenge/', views.pgp_challenge_view, name='pgp_challenge'),
-    path('switch-theme/', views.switch_theme, name='switch_theme'),
 ]

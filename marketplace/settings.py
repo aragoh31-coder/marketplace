@@ -44,7 +44,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware',
-    'core.middleware.ThemeMiddleware',
 ]
 
 ROOT_URLCONF = 'marketplace.urls'
