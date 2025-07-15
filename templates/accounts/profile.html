@@ -102,10 +102,9 @@
                 <!-- Recent Logins -->
                 <div class="recent-logins">
                     <h3>Recent Logins</h3>
-                    {% for login in login_history %}
+                    {% for login in login_history|slice:":3" %}
                     <div class="login-entry">
                         <div class="login-time">{{ login.login_time|date:"M d, H:i" }}</div>
-                        <div class="login-device">{{ login.user_agent|truncatechars:30 }}</div>
                     </div>
                     {% empty %}
                     <p class="text-muted">No login history available</p>
