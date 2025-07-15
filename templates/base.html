@@ -48,9 +48,28 @@
             text-decoration: none;
         }
         
-        /* Mobile Navigation */
+        /* Mobile Navigation Checkbox (hidden) */
+        .mobile-nav-checkbox {
+            display: none;
+        }
+        
+        /* Mobile Navigation Toggle */
         .mobile-nav-toggle {
             display: block;
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        .mobile-nav-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
             background: none;
             border: none;
             color: #e0e0e0;
@@ -74,7 +93,8 @@
             overflow-y: auto;
         }
         
-        .mobile-nav.active {
+        /* Show mobile nav when checkbox is checked */
+        .mobile-nav-checkbox:checked ~ .mobile-nav {
             left: 0;
         }
         
@@ -92,6 +112,9 @@
             color: #e0e0e0;
             font-size: 24px;
             cursor: pointer;
+            padding: 8px;
+            min-height: 44px;
+            min-width: 44px;
         }
         
         .mobile-nav-menu {
@@ -122,9 +145,11 @@
             opacity: 0;
             visibility: hidden;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
         
-        .mobile-nav-overlay.active {
+        /* Show overlay when checkbox is checked */
+        .mobile-nav-checkbox:checked ~ .mobile-nav-overlay {
             opacity: 1;
             visibility: visible;
         }
@@ -457,12 +482,15 @@
     </style>
 </head>
 <body>
+    <!-- Mobile Navigation Checkbox -->
+    <input type="checkbox" id="mobile-nav-toggle" class="mobile-nav-checkbox">
+    
     <div class="header">
         <div class="header-content">
             <a href="{% url 'accounts:home' %}" class="logo">🛒 Marketplace</a>
             
             <!-- Mobile Navigation Toggle -->
-            <button class="mobile-nav-toggle" onclick="toggleMobileNav()">☰</button>
+            <label for="mobile-nav-toggle" class="mobile-nav-toggle">☰</label>
             
             <!-- Desktop Navigation -->
             <nav class="desktop-nav">
@@ -484,10 +512,10 @@
     </div>
 
     <!-- Mobile Navigation Menu -->
-    <nav class="mobile-nav" id="mobileNav">
+    <nav class="mobile-nav">
         <div class="mobile-nav-header">
             <span class="logo">🛒 Marketplace</span>
-            <button class="mobile-nav-close" onclick="toggleMobileNav()">✕</button>
+            <label for="mobile-nav-toggle" class="mobile-nav-close">✕</label>
         </div>
         <div class="mobile-nav-menu">
             <a href="{% url 'accounts:home' %}">🏠 Home</a>
@@ -507,7 +535,7 @@
     </nav>
 
     <!-- Mobile Navigation Overlay -->
-    <div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="toggleMobileNav()"></div>
+    <label for="mobile-nav-toggle" class="mobile-nav-overlay"></label>
 
     <!-- Main Content -->
     <div class="main-content">
@@ -553,21 +581,5 @@
     </nav>
     {% endif %}
 
-    <script>
-        function toggleMobileNav() {
-            const nav = document.getElementById('mobileNav');
-            const overlay = document.getElementById('mobileNavOverlay');
-            
-            nav.classList.toggle('active');
-            overlay.classList.toggle('active');
-        }
-        
-        // Close mobile nav when clicking on a link
-        document.querySelectorAll('.mobile-nav-menu a').forEach(link => {
-            link.addEventListener('click', () => {
-                toggleMobileNav();
-            });
-        });
-    </script>
 </body>
 </html>
