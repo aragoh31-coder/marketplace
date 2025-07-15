@@ -150,7 +150,7 @@ def logout_view(request):
     if request.user.is_authenticated:
         log_event('user_logout', {'user_id': str(request.user.id), 'username': request.user.username})
     logout(request)
-    return redirect('home')
+    return redirect('/')
 
 
 @login_required
@@ -310,7 +310,7 @@ def delete_account(request):
                 user.delete()
                 
                 messages.success(request, 'Account deleted successfully')
-                return redirect('home')
+                return redirect('/')
     else:
         form = DeleteAccountForm()
     
@@ -346,7 +346,7 @@ def pgp_challenge_view(request):
             success=True
         )
         
-        return redirect('home')
+        return redirect('/')
     
     challenge = secrets.token_urlsafe(32)
     
