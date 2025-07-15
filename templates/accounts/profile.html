@@ -174,7 +174,7 @@
                         <div class="stat-item">
                             <span class="stat-value">
                                 {% if user.total_trades > 0 %}
-                                    {{ user.positive_feedback_count|percentage:user.total_trades }}%
+                                    {% widthratio user.positive_feedback_count user.total_trades 100 %}%
                                 {% else %}
                                     -
                                 {% endif %}
