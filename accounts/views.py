@@ -121,7 +121,7 @@ def login_view(request):
                 
                 log_event('user_login', {'user_id': str(user.id), 'username': username})
                 request.session.cycle_key()
-                return redirect('home')
+                return redirect('/')
             else:
                 try:
                     user = User.objects.get(username=username)
