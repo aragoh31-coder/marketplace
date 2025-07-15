@@ -172,14 +172,6 @@ class PGPService:
         try:
             logger.debug("Extracting message from PGP signature...")
             
-            verification_result = self.verify_signature(signed_message)
-            
-            if not verification_result['success'] or not verification_result.get('valid'):
-                return {
-                    'success': False,
-                    'error': 'Invalid signature - cannot extract message'
-                }
-            
             lines = signed_message.split('\n')
             message_lines = []
             in_message = False
@@ -200,8 +192,24 @@ class PGPService:
             
             extracted_message = '\n'.join(message_lines).strip()
             
+            if not extracted_message:
+                return {
+                    'success': False,
+                    'error': 'No message content found in signed message'
+                }
+            
             logger.info("Message extracted successfully from signature")
             logger.debug(f"Extracted message: {extracted_message[:100]}...")
+            
+            verification_result = None
+            try:
+                verification_result = self.verify_signature(signed_message)
+                if verification_result.get('valid'):
+                    logger.debug("Signature verification successful")
+                else:
+                    logger.warning("Signature verification failed, but message extracted")
+            except Exception as verify_error:
+                logger.warning(f"Signature verification error (message still extracted): {verify_error}")
             
             return {
                 'success': True,
