@@ -70,7 +70,7 @@
     </div>
     
     <!-- Security Section -->
-    <div id="security" class="profile-section" style="display:none;">
+    <div id="security" class="profile-section">
         <div class="card">
             <div class="card-header">
                 <h2>🔒 Security Options</h2>
@@ -120,7 +120,7 @@
     </div>
     
     <!-- Wallet Section -->
-    <div id="wallet" class="profile-section" style="display:none;">
+    <div id="wallet" class="profile-section">
         <div class="card">
             <div class="card-header">
                 <h2>💰 Wallet Balance</h2>
@@ -153,7 +153,7 @@
     </div>
     
     <!-- Stats Section -->
-    <div id="stats" class="profile-section" style="display:none;">
+    <div id="stats" class="profile-section">
         <div class="card">
             <div class="card-header">
                 <h2>⚖️ Trust & Reputation</h2>
@@ -263,11 +263,21 @@
         display: none;
     }
     
+    /* Hide all sections by default on mobile */
+    .profile-section {
+        display: none;
+    }
+    
     /* Show sections based on checked radio buttons */
-    #tab-account:checked ~ #account,
-    #tab-security:checked ~ #security,
-    #tab-wallet:checked ~ #wallet,
-    #tab-stats:checked ~ #stats {
+    #tab-account:checked ~ .profile-content #account,
+    #tab-security:checked ~ .profile-content #security,
+    #tab-wallet:checked ~ .profile-content #wallet,
+    #tab-stats:checked ~ .profile-content #stats {
+        display: block !important;
+    }
+    
+    /* Default show account section */
+    #account {
         display: block;
     }
     

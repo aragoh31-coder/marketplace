@@ -17,7 +17,7 @@ class Message(PrivacyModel):
     expires_at = models.DateTimeField(null=True, blank=True)
     
     def __str__(self):
-        return f"Message from {self.sender.username} to {self.recipient.username}"
+        return f"{self.subject}"
 
 
 class MessageThread(PrivacyModel):

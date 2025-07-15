@@ -93,7 +93,7 @@ def compose_message(request):
             })
         
         if not subject:
-            subject = 'Message from ' + request.user.username
+            subject = 'New Message'
         
         try:
             with transaction.atomic():
@@ -104,7 +104,7 @@ def compose_message(request):
                     content=content,
                     created_at=timezone.now()
                 )
-                django_messages.success(request, f'Message sent successfully to {recipient.username}!')
+                django_messages.success(request, 'Message sent successfully!')
                 return redirect('messaging:detail', pk=message.pk)
         except Exception as e:
             django_messages.error(request, f'Error sending message: {str(e)}')
@@ -197,7 +197,7 @@ def send_message(request, user_id):
                 message = Message.objects.create(
                     sender=request.user,
                     recipient=recipient,
-                    subject=f'Message from {request.user.username}',
+                    subject='New Message',
                     content=content,
                     created_at=timezone.now()
                 )
