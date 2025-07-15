@@ -137,3 +137,30 @@ MONERO_WALLET_RPC_PORT = env.int('MONERO_WALLET_RPC_PORT', default=18088)
 MONERO_DAEMON_RPC_PORT = env.int('MONERO_DAEMON_RPC_PORT', default=18081)
 BTC_REQUIRED_CONFIRMATIONS = 1
 XMR_REQUIRED_CONFIRMATIONS = 10
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'pgp_debug.log',
+        },
+    },
+    'loggers': {
+        'accounts': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+    },
+}
+
+GPG_BINARY = '/usr/bin/gpg'

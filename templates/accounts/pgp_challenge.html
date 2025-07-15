@@ -1,163 +1,283 @@
 {% extends "base.html" %}
-{% block title %}PGP Challenge - Secure Marketplace{% endblock %}
+{% block title %}PGP Authentication Challenge{% endblock %}
 {% block content %}
 <div class="container">
-    <div class="challenge-container">
-        <h1>🔐 PGP Authentication Challenge</h1>
+    <div class="pgp-challenge-container">
+        <h1>🔐 PGP Authentication Required</h1>
         
-        <div class="user-info">
-            <p>Welcome back, <strong>{{ user.username }}</strong></p>
-            <p>PGP 2FA is enabled for your account. Please decrypt the challenge below with your private key.</p>
+        <div class="info-box">
+            <p>Hello <strong>{{ username }}</strong>,</p>
+            <p>Your account has PGP 2FA enabled. Please follow these steps:</p>
+            <ol>
+                <li>Copy the encrypted challenge below</li>
+                <li>Decrypt it with your PGP private key</li>
+                <li>Sign the <strong>entire decrypted message</strong> with your PGP key</li>
+                <li>Paste the signed message (including PGP signature) below</li>
+            </ol>
         </div>
         
-        <div class="challenge-box">
-            <h3>Challenge to Decrypt:</h3>
-            <div class="challenge-text">
-                <pre>-----BEGIN PGP MESSAGE-----
-
-{{ challenge }}
-
------END PGP MESSAGE-----</pre>
+        <div class="challenge-section">
+            <h2>Encrypted Challenge</h2>
+            <p class="help-text">This message has been encrypted with your PGP public key:</p>
+            
+            <div class="pgp-message-container">
+                <textarea id="encrypted-challenge" class="pgp-textarea" readonly>{{ encrypted_challenge }}</textarea>
+                <div class="copy-instructions">
+                    <p>Select all text above and copy it (Ctrl+A, then Ctrl+C)</p>
+                </div>
             </div>
-            <small class="text-muted">
-                Decrypt this message with your PGP private key and enter the result below.
-            </small>
         </div>
         
-        <form method="post" class="challenge-form">
+        <form method="post" action="{% url 'accounts:pgp_challenge' %}">
             {% csrf_token %}
-            <div class="form-group">
-                <label for="decrypted_challenge">Decrypted Challenge:</label>
-                <input type="text" id="decrypted_challenge" name="decrypted_challenge" 
-                       class="form-control" placeholder="Enter decrypted challenge" required>
+            <div class="response-section">
+                <h2>Signed Response</h2>
+                <p class="help-text">
+                    After decrypting and signing the message, paste the complete signed message here:
+                </p>
+                <textarea name="signed_response" 
+                          class="pgp-textarea" 
+                          placeholder="-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+[The decrypted message content]
+-----BEGIN PGP SIGNATURE-----
+
+[Your signature]
+-----END PGP SIGNATURE-----"
+                          required></textarea>
             </div>
             
             <div class="button-group">
-                <button type="submit" class="btn btn-primary">Verify & Login</button>
-                <a href="{% url 'accounts:login' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    🔓 Verify & Login
+                </button>
+                <a href="{% url 'accounts:login' %}" class="btn btn-secondary">
+                    Cancel
+                </a>
             </div>
         </form>
         
-        <div class="help-text">
-            <h4>How to decrypt:</h4>
-            <ol>
-                <li>Copy the PGP message above</li>
-                <li>Use your PGP client (GPG, Kleopatra, etc.) to decrypt it</li>
-                <li>Enter the decrypted text in the field above</li>
-                <li>Click "Verify & Login" to complete authentication</li>
-            </ol>
+        <div class="help-section">
+            <details>
+                <summary>📚 Detailed Instructions</summary>
+                <div class="help-content">
+                    <h3>Command Line (GPG)</h3>
+                    <ol>
+                        <li>Save the encrypted challenge to a file:
+                            <pre>cat > challenge.asc << 'EOF'
+[Paste encrypted challenge here]
+EOF</pre>
+                        </li>
+                        <li>Decrypt the challenge:
+                            <pre>gpg --decrypt challenge.asc > challenge.txt</pre>
+                        </li>
+                        <li>Sign the decrypted message:
+                            <pre>gpg --clearsign challenge.txt</pre>
+                        </li>
+                        <li>Copy the contents of <code>challenge.txt.asc</code> and paste in the form above</li>
+                    </ol>
+                    
+                    <h3>Kleopatra/GPA (Windows)</h3>
+                    <ol>
+                        <li>Copy the encrypted challenge</li>
+                        <li>Open Kleopatra and click "Clipboard" → "Decrypt/Verify"</li>
+                        <li>Copy the decrypted text</li>
+                        <li>Click "Clipboard" → "Sign" and paste the decrypted text</li>
+                        <li>Copy the signed output and paste above</li>
+                    </ol>
+                    
+                    <h3>Troubleshooting</h3>
+                    <ul>
+                        <li><strong>Cannot decrypt:</strong> Make sure you're using the same PGP key that you uploaded to your profile</li>
+                        <li><strong>Signature invalid:</strong> You must sign the ENTIRE decrypted message, not just the challenge code</li>
+                        <li><strong>Session expired:</strong> The challenge is valid for 5 minutes. If expired, return to login</li>
+                    </ul>
+                </div>
+            </details>
+        </div>
+        
+        <div style="margin-top: 2rem; text-align: center;">
+            <a href="{% url 'accounts:test_pgp' %}" class="text-muted" style="font-size: 0.875rem;">
+                Test PGP Encryption
+            </a>
         </div>
     </div>
 </div>
 
 <style>
-    .challenge-container {
-        max-width: 600px;
+    .pgp-challenge-container {
+        max-width: 800px;
         margin: 0 auto;
-        background: #1a1a1a;
+        background: rgba(26, 26, 26, 0.95);
         padding: 30px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+    }
+    
+    .info-box {
+        background: rgba(42, 42, 42, 0.8);
+        padding: 20px;
         border-radius: 8px;
-        border: 1px solid #333;
-    }
-    
-    .user-info {
-        background: #2a2a2a;
-        padding: 20px;
-        border-radius: 5px;
         margin-bottom: 30px;
-        border: 1px solid #444;
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
-    .challenge-box {
-        background: #0a0a0a;
-        padding: 20px;
-        border-radius: 5px;
-        margin-bottom: 30px;
-        border: 2px solid #4CAF50;
-    }
-    
-    .challenge-box h3 {
-        color: #4CAF50;
-        margin-bottom: 15px;
-    }
-    
-    .challenge-text {
-        background: #000;
-        padding: 15px;
-        border-radius: 3px;
-        margin-bottom: 10px;
-    }
-    
-    .challenge-text pre {
-        color: #4CAF50;
-        font-family: monospace;
-        font-size: 12px;
-        margin: 0;
-        white-space: pre-wrap;
-        word-break: break-all;
-    }
-    
-    .challenge-form {
-        margin-bottom: 30px;
-    }
-    
-    .form-group {
-        margin-bottom: 20px;
-    }
-    
-    .form-group label {
-        display: block;
-        margin-bottom: 5px;
+    .info-box ol {
+        margin: 15px 0 0 20px;
         color: #ccc;
-        font-weight: bold;
     }
     
-    .form-control {
+    .challenge-section, .response-section {
+        margin-bottom: 30px;
+    }
+    
+    .pgp-message-container {
+        position: relative;
+    }
+    
+    .pgp-textarea {
         width: 100%;
-        padding: 10px;
-        background: #2a2a2a;
-        border: 1px solid #444;
-        color: #fff;
-        border-radius: 5px;
+        min-height: 200px;
+        padding: 15px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #4CAF50;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        line-height: 1.4;
+        resize: vertical;
+        white-space: pre;
+        overflow-wrap: break-word;
     }
     
-    .form-control:focus {
+    .pgp-textarea:focus {
         border-color: #4CAF50;
         outline: none;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    }
+    
+    .copy-instructions {
+        margin-top: 10px;
+        padding: 10px;
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        border-radius: 5px;
+        color: #ffc107;
+        font-size: 14px;
+        text-align: center;
     }
     
     .button-group {
         display: flex;
-        gap: 10px;
-        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
     }
     
-    .help-text {
-        background: #2a2a2a;
-        padding: 20px;
-        border-radius: 5px;
-        border: 1px solid #444;
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        font-weight: bold;
+        transition: all 0.3s ease;
     }
     
-    .help-text h4 {
+    .btn-primary {
+        background: linear-gradient(135deg, #4CAF50, #45a049);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #45a049, #3d8b40);
+        transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+        background: rgba(108, 117, 125, 0.8);
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: rgba(108, 117, 125, 1);
+        transform: translateY(-2px);
+    }
+    
+    .help-section {
+        margin-top: 30px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 20px;
+    }
+    
+    .help-section details {
+        cursor: pointer;
+    }
+    
+    .help-section summary {
         color: #4CAF50;
+        font-weight: bold;
         margin-bottom: 15px;
     }
     
-    .help-text ol {
-        color: #ccc;
-        padding-left: 20px;
+    .help-content {
+        background: rgba(42, 42, 42, 0.6);
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 10px;
     }
     
-    .help-text li {
+    .help-content h3 {
+        color: #4CAF50;
+        margin-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 5px;
+    }
+    
+    .help-content ol, .help-content ul {
+        margin-left: 20px;
+        color: #ccc;
+        margin-bottom: 20px;
+    }
+    
+    .help-content li {
         margin-bottom: 8px;
+    }
+    
+    .help-content pre {
+        background: rgba(0, 0, 0, 0.4);
+        padding: 10px;
+        border-radius: 5px;
+        color: #4CAF50;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        overflow-x: auto;
+        margin: 10px 0;
+    }
+    
+    .help-content code {
+        background: rgba(0, 0, 0, 0.4);
+        padding: 2px 6px;
+        border-radius: 3px;
+        color: #4CAF50;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .help-text {
+        color: #aaa;
+        margin-bottom: 15px;
     }
     
     .text-muted {
         color: #888;
-        font-size: 12px;
-        display: block;
-        margin-top: 10px;
+        text-decoration: none;
+    }
+    
+    .text-muted:hover {
+        color: #4CAF50;
     }
 </style>
 {% endblock %}

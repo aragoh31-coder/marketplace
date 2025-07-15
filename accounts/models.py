@@ -3,6 +3,8 @@ from django.db import models
 from django.utils import timezone
 from core.base_models import PrivacyModel
 import uuid
+import secrets
+from datetime import timedelta
 
 
 class User(AbstractUser, PrivacyModel):
@@ -56,6 +58,30 @@ class User(AbstractUser, PrivacyModel):
             return "Regular"
         else:
             return "Beginner"
+    
+    def generate_pgp_challenge(self):
+        """Generate a new PGP challenge for 2FA authentication"""
+        challenge = secrets.token_urlsafe(32)
+        self.pgp_challenge = challenge
+        self.pgp_challenge_expires = timezone.now() + timedelta(minutes=5)
+        self.save()
+        return challenge
+    
+    def verify_pgp_challenge(self, challenge_code):
+        """Verify a PGP challenge response"""
+        if not self.pgp_challenge or not self.pgp_challenge_expires:
+            return False
+        
+        if timezone.now() > self.pgp_challenge_expires:
+            return False
+        
+        if self.pgp_challenge == challenge_code:
+            self.pgp_challenge = None
+            self.pgp_challenge_expires = None
+            self.save()
+            return True
+        
+        return False
     
     def __str__(self):
         return self.username

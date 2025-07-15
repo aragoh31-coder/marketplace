@@ -10,10 +10,13 @@ from django import forms
 from products.models import Product
 import hashlib
 import secrets
+import logging
+from datetime import timedelta
 from .forms import (
     UserProfileForm, PGPKeyForm, CustomPasswordChangeForm, DeleteAccountForm
 )
 from .models import User, LoginHistory
+from .pgp_service import PGPService
 from core.utils.cache import log_event
 
 User = get_user_model()
@@ -93,22 +96,56 @@ def register(request):
 
 
 def login_view(request):
+    logger = logging.getLogger(__name__)
+    
     if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
-            
-            user = authenticate(request, username=username, password=password)
-            if user:
-                if user.pgp_login_enabled and user.pgp_public_key:
-                    request.session['pgp_challenge_user'] = str(user.id)
-                    return redirect('accounts:pgp_challenge')
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        user = authenticate(request, username=username, password=password)
+        
+        if user:
+            if user.pgp_login_enabled and user.pgp_public_key:
+                pgp_service = PGPService()
                 
+                import_result = pgp_service.import_public_key(user.pgp_public_key)
+                
+                if not import_result['success']:
+                    logger.error(f"Failed to import PGP key for user {username}: {import_result['error']}")
+                    messages.error(request, 'PGP key error. Please update your PGP key in settings.')
+                    return render(request, 'accounts/login.html')
+                
+                challenge = user.generate_pgp_challenge()
+                challenge_message = (
+                    f"Marketplace Login Challenge\n\n"
+                    f"Challenge Code: {challenge}\n\n"
+                    f"Username: {username}\n"
+                    f"Timestamp: {timezone.now().strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
+                    f"Sign this entire message with your PGP key to complete login."
+                )
+                
+                encrypt_result = pgp_service.encrypt_message(
+                    challenge_message,
+                    user.pgp_fingerprint
+                )
+                
+                if not encrypt_result['success']:
+                    logger.error(f"Failed to encrypt challenge: {encrypt_result['error']}")
+                    messages.error(request, 'Failed to generate PGP challenge. Please try again.')
+                    return render(request, 'accounts/login.html')
+                
+                request.session['pgp_2fa_user_id'] = user.id
+                request.session['pgp_2fa_timestamp'] = timezone.now().isoformat()
+                
+                logger.info(f"Generated encrypted challenge for {username}")
+                
+                return render(request, 'accounts/pgp_challenge.html', {
+                    'encrypted_challenge': encrypt_result['encrypted_message'],
+                    'username': username
+                })
+            
+            else:
                 login(request, user)
-                user.last_activity = timezone.now()
-                user.failed_login_attempts = 0
-                user.save()
                 
                 LoginHistory.objects.create(
                     user=user,
@@ -119,31 +156,28 @@ def login_view(request):
                     success=True
                 )
                 
-                log_event('user_login', {'user_id': str(user.id), 'username': username})
-                request.session.cycle_key()
+                messages.success(request, 'Logged in successfully!')
                 return redirect('/')
-            else:
-                try:
-                    user = User.objects.get(username=username)
-                    user.failed_login_attempts += 1
-                    user.save()
-                    
-                    LoginHistory.objects.create(
-                        user=user,
-                        ip_hash=hashlib.sha256(
-                            request.META.get('REMOTE_ADDR', '').encode()
-                        ).hexdigest(),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
-                        success=False
-                    )
-                except User.DoesNotExist:
-                    pass
+        else:
+            try:
+                user = User.objects.get(username=username)
+                user.failed_login_attempts += 1
+                user.save()
                 
-                messages.error(request, 'Invalid username or password')
-    else:
-        form = AuthenticationForm()
+                LoginHistory.objects.create(
+                    user=user,
+                    ip_hash=hashlib.sha256(
+                        request.META.get('REMOTE_ADDR', '').encode()
+                    ).hexdigest(),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
+                    success=False
+                )
+            except User.DoesNotExist:
+                pass
+            
+            messages.error(request, 'Invalid username or password')
     
-    return render(request, 'accounts/login.html', {'form': form})
+    return render(request, 'accounts/login.html')
 
 
 def logout_view(request):
@@ -261,8 +295,15 @@ def pgp_settings(request):
             user = request.user
             
             if form.cleaned_data['pgp_public_key']:
+                pgp_service = PGPService()
+                import_result = pgp_service.import_public_key(form.cleaned_data['pgp_public_key'])
+                
+                if not import_result['success']:
+                    messages.error(request, f'Invalid PGP key: {import_result["error"]}')
+                    return render(request, 'accounts/pgp_settings.html', {'form': form})
+                
                 user.pgp_public_key = form.cleaned_data['pgp_public_key']
-                user.pgp_fingerprint = form.fingerprint
+                user.pgp_fingerprint = import_result['fingerprint']
             
             user.pgp_login_enabled = form.cleaned_data['enable_pgp_login']
             
@@ -323,34 +364,109 @@ def login_history_view(request):
     return render(request, 'accounts/login_history.html', {'history': history})
 
 
+@login_required
+def test_pgp_encryption(request):
+    """Test PGP encryption for debugging"""
+    if not request.user.pgp_public_key:
+        messages.error(request, 'No PGP key configured')
+        return redirect('accounts:pgp_settings')
+    
+    pgp_service = PGPService()
+    
+    import_result = pgp_service.import_public_key(request.user.pgp_public_key)
+    if not import_result['success']:
+        messages.error(request, f'Failed to import key: {import_result["error"]}')
+        return redirect('accounts:pgp_settings')
+    
+    test_message = "This is a test message from the marketplace.\nTimestamp: " + timezone.now().strftime('%Y-%m-%d %H:%M:%S UTC')
+    encrypt_result = pgp_service.encrypt_message(test_message, request.user.pgp_fingerprint)
+    
+    if encrypt_result['success']:
+        return render(request, 'accounts/pgp_test.html', {
+            'encrypted_message': encrypt_result['encrypted_message'],
+            'original_message': test_message,
+            'fingerprint': request.user.pgp_fingerprint
+        })
+    else:
+        messages.error(request, f'Encryption failed: {encrypt_result["error"]}')
+        return redirect('accounts:pgp_settings')
+
+
 def pgp_challenge_view(request):
-    user_id = request.session.get('pgp_challenge_user')
-    if not user_id:
+    logger = logging.getLogger(__name__)
+    
+    user_id = request.session.get('pgp_2fa_user_id')
+    timestamp = request.session.get('pgp_2fa_timestamp')
+    
+    if not user_id or not timestamp:
+        messages.error(request, 'No pending 2FA authentication')
+        return redirect('accounts:login')
+    
+    from dateutil import parser
+    session_time = parser.parse(timestamp)
+    if timezone.now() - session_time > timedelta(minutes=5):
+        messages.error(request, '2FA session expired. Please login again.')
+        del request.session['pgp_2fa_user_id']
+        del request.session['pgp_2fa_timestamp']
         return redirect('accounts:login')
     
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
+        messages.error(request, 'Invalid session')
         return redirect('accounts:login')
     
     if request.method == 'POST':
-        login(request, user)
-        del request.session['pgp_challenge_user']
+        signed_response = request.POST.get('signed_response', '').strip()
         
-        LoginHistory.objects.create(
-            user=user,
-            ip_hash=hashlib.sha256(
-                request.META.get('REMOTE_ADDR', '').encode()
-            ).hexdigest(),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
-            success=True
-        )
+        if not signed_response:
+            messages.error(request, 'Please provide the signed challenge')
+            return render(request, 'accounts/pgp_challenge.html', {
+                'username': user.username
+            })
         
-        return redirect('/')
+        pgp_service = PGPService()
+        
+        import_result = pgp_service.import_public_key(user.pgp_public_key)
+        if not import_result['success']:
+            messages.error(request, 'Failed to verify PGP key')
+            return redirect('accounts:login')
+        
+        verify_result = pgp_service.extract_message_from_signature(signed_response)
+        
+        if verify_result['success']:
+            signed_content = verify_result['message']
+            
+            challenge_code = None
+            for line in signed_content.split('\n'):
+                if line.startswith('Challenge Code:'):
+                    challenge_code = line.replace('Challenge Code:', '').strip()
+                    break
+            
+            if challenge_code and user.verify_pgp_challenge(challenge_code):
+                login(request, user)
+                
+                del request.session['pgp_2fa_user_id']
+                del request.session['pgp_2fa_timestamp']
+                
+                LoginHistory.objects.create(
+                    user=user,
+                    ip_hash=hashlib.sha256(
+                        request.META.get('REMOTE_ADDR', '').encode()
+                    ).hexdigest(),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
+                    success=True
+                )
+                
+                messages.success(request, 'PGP authentication successful!')
+                return redirect('/')
+            else:
+                messages.error(request, 'Invalid challenge response')
+        else:
+            messages.error(request, f'PGP verification failed: {verify_result.get("error", "Unknown error")}')
+        
+        return render(request, 'accounts/pgp_challenge.html', {
+            'username': user.username
+        })
     
-    challenge = secrets.token_urlsafe(32)
-    
-    return render(request, 'accounts/pgp_challenge.html', {
-        'challenge': challenge,
-        'user': user
-    })
+    return redirect('accounts:login')
