@@ -1,24 +1,38 @@
 {% extends "base.html" %}
-{% block title %}Profile - Secure Marketplace{% endblock %}
+{% block title %}Profile - {{ user.username }}{% endblock %}
 {% block content %}
 <div class="container">
-    <h1>👤 User Profile</h1>
+    <h1>{{ user.username }}</h1>
     
-    <div class="profile-grid">
-        <div class="profile-left">
-            <div class="card">
-                <div class="card-header">
-                    <h2>⚙️ Account Settings</h2>
-                </div>
-                <div class="card-body">
-                    <div class="info-row">
-                        <label>Username:</label>
-                        <span class="value">{{ user.username }}</span>
+    <!-- Mobile Profile Navigation -->
+    <nav class="profile-nav">
+        <a href="#account" class="nav-tab active">Account</a>
+        <a href="#security" class="nav-tab">Security</a>
+        <a href="#wallet" class="nav-tab">Wallet</a>
+        <a href="#stats" class="nav-tab">Stats</a>
+    </nav>
+    
+    <!-- Account Section -->
+    <div id="account" class="profile-section">
+        <div class="card">
+            <div class="card-header">
+                <h2>🔐 Account Settings</h2>
+            </div>
+            <div class="card-body">
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="info-label">Username</span>
+                        <span class="info-value">{{ user.username }}</span>
                     </div>
                     
-                    <div class="info-row">
-                        <label>Account Type:</label>
-                        <span class="value">
+                    <div class="info-item">
+                        <span class="info-label">Member Since</span>
+                        <span class="info-value">{{ user.account_created|date:"Y-m-d" }}</span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <span class="info-label">Account Type</span>
+                        <span class="info-value">
                             {% if user.is_vendor %}
                                 <span class="badge vendor">Vendor</span>
                             {% else %}
@@ -27,243 +41,235 @@
                         </span>
                     </div>
                     
-                    <div class="info-row">
-                        <label>Member Since:</label>
-                        <span class="value">{{ user.account_created|date:"F d, Y" }}</span>
+                    <div class="info-item">
+                        <span class="info-label">Default Currency</span>
+                        <span class="info-value">{{ user.get_default_currency_display }}</span>
                     </div>
                     
-                    <div class="info-row">
-                        <label>Last Activity:</label>
-                        <span class="value">{{ user.last_activity|timesince }} ago</span>
-                    </div>
-                    
-                    <div class="button-group">
-                        <a href="{% url 'accounts:profile_settings' %}" class="btn btn-primary">Edit Settings</a>
-                        <a href="{% url 'accounts:change_password' %}" class="btn btn-secondary">Change Password</a>
+                    <div class="info-item">
+                        <span class="info-label">Shipping Country</span>
+                        <span class="info-value">{{ user.default_shipping_country|default:"Not set" }}</span>
                     </div>
                 </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h2>🔐 Security Options</h2>
-                </div>
-                <div class="card-body">
-                    <div class="info-row">
-                        <label>PGP Public Key:</label>
-                        <span class="value">
-                            {% if user.pgp_public_key %}
-                                <span style="color: #4CAF50;">✓ Configured</span>
-                                <small>Fingerprint: {{ user.pgp_fingerprint|default:"Not available" }}</small>
-                            {% else %}
-                                <span style="color: #f44336;">✗ Not configured</span>
-                            {% endif %}
-                        </span>
-                    </div>
-                    
-                    <div class="info-row">
-                        <label>PGP 2FA Login:</label>
-                        <span class="value">
-                            {% if user.pgp_login_enabled %}
-                                <span style="color: #4CAF50;">✓ Enabled</span>
-                            {% else %}
-                                <span style="color: #f44336;">✗ Disabled</span>
-                            {% endif %}
-                        </span>
-                    </div>
-                    
-                    <div class="info-row">
-                        <label>Failed Login Attempts:</label>
-                        <span class="value">{{ user.failed_login_attempts }}</span>
-                    </div>
-                    
-                    <div class="button-group">
-                        <a href="{% url 'accounts:pgp_settings' %}" class="btn btn-primary">PGP Settings</a>
-                        <a href="{% url 'accounts:login_history' %}" class="btn btn-secondary">Login History</a>
-                    </div>
-                    
-                    <div class="login-history-preview">
-                        <h4>Recent Logins</h4>
-                        <table class="mini-table">
-                            {% for login in login_history %}
-                            <tr>
-                                <td>{{ login.login_time|date:"M d, H:i" }}</td>
-                                <td>{{ login.user_agent|truncatechars:30 }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="2">No login history</td></tr>
-                            {% endfor %}
-                        </table>
-                    </div>
+                
+                <div class="action-buttons">
+                    <a href="{% url 'accounts:change_password' %}" class="btn btn-secondary">
+                        Change Password
+                    </a>
+                    <a href="{% url 'accounts:profile_settings' %}" class="btn btn-primary">
+                        Edit Settings
+                    </a>
                 </div>
             </div>
         </div>
-        
-        <div class="profile-right">
-            <div class="card">
-                <div class="card-header">
-                    <h2>💰 Wallet & Currency</h2>
+    </div>
+    
+    <!-- Security Section -->
+    <div id="security" class="profile-section" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <h2>🔒 Security Options</h2>
+            </div>
+            <div class="card-body">
+                <div class="security-status">
+                    <div class="status-item {% if user.pgp_public_key %}active{% endif %}">
+                        <span class="status-icon">{% if user.pgp_public_key %}✓{% else %}✗{% endif %}</span>
+                        <span class="status-text">PGP Key</span>
+                    </div>
+                    
+                    <div class="status-item {% if user.pgp_login_enabled %}active{% endif %}">
+                        <span class="status-icon">{% if user.pgp_login_enabled %}✓{% else %}✗{% endif %}</span>
+                        <span class="status-text">2FA Login</span>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="info-row">
-                        <label>BTC Balance:</label>
-                        <span class="value">{{ btc_balance|floatformat:8 }} BTC</span>
+                
+                {% if user.pgp_fingerprint %}
+                <div class="pgp-info">
+                    <strong>PGP Fingerprint:</strong><br>
+                    <code>{{ user.pgp_fingerprint }}</code>
+                </div>
+                {% endif %}
+                
+                <div class="action-buttons">
+                    <a href="{% url 'accounts:pgp_settings' %}" class="btn btn-primary">
+                        Configure PGP
+                    </a>
+                    <a href="{% url 'accounts:login_history' %}" class="btn btn-secondary">
+                        Login History
+                    </a>
+                </div>
+                
+                <!-- Recent Logins -->
+                <div class="recent-logins">
+                    <h3>Recent Logins</h3>
+                    {% for login in login_history %}
+                    <div class="login-entry">
+                        <div class="login-time">{{ login.login_time|date:"M d, H:i" }}</div>
+                        <div class="login-device">{{ login.user_agent|truncatechars:30 }}</div>
                     </div>
-                    
-                    <div class="info-row">
-                        <label>XMR Balance:</label>
-                        <span class="value">{{ xmr_balance|floatformat:8 }} XMR</span>
-                    </div>
-                    
-                    <div class="info-row">
-                        <label>Default Currency:</label>
-                        <span class="value">{{ user.get_default_currency_display }}</span>
-                    </div>
-                    
-                    <div class="info-row">
-                        <label>Default Shipping Country:</label>
-                        <span class="value">{{ user.default_shipping_country|default:"Not set" }}</span>
-                    </div>
-                    
-                    <div class="button-group">
-                        <a href="{% url 'wallets:deposit' %}" class="btn btn-primary">Manage Wallet</a>
-                    </div>
+                    {% empty %}
+                    <p class="text-muted">No login history available</p>
+                    {% endfor %}
                 </div>
             </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h2>⚖️ Trust and Reputation</h2>
+        </div>
+    </div>
+    
+    <!-- Wallet Section -->
+    <div id="wallet" class="profile-section" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <h2>💰 Wallet Balance</h2>
+            </div>
+            <div class="card-body">
+                <div class="balance-grid">
+                    <div class="balance-item">
+                        <span class="currency-icon">₿</span>
+                        <span class="balance-amount">{{ btc_balance|floatformat:8 }}</span>
+                        <span class="currency-name">Bitcoin</span>
+                    </div>
+                    
+                    <div class="balance-item">
+                        <span class="currency-icon">ɱ</span>
+                        <span class="balance-amount">{{ xmr_balance|floatformat:8 }}</span>
+                        <span class="currency-name">Monero</span>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="trust-badge">
-                        <span class="trust-level trust-{{ trust_level|lower }}">{{ trust_level }}</span>
-                    </div>
-                    
-                    <div class="info-row">
-                        <label>Feedback Score:</label>
-                        <span class="value">{{ user.feedback_score|floatformat:1 }}/5.0</span>
-                    </div>
-                    
-                    <div class="info-row">
-                        <label>Total Trades:</label>
-                        <span class="value">{{ user.total_trades }}</span>
-                    </div>
-                    
-                    <div class="info-row">
-                        <label>Positive Feedback:</label>
-                        <span class="value">
-                            {% if user.total_trades > 0 %}
-                                {{ user.positive_feedback_count }}/{{ user.total_trades }}
-                                ({{ feedback_percentage|floatformat:1 }}%)
-                            {% else %}
-                                No trades yet
-                            {% endif %}
-                        </span>
-                    </div>
+                
+                <div class="action-buttons">
+                    <a href="{% url 'wallets:deposit' %}" class="btn btn-primary">
+                        Deposit
+                    </a>
+                    <a href="{% url 'wallets:withdraw' %}" class="btn btn-secondary">
+                        Withdraw
+                    </a>
                 </div>
             </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h2>🧾 Order Overview</h2>
-                </div>
-                <div class="card-body">
-                    <div class="stat-grid">
-                        <div class="stat-item">
-                            <span class="stat-value">{{ current_orders }}</span>
-                            <span class="stat-label">Current Orders</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-value">{{ total_orders }}</span>
-                            <span class="stat-label">Total Orders</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-value">{{ active_disputes }}</span>
-                            <span class="stat-label">Active Disputes</span>
-                        </div>
+        </div>
+    </div>
+    
+    <!-- Stats Section -->
+    <div id="stats" class="profile-section" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <h2>⚖️ Trust & Reputation</h2>
+            </div>
+            <div class="card-body">
+                <div class="trust-display">
+                    <div class="trust-level {{ trust_level|lower }}">
+                        {{ trust_level }}
                     </div>
                     
-                    <div class="button-group">
-                        <a href="{% url 'orders:list' %}" class="btn btn-primary">Order History</a>
-                        <a href="{% url 'disputes:list' %}" class="btn btn-secondary">View Disputes</a>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value">{{ user.feedback_score|floatformat:1 }}</span>
+                            <span class="stat-label">Rating</span>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <span class="stat-value">{{ user.total_trades }}</span>
+                            <span class="stat-label">Trades</span>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <span class="stat-value">
+                                {% if user.total_trades > 0 %}
+                                    {{ user.positive_feedback_count|percentage:user.total_trades }}%
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </span>
+                            <span class="stat-label">Positive</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="order-stats">
+                    <h3>Order Overview</h3>
+                    <div class="order-summary">
+                        <a href="{% url 'orders:list' %}" class="order-link">
+                            <span class="order-count">{{ current_orders }}</span>
+                            <span class="order-label">Active Orders</span>
+                        </a>
+                        
+                        <a href="{% url 'disputes:list' %}" class="order-link">
+                            <span class="order-count">{{ active_disputes }}</span>
+                            <span class="order-label">Disputes</span>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
+    <!-- Danger Zone -->
     <div class="danger-zone">
-        <h2>🚨 Account Actions</h2>
-        <div class="danger-actions">
-            <a href="{% url 'accounts:delete_account' %}" class="btn btn-danger">Delete Account</a>
-            <small class="text-muted">Permanently delete your account and all associated data</small>
-        </div>
+        <h3>🚨 Danger Zone</h3>
+        <p class="text-muted">Irreversible account actions</p>
+        <a href="{% url 'accounts:delete_account' %}" class="btn btn-danger">
+            Delete Account
+        </a>
     </div>
 </div>
 
 <style>
-    .profile-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 30px;
-        margin-bottom: 40px;
-    }
-    
-    .card {
+    /* Mobile Profile Navigation */
+    .profile-nav {
+        display: flex;
         background: #1a1a1a;
         border-radius: 8px;
+        padding: 4px;
         margin-bottom: 20px;
-        border: 1px solid #333;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     
-    .card-header {
+    .nav-tab {
+        flex: 1;
+        padding: 10px 15px;
+        text-align: center;
+        color: #888;
+        text-decoration: none;
+        border-radius: 6px;
+        white-space: nowrap;
+        transition: all 0.2s;
+    }
+    
+    .nav-tab.active {
         background: #2a2a2a;
-        padding: 20px;
-        border-bottom: 1px solid #333;
-        border-radius: 8px 8px 0 0;
+        color: #4CAF50;
     }
     
-    .card-header h2 {
-        margin: 0;
-        font-size: 18px;
+    /* Info List */
+    .info-list {
+        margin-bottom: 20px;
     }
     
-    .card-body {
-        padding: 20px;
-    }
-    
-    .info-row {
-        margin-bottom: 15px;
+    .info-item {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #333;
     }
     
-    .info-row label {
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
         color: #888;
-        font-weight: bold;
+        font-size: 14px;
     }
     
-    .info-row .value {
+    .info-value {
         color: #fff;
-    }
-    
-    .info-row small {
-        display: block;
-        color: #666;
-        font-size: 12px;
-    }
-    
-    .button-group {
-        margin-top: 20px;
-        display: flex;
-        gap: 10px;
+        font-weight: 500;
+        text-align: right;
     }
     
     .badge {
-        padding: 4px 8px;
-        border-radius: 4px;
+        padding: 4px 12px;
+        border-radius: 12px;
         font-size: 12px;
         font-weight: bold;
     }
@@ -278,50 +284,142 @@
         color: white;
     }
     
-    .trust-badge {
+    /* Security Status */
+    .security-status {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .status-item {
+        flex: 1;
+        background: #2a2a2a;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        border: 2px solid #333;
+    }
+    
+    .status-item.active {
+        border-color: #4CAF50;
+    }
+    
+    .status-icon {
+        display: block;
+        font-size: 24px;
+        margin-bottom: 5px;
+    }
+    
+    .status-item.active .status-icon {
+        color: #4CAF50;
+    }
+    
+    .status-text {
+        font-size: 14px;
+        color: #ccc;
+    }
+    
+    /* PGP Info */
+    .pgp-info {
+        background: #2a2a2a;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        word-break: break-all;
+    }
+    
+    .pgp-info code {
+        color: #4CAF50;
+        font-size: 12px;
+    }
+    
+    /* Recent Logins */
+    .recent-logins {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #333;
+    }
+    
+    .recent-logins h3 {
+        margin-bottom: 15px;
+        font-size: 16px;
+    }
+    
+    .login-entry {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        font-size: 14px;
+    }
+    
+    .login-time {
+        color: #fff;
+    }
+    
+    .login-device {
+        color: #888;
+        text-align: right;
+    }
+    
+    /* Balance Display */
+    .balance-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .balance-item {
+        background: #2a2a2a;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .currency-icon {
+        display: block;
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
+    
+    .balance-amount {
+        display: block;
+        font-size: 18px;
+        font-weight: bold;
+        color: #4CAF50;
+        margin-bottom: 5px;
+    }
+    
+    .currency-name {
+        display: block;
+        font-size: 12px;
+        color: #888;
+    }
+    
+    /* Trust Display */
+    .trust-display {
         text-align: center;
         margin-bottom: 20px;
     }
     
     .trust-level {
         display: inline-block;
-        padding: 10px 20px;
+        padding: 10px 30px;
         border-radius: 20px;
         font-weight: bold;
         font-size: 18px;
+        margin-bottom: 20px;
     }
     
-    .trust-new {
-        background: #666;
-        color: white;
-    }
+    .trust-level.new { background: #666; }
+    .trust-level.beginner { background: #795548; }
+    .trust-level.regular { background: #2196F3; }
+    .trust-level.established { background: #4CAF50; }
+    .trust-level.trusted { background: #FF9800; }
+    .trust-level.legendary { background: #9C27B0; }
     
-    .trust-beginner {
-        background: #795548;
-        color: white;
-    }
-    
-    .trust-regular {
-        background: #2196F3;
-        color: white;
-    }
-    
-    .trust-established {
-        background: #4CAF50;
-        color: white;
-    }
-    
-    .trust-trusted {
-        background: #FF9800;
-        color: white;
-    }
-    
-    .trust-legendary {
-        background: #9C27B0;
-        color: white;
-    }
-    
-    .stat-grid {
+    /* Stats Grid */
+    .stats-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 15px;
@@ -330,9 +428,6 @@
     
     .stat-item {
         text-align: center;
-        padding: 15px;
-        background: #2a2a2a;
-        border-radius: 5px;
     }
     
     .stat-value {
@@ -349,54 +444,133 @@
         margin-top: 5px;
     }
     
-    .login-history-preview {
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 1px solid #333;
+    /* Order Stats */
+    .order-summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
     }
     
-    .login-history-preview h4 {
-        margin-bottom: 10px;
-        color: #ccc;
+    .order-link {
+        background: #2a2a2a;
+        padding: 15px;
+        border-radius: 8px;
+        text-decoration: none;
+        text-align: center;
+        display: block;
     }
     
-    .mini-table {
-        width: 100%;
+    .order-count {
+        display: block;
+        font-size: 24px;
+        font-weight: bold;
+        color: #4CAF50;
+    }
+    
+    .order-label {
+        display: block;
         font-size: 12px;
+        color: #888;
+        margin-top: 5px;
     }
     
-    .mini-table td {
-        padding: 5px;
-        border-bottom: 1px solid #333;
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
     }
     
+    .action-buttons .btn {
+        flex: 1;
+        margin: 0;
+    }
+    
+    /* Danger Zone */
     .danger-zone {
         background: #1a1a1a;
         border: 2px solid #f44336;
         border-radius: 8px;
-        padding: 30px;
-        margin-top: 40px;
+        padding: 20px;
+        margin-top: 30px;
+        text-align: center;
     }
     
-    .danger-zone h2 {
+    .danger-zone h3 {
         color: #f44336;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
     }
     
-    .btn-danger {
-        background: #f44336;
-        color: white;
-        border: none;
+    /* Tablet and Desktop */
+    @media (min-width: 768px) {
+        .profile-nav {
+            display: none;
+        }
+        
+        .profile-section {
+            display: block !important;
+        }
+        
+        .balance-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .order-summary {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .action-buttons {
+            flex-direction: row;
+        }
     }
     
-    .btn-danger:hover {
-        background: #d32f2f;
-    }
-    
-    @media (max-width: 768px) {
-        .profile-grid {
+    @media (max-width: 767px) {
+        .security-status {
+            flex-direction: column;
+        }
+        
+        .balance-grid {
             grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .order-summary {
+            grid-template-columns: 1fr;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
         }
     }
 </style>
+
+<script>
+    function showSection(sectionId) {
+        document.querySelectorAll('.profile-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        document.getElementById(sectionId).style.display = 'block';
+        document.querySelector(`[href="#${sectionId}"]`).classList.add('active');
+    }
+    
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            const sectionId = tab.getAttribute('href').substring(1);
+            showSection(sectionId);
+        });
+    });
+</script>
 {% endblock %}

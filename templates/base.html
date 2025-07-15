@@ -5,75 +5,414 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Secure Marketplace{% endblock %}</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #1a1a1a;
-            color: #ffffff;
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            line-height: 1.6;
+            -webkit-text-size-adjust: 100%;
         }
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
         }
+        
+        /* Mobile Header */
         .header {
-            background-color: #2d2d2d;
-            padding: 1rem;
-            margin-bottom: 2rem;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
-        .nav {
+        
+        .header-content {
             display: flex;
-            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
         }
-        .nav a {
-            color: #ffffff;
+        
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4CAF50;
             text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
         }
-        .nav a:hover {
-            background-color: #404040;
-        }
-        .btn {
-            background-color: #007bff;
-            color: white;
-            padding: 0.5rem 1rem;
-            text-decoration: none;
-            border-radius: 4px;
+        
+        /* Mobile Navigation */
+        .mobile-nav-toggle {
+            display: block;
+            background: none;
             border: none;
+            color: #e0e0e0;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        .mobile-nav {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 280px;
+            height: 100vh;
+            background: #1a1a1a;
+            border-right: 1px solid #333;
+            transition: left 0.3s ease;
+            z-index: 2000;
+            overflow-y: auto;
+        }
+        
+        .mobile-nav.active {
+            left: 0;
+        }
+        
+        .mobile-nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .mobile-nav-close {
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            font-size: 24px;
             cursor: pointer;
         }
-        .btn:hover {
-            background-color: #0056b3;
+        
+        .mobile-nav-menu {
+            padding: 20px 0;
         }
-        .card {
-            background-color: #2d2d2d;
-            padding: 1rem;
-            margin: 1rem 0;
+        
+        .mobile-nav-menu a {
+            display: block;
+            padding: 15px 20px;
+            color: #e0e0e0;
+            text-decoration: none;
+            border-bottom: 1px solid #2a2a2a;
+            transition: background 0.2s;
+        }
+        
+        .mobile-nav-menu a:active {
+            background: #2a2a2a;
+        }
+        
+        .mobile-nav-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1500;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-nav-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Desktop Navigation */
+        .desktop-nav {
+            display: none;
+        }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+            display: flex;
+            z-index: 1000;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .bottom-nav a {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 4px;
+            color: #888;
+            text-decoration: none;
+            font-size: 12px;
+            transition: color 0.2s;
+        }
+        
+        .bottom-nav a:active {
+            color: #4CAF50;
+        }
+        
+        .bottom-nav-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding-bottom: 80px;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            text-decoration: none;
             border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            text-align: center;
+            min-height: 48px;
+            min-width: 48px;
+            transition: all 0.2s;
+            -webkit-user-select: none;
+            user-select: none;
         }
+        
+        .btn:active {
+            opacity: 0.8;
+            transform: scale(0.98);
+        }
+        
+        .btn-primary {
+            background: #4CAF50;
+        }
+        
+        .btn-secondary {
+            background: #666;
+        }
+        
+        .btn-danger {
+            background: #f44336;
+        }
+        
+        /* Cards */
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        
+        .card-header {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .card-header h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #4CAF50;
+        }
+        
+        .card-body {
+            padding: 0;
+        }
+        
+        /* Forms */
         .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 20px;
         }
+        
         .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 8px;
+            color: #ccc;
+            font-weight: 500;
         }
-        .form-group input, .form-group textarea {
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
             width: 100%;
-            padding: 0.5rem;
-            background-color: #404040;
-            color: white;
-            border: 1px solid #555;
-            border-radius: 4px;
+            padding: 12px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 6px;
+            font-size: 16px;
+            min-height: 48px;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        /* Messages */
+        .messages {
+            margin: 15px 0;
+        }
+        
+        .message {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .message.success {
+            background: #1b5e20;
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+        
+        .message.error {
+            background: #b71c1c;
+            color: #f44336;
+            border: 1px solid #f44336;
+        }
+        
+        /* Utility Classes */
+        .text-center { text-align: center; }
+        .text-success { color: #4CAF50; }
+        .text-danger { color: #f44336; }
+        .text-muted { color: #888; }
+        .mb-1 { margin-bottom: 10px; }
+        .mb-2 { margin-bottom: 20px; }
+        .mt-1 { margin-top: 10px; }
+        .mt-2 { margin-top: 20px; }
+        
+        /* Honeypot */
+        .honeypot {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+        }
+        
+        /* Touch Interactions */
+        @media (hover: none) and (pointer: coarse) {
+            .btn:hover,
+            a:hover {
+                background: inherit;
+                color: inherit;
+            }
+            
+            .btn,
+            input[type="submit"],
+            input[type="button"],
+            button {
+                min-height: 48px;
+                min-width: 48px;
+            }
+            
+            .mobile-menu,
+            .container {
+                -webkit-overflow-scrolling: touch;
+                scroll-behavior: smooth;
+            }
+            
+            .btn,
+            button {
+                -webkit-user-select: none;
+                user-select: none;
+            }
+            
+            .btn:active,
+            button:active,
+            a:active {
+                opacity: 0.8;
+                transform: scale(0.98);
+            }
+        }
+        
+        /* Prevent zoom on input focus (iOS) */
+        @media screen and (max-width: 768px) {
+            input[type="text"],
+            input[type="password"],
+            input[type="email"],
+            input[type="number"],
+            textarea,
+            select {
+                font-size: 16px !important;
+            }
+        }
+        
+        /* Tablet and Desktop */
+        @media (min-width: 768px) {
+            .container {
+                padding: 30px;
+            }
+            
+            .mobile-nav-toggle {
+                display: none !important;
+            }
+            
+            .desktop-nav {
+                display: flex;
+                gap: 20px;
+            }
+            
+            .desktop-nav a {
+                color: #e0e0e0;
+                text-decoration: none;
+                padding: 10px 15px;
+                border-radius: 6px;
+                transition: background 0.2s;
+            }
+            
+            .desktop-nav a:hover {
+                background: #2a2a2a;
+            }
+            
+            .bottom-nav {
+                display: none;
+            }
+            
+            .main-content {
+                padding-bottom: 0;
+            }
+        }
+        
+        /* Safe area insets for notched devices */
+        @supports (padding: max(0px)) {
+            .header {
+                padding-top: max(0px, env(safe-area-inset-top));
+            }
+            
+            .bottom-nav {
+                padding-bottom: max(8px, env(safe-area-inset-bottom));
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="container">
-            <nav class="nav">
+        <div class="header-content">
+            <a href="{% url 'accounts:home' %}" class="logo">🛒 Marketplace</a>
+            
+            <!-- Mobile Navigation Toggle -->
+            <button class="mobile-nav-toggle" onclick="toggleMobileNav()">☰</button>
+            
+            <!-- Desktop Navigation -->
+            <nav class="desktop-nav">
                 <a href="{% url 'accounts:home' %}">Home</a>
                 <a href="{% url 'products:list' %}">Products</a>
                 {% if user.is_authenticated %}
@@ -91,17 +430,91 @@
         </div>
     </div>
 
-    <div class="container">
-        {% if messages and request.resolver_match.url_name != 'list' %}
-            {% for message in messages %}
-                <div class="card" style="background-color: {% if message.tags == 'error' %}#dc3545{% else %}#28a745{% endif %};">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
+    <!-- Mobile Navigation Menu -->
+    <nav class="mobile-nav" id="mobileNav">
+        <div class="mobile-nav-header">
+            <span class="logo">🛒 Marketplace</span>
+            <button class="mobile-nav-close" onclick="toggleMobileNav()">✕</button>
+        </div>
+        <div class="mobile-nav-menu">
+            <a href="{% url 'accounts:home' %}">🏠 Home</a>
+            <a href="{% url 'products:list' %}">🎁 Products</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'orders:cart' %}">🛒 Cart</a>
+                <a href="{% url 'orders:list' %}">📦 Orders</a>
+                <a href="{% url 'wallets:list' %}">💰 Wallets</a>
+                <a href="{% url 'messaging:list' %}">💬 Messages</a>
+                <a href="{% url 'accounts:profile' %}">👤 Profile</a>
+                <a href="{% url 'accounts:logout' %}">🚪 Logout</a>
+            {% else %}
+                <a href="{% url 'accounts:login' %}">🔑 Login</a>
+                <a href="{% url 'accounts:register' %}">📝 Register</a>
+            {% endif %}
+        </div>
+    </nav>
 
-        {% block content %}
-        {% endblock %}
+    <!-- Mobile Navigation Overlay -->
+    <div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="toggleMobileNav()"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            {% if messages and request.resolver_match.url_name != 'list' %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message {% if message.tags == 'error' %}error{% else %}success{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% block content %}
+            {% endblock %}
+        </div>
     </div>
+
+    <!-- Bottom Navigation (Mobile Only) -->
+    {% if user.is_authenticated %}
+    <nav class="bottom-nav">
+        <a href="{% url 'accounts:home' %}">
+            <div class="bottom-nav-icon">🏠</div>
+            <div>Home</div>
+        </a>
+        <a href="{% url 'products:list' %}">
+            <div class="bottom-nav-icon">🎁</div>
+            <div>Products</div>
+        </a>
+        <a href="{% url 'orders:cart' %}">
+            <div class="bottom-nav-icon">🛒</div>
+            <div>Cart</div>
+        </a>
+        <a href="{% url 'wallets:list' %}">
+            <div class="bottom-nav-icon">💰</div>
+            <div>Wallet</div>
+        </a>
+        <a href="{% url 'messaging:list' %}">
+            <div class="bottom-nav-icon">💬</div>
+            <div>Messages</div>
+        </a>
+    </nav>
+    {% endif %}
+
+    <script>
+        function toggleMobileNav() {
+            const nav = document.getElementById('mobileNav');
+            const overlay = document.getElementById('mobileNavOverlay');
+            
+            nav.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+        
+        // Close mobile nav when clicking on a link
+        document.querySelectorAll('.mobile-nav-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                toggleMobileNav();
+            });
+        });
+    </script>
 </body>
 </html>

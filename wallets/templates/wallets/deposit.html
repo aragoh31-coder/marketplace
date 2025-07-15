@@ -104,6 +104,38 @@
 </div>
 
 <script>
+    function copyToClipboard(elementId) {
+        var text = document.getElementById(elementId).textContent;
+        var textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('Address copied to clipboard');
+    }
+    
+    function showCurrency(currency) {
+        document.querySelectorAll('.currency-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        
+        document.querySelectorAll('.tab-link').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        document.getElementById(currency).style.display = 'block';
+        document.querySelector(`[href="#${currency}"]`).classList.add('active');
+    }
+    
+    document.querySelectorAll('.tab-link').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            const currency = tab.getAttribute('href').substring(1);
+            showCurrency(currency);
+        });
+    });
+</script>
 function copyToClipboard(elementId) {
     var text = document.getElementById(elementId).textContent;
     var textarea = document.createElement('textarea');
