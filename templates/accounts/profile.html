@@ -1,20 +1,402 @@
-{% extends 'base.html' %}
-
+{% extends "base.html" %}
 {% block title %}Profile - Secure Marketplace{% endblock %}
-
 {% block content %}
-<div class="card">
-    <h2>User Profile</h2>
-    <p><strong>Username:</strong> {{ user.username }}</p>
-    <p><strong>Email:</strong> {{ user.email }}</p>
-    <p><strong>Member since:</strong> {{ user.date_joined|date:"F d, Y" }}</p>
-    <p><strong>Last login:</strong> {{ user.last_login|date:"F d, Y H:i" }}</p>
+<div class="container">
+    <h1>👤 User Profile</h1>
     
-    {% if user.is_vendor %}
-        <p><strong>Vendor Status:</strong> Active</p>
-        <a href="{% url 'vendors:dashboard' %}" class="btn">Vendor Dashboard</a>
-    {% else %}
-        <a href="{% url 'vendors:apply' %}" class="btn">Apply to become a vendor</a>
-    {% endif %}
+    <div class="profile-grid">
+        <div class="profile-left">
+            <div class="card">
+                <div class="card-header">
+                    <h2>⚙️ Account Settings</h2>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <label>Username:</label>
+                        <span class="value">{{ user.username }}</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <label>Account Type:</label>
+                        <span class="value">
+                            {% if user.is_vendor %}
+                                <span class="badge vendor">Vendor</span>
+                            {% else %}
+                                <span class="badge buyer">Buyer</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <label>Member Since:</label>
+                        <span class="value">{{ user.account_created|date:"F d, Y" }}</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <label>Last Activity:</label>
+                        <span class="value">{{ user.last_activity|timesince }} ago</span>
+                    </div>
+                    
+                    <div class="button-group">
+                        <a href="{% url 'accounts:profile_settings' %}" class="btn btn-primary">Edit Settings</a>
+                        <a href="{% url 'accounts:change_password' %}" class="btn btn-secondary">Change Password</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2>🔐 Security Options</h2>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <label>PGP Public Key:</label>
+                        <span class="value">
+                            {% if user.pgp_public_key %}
+                                <span style="color: #4CAF50;">✓ Configured</span>
+                                <small>Fingerprint: {{ user.pgp_fingerprint|default:"Not available" }}</small>
+                            {% else %}
+                                <span style="color: #f44336;">✗ Not configured</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <label>PGP 2FA Login:</label>
+                        <span class="value">
+                            {% if user.pgp_login_enabled %}
+                                <span style="color: #4CAF50;">✓ Enabled</span>
+                            {% else %}
+                                <span style="color: #f44336;">✗ Disabled</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <label>Failed Login Attempts:</label>
+                        <span class="value">{{ user.failed_login_attempts }}</span>
+                    </div>
+                    
+                    <div class="button-group">
+                        <a href="{% url 'accounts:pgp_settings' %}" class="btn btn-primary">PGP Settings</a>
+                        <a href="{% url 'accounts:login_history' %}" class="btn btn-secondary">Login History</a>
+                    </div>
+                    
+                    <div class="login-history-preview">
+                        <h4>Recent Logins</h4>
+                        <table class="mini-table">
+                            {% for login in login_history %}
+                            <tr>
+                                <td>{{ login.login_time|date:"M d, H:i" }}</td>
+                                <td>{{ login.user_agent|truncatechars:30 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="2">No login history</td></tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="profile-right">
+            <div class="card">
+                <div class="card-header">
+                    <h2>💰 Wallet & Currency</h2>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <label>BTC Balance:</label>
+                        <span class="value">{{ btc_balance|floatformat:8 }} BTC</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <label>XMR Balance:</label>
+                        <span class="value">{{ xmr_balance|floatformat:8 }} XMR</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <label>Default Currency:</label>
+                        <span class="value">{{ user.get_default_currency_display }}</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <label>Default Shipping Country:</label>
+                        <span class="value">{{ user.default_shipping_country|default:"Not set" }}</span>
+                    </div>
+                    
+                    <div class="button-group">
+                        <a href="{% url 'wallets:deposit' %}" class="btn btn-primary">Manage Wallet</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2>⚖️ Trust and Reputation</h2>
+                </div>
+                <div class="card-body">
+                    <div class="trust-badge">
+                        <span class="trust-level trust-{{ trust_level|lower }}">{{ trust_level }}</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <label>Feedback Score:</label>
+                        <span class="value">{{ user.feedback_score|floatformat:1 }}/5.0</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <label>Total Trades:</label>
+                        <span class="value">{{ user.total_trades }}</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <label>Positive Feedback:</label>
+                        <span class="value">
+                            {% if user.total_trades > 0 %}
+                                {{ user.positive_feedback_count }}/{{ user.total_trades }}
+                                ({{ feedback_percentage|floatformat:1 }}%)
+                            {% else %}
+                                No trades yet
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2>🧾 Order Overview</h2>
+                </div>
+                <div class="card-body">
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <span class="stat-value">{{ current_orders }}</span>
+                            <span class="stat-label">Current Orders</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">{{ total_orders }}</span>
+                            <span class="stat-label">Total Orders</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">{{ active_disputes }}</span>
+                            <span class="stat-label">Active Disputes</span>
+                        </div>
+                    </div>
+                    
+                    <div class="button-group">
+                        <a href="{% url 'orders:list' %}" class="btn btn-primary">Order History</a>
+                        <a href="{% url 'disputes:list' %}" class="btn btn-secondary">View Disputes</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="danger-zone">
+        <h2>🚨 Account Actions</h2>
+        <div class="danger-actions">
+            <a href="{% url 'accounts:delete_account' %}" class="btn btn-danger">Delete Account</a>
+            <small class="text-muted">Permanently delete your account and all associated data</small>
+        </div>
+    </div>
 </div>
+
+<style>
+    .profile-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+    
+    .card {
+        background: #1a1a1a;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid #333;
+    }
+    
+    .card-header {
+        background: #2a2a2a;
+        padding: 20px;
+        border-bottom: 1px solid #333;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .card-header h2 {
+        margin: 0;
+        font-size: 18px;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .info-row {
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .info-row label {
+        color: #888;
+        font-weight: bold;
+    }
+    
+    .info-row .value {
+        color: #fff;
+    }
+    
+    .info-row small {
+        display: block;
+        color: #666;
+        font-size: 12px;
+    }
+    
+    .button-group {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .badge.vendor {
+        background: #4CAF50;
+        color: white;
+    }
+    
+    .badge.buyer {
+        background: #2196F3;
+        color: white;
+    }
+    
+    .trust-badge {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    
+    .trust-level {
+        display: inline-block;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 18px;
+    }
+    
+    .trust-new {
+        background: #666;
+        color: white;
+    }
+    
+    .trust-beginner {
+        background: #795548;
+        color: white;
+    }
+    
+    .trust-regular {
+        background: #2196F3;
+        color: white;
+    }
+    
+    .trust-established {
+        background: #4CAF50;
+        color: white;
+    }
+    
+    .trust-trusted {
+        background: #FF9800;
+        color: white;
+    }
+    
+    .trust-legendary {
+        background: #9C27B0;
+        color: white;
+    }
+    
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 15px;
+        background: #2a2a2a;
+        border-radius: 5px;
+    }
+    
+    .stat-value {
+        display: block;
+        font-size: 24px;
+        font-weight: bold;
+        color: #4CAF50;
+    }
+    
+    .stat-label {
+        display: block;
+        font-size: 12px;
+        color: #888;
+        margin-top: 5px;
+    }
+    
+    .login-history-preview {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #333;
+    }
+    
+    .login-history-preview h4 {
+        margin-bottom: 10px;
+        color: #ccc;
+    }
+    
+    .mini-table {
+        width: 100%;
+        font-size: 12px;
+    }
+    
+    .mini-table td {
+        padding: 5px;
+        border-bottom: 1px solid #333;
+    }
+    
+    .danger-zone {
+        background: #1a1a1a;
+        border: 2px solid #f44336;
+        border-radius: 8px;
+        padding: 30px;
+        margin-top: 40px;
+    }
+    
+    .danger-zone h2 {
+        color: #f44336;
+        margin-bottom: 20px;
+    }
+    
+    .btn-danger {
+        background: #f44336;
+        color: white;
+        border: none;
+    }
+    
+    .btn-danger:hover {
+        background: #d32f2f;
+    }
+    
+    @media (max-width: 768px) {
+        .profile-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 {% endblock %}

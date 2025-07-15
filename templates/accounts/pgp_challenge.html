@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}PGP Challenge - Secure Marketplace{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="challenge-container">
+        <h1>🔐 PGP Authentication Challenge</h1>
+        
+        <div class="user-info">
+            <p>Welcome back, <strong>{{ user.username }}</strong></p>
+            <p>PGP 2FA is enabled for your account. Please decrypt the challenge below with your private key.</p>
+        </div>
+        
+        <div class="challenge-box">
+            <h3>Challenge to Decrypt:</h3>
+            <div class="challenge-text">
+                <pre>-----BEGIN PGP MESSAGE-----
+
+{{ challenge }}
+
+-----END PGP MESSAGE-----</pre>
+            </div>
+            <small class="text-muted">
+                Decrypt this message with your PGP private key and enter the result below.
+            </small>
+        </div>
+        
+        <form method="post" class="challenge-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="decrypted_challenge">Decrypted Challenge:</label>
+                <input type="text" id="decrypted_challenge" name="decrypted_challenge" 
+                       class="form-control" placeholder="Enter decrypted challenge" required>
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">Verify & Login</button>
+                <a href="{% url 'accounts:login' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+        
+        <div class="help-text">
+            <h4>How to decrypt:</h4>
+            <ol>
+                <li>Copy the PGP message above</li>
+                <li>Use your PGP client (GPG, Kleopatra, etc.) to decrypt it</li>
+                <li>Enter the decrypted text in the field above</li>
+                <li>Click "Verify & Login" to complete authentication</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<style>
+    .challenge-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #1a1a1a;
+        padding: 30px;
+        border-radius: 8px;
+        border: 1px solid #333;
+    }
+    
+    .user-info {
+        background: #2a2a2a;
+        padding: 20px;
+        border-radius: 5px;
+        margin-bottom: 30px;
+        border: 1px solid #444;
+    }
+    
+    .challenge-box {
+        background: #0a0a0a;
+        padding: 20px;
+        border-radius: 5px;
+        margin-bottom: 30px;
+        border: 2px solid #4CAF50;
+    }
+    
+    .challenge-box h3 {
+        color: #4CAF50;
+        margin-bottom: 15px;
+    }
+    
+    .challenge-text {
+        background: #000;
+        padding: 15px;
+        border-radius: 3px;
+        margin-bottom: 10px;
+    }
+    
+    .challenge-text pre {
+        color: #4CAF50;
+        font-family: monospace;
+        font-size: 12px;
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    
+    .challenge-form {
+        margin-bottom: 30px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #ccc;
+        font-weight: bold;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        background: #2a2a2a;
+        border: 1px solid #444;
+        color: #fff;
+        border-radius: 5px;
+    }
+    
+    .form-control:focus {
+        border-color: #4CAF50;
+        outline: none;
+    }
+    
+    .button-group {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+    
+    .help-text {
+        background: #2a2a2a;
+        padding: 20px;
+        border-radius: 5px;
+        border: 1px solid #444;
+    }
+    
+    .help-text h4 {
+        color: #4CAF50;
+        margin-bottom: 15px;
+    }
+    
+    .help-text ol {
+        color: #ccc;
+        padding-left: 20px;
+    }
+    
+    .help-text li {
+        margin-bottom: 8px;
+    }
+    
+    .text-muted {
+        color: #888;
+        font-size: 12px;
+        display: block;
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
