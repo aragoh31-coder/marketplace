@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash, get_user_model
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db import transaction
 from django.utils import timezone
@@ -93,36 +94,20 @@ def register(request):
 
 def login_view(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        
-        user = authenticate(request, username=username, password=password)
-        if user:
-            if user.pgp_login_enabled and user.pgp_public_key:
-                request.session['pgp_challenge_user'] = str(user.id)
-                return redirect('accounts:pgp_challenge')
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
             
-            login(request, user)
-            user.last_activity = timezone.now()
-            user.failed_login_attempts = 0
-            user.save()
-            
-            LoginHistory.objects.create(
-                user=user,
-                ip_hash=hashlib.sha256(
-                    request.META.get('REMOTE_ADDR', '').encode()
-                ).hexdigest(),
-                user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
-                success=True
-            )
-            
-            log_event('user_login', {'user_id': str(user.id), 'username': username})
-            request.session.cycle_key()
-            return redirect('home')
-        else:
-            try:
-                user = User.objects.get(username=username)
-                user.failed_login_attempts += 1
+            user = authenticate(request, username=username, password=password)
+            if user:
+                if user.pgp_login_enabled and user.pgp_public_key:
+                    request.session['pgp_challenge_user'] = str(user.id)
+                    return redirect('accounts:pgp_challenge')
+                
+                login(request, user)
+                user.last_activity = timezone.now()
+                user.failed_login_attempts = 0
                 user.save()
                 
                 LoginHistory.objects.create(
@@ -131,14 +116,34 @@ def login_view(request):
                         request.META.get('REMOTE_ADDR', '').encode()
                     ).hexdigest(),
                     user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
-                    success=False
+                    success=True
                 )
-            except User.DoesNotExist:
-                pass
-            
-            messages.error(request, 'Invalid username or password')
+                
+                log_event('user_login', {'user_id': str(user.id), 'username': username})
+                request.session.cycle_key()
+                return redirect('home')
+            else:
+                try:
+                    user = User.objects.get(username=username)
+                    user.failed_login_attempts += 1
+                    user.save()
+                    
+                    LoginHistory.objects.create(
+                        user=user,
+                        ip_hash=hashlib.sha256(
+                            request.META.get('REMOTE_ADDR', '').encode()
+                        ).hexdigest(),
+                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
+                        success=False
+                    )
+                except User.DoesNotExist:
+                    pass
+                
+                messages.error(request, 'Invalid username or password')
+    else:
+        form = AuthenticationForm()
     
-    return render(request, 'accounts/login.html')
+    return render(request, 'accounts/login.html', {'form': form})
 
 
 def logout_view(request):
