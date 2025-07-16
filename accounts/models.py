@@ -25,10 +25,10 @@ class User(AbstractUser, PrivacyModel):
         choices=[
             ('BTC', 'Bitcoin'),
             ('XMR', 'Monero'),
-            ('LTC', 'Litecoin'),
-            ('USDT', 'Tether'),
+            ('USD', 'USD'),
+            ('EUR', 'Euro'),
         ],
-        default='XMR'
+        default='BTC'
     )
     default_shipping_country = models.CharField(max_length=100, blank=True, default='')
     
