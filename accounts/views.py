@@ -117,13 +117,7 @@ def login_view(request):
                         return render(request, 'accounts/login.html', {'form': form})
                     
                     challenge = user.generate_pgp_challenge()
-                    challenge_message = (
-                        f"Marketplace Login Challenge\n\n"
-                        f"Challenge Code: {challenge}\n\n"
-                        f"Username: {username}\n"
-                        f"Timestamp: {timezone.now().strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
-                        f"Sign this entire message with your PGP key to complete login."
-                    )
+                    challenge_message = f"MARKETPLACE-2FA:{challenge}"
                     
                     encrypt_result = pgp_service.encrypt_message(
                         challenge_message,
@@ -142,7 +136,8 @@ def login_view(request):
                     
                     return render(request, 'accounts/pgp_challenge.html', {
                         'encrypted_challenge': encrypt_result['encrypted_message'],
-                        'username': username
+                        'username': username,
+                        'challenge_format': 'MARKETPLACE-2FA:XXXXXXXXXXXXX'
                     })
                 
                 else:
@@ -380,10 +375,17 @@ def test_pgp_encryption(request):
 def pgp_challenge_view(request):
     logger = logging.getLogger(__name__)
     
+    logger.debug(f"DEBUG: pgp_challenge_view called with method: {request.method}")
+    logger.debug(f"DEBUG: Session keys: {list(request.session.keys())}")
+    
     user_id = request.session.get('pgp_2fa_user_id')
     timestamp = request.session.get('pgp_2fa_timestamp')
     
+    logger.debug(f"DEBUG: user_id from session: {user_id}")
+    logger.debug(f"DEBUG: timestamp from session: {timestamp}")
+    
     if not user_id or not timestamp:
+        logger.debug("DEBUG: Missing session data, redirecting to login")
         messages.error(request, 'No pending 2FA authentication')
         return redirect('accounts:login')
     
@@ -402,56 +404,57 @@ def pgp_challenge_view(request):
         return redirect('accounts:login')
     
     if request.method == 'POST':
-        signed_response = request.POST.get('signed_response', '').strip()
+        decrypted_response = request.POST.get('decrypted_response', '').strip()
         
-        if not signed_response:
-            messages.error(request, 'Please provide the signed challenge')
+        if not decrypted_response:
+            messages.error(request, 'Please provide the decrypted challenge')
             return render(request, 'accounts/pgp_challenge.html', {
-                'username': user.username
+                'username': user.username,
+                'challenge_format': 'MARKETPLACE-2FA:XXXXXXXXXXXXX'
             })
         
-        pgp_service = PGPService()
+        challenge_code = None
         
-        import_result = pgp_service.import_public_key(user.pgp_public_key)
-        if not import_result['success']:
-            messages.error(request, 'Failed to verify PGP key')
-            return redirect('accounts:login')
+        logger.debug(f"DEBUG: Received decrypted_response = {repr(decrypted_response)}")
+        logger.debug(f"DEBUG: Current user.pgp_challenge = {repr(user.pgp_challenge)}")
+        logger.debug(f"DEBUG: Challenge expires at = {user.pgp_challenge_expires}")
         
-        verify_result = pgp_service.extract_message_from_signature(signed_response)
-        
-        if verify_result['success']:
-            signed_content = verify_result['message']
-            
-            challenge_code = None
-            for line in signed_content.split('\n'):
-                if line.startswith('Challenge Code:'):
-                    challenge_code = line.replace('Challenge Code:', '').strip()
-                    break
-            
-            if challenge_code and user.verify_pgp_challenge(challenge_code):
-                login(request, user)
-                
-                del request.session['pgp_2fa_user_id']
-                del request.session['pgp_2fa_timestamp']
-                
-                LoginHistory.objects.create(
-                    user=user,
-                    ip_hash=hashlib.sha256(
-                        request.META.get('REMOTE_ADDR', '').encode()
-                    ).hexdigest(),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
-                    success=True
-                )
-                
-                messages.success(request, 'PGP authentication successful!')
-                return redirect('/')
-            else:
-                messages.error(request, 'Invalid challenge response')
+        if decrypted_response.startswith('MARKETPLACE-2FA:'):
+            challenge_code = decrypted_response.replace('MARKETPLACE-2FA:', '').strip()
+        elif len(decrypted_response) >= 32:  # Just the challenge code (allow longer)
+            challenge_code = decrypted_response.strip()
         else:
-            messages.error(request, f'PGP verification failed: {verify_result.get("error", "Unknown error")}')
+            if 'MARKETPLACE-2FA:' in decrypted_response:
+                parts = decrypted_response.split('MARKETPLACE-2FA:')
+                if len(parts) > 1:
+                    challenge_code = parts[1].strip()
+        
+        logger.debug(f"DEBUG: Extracted challenge_code = {repr(challenge_code)}")
+        
+        if challenge_code and user.verify_pgp_challenge(challenge_code):
+            login(request, user)
+            
+            del request.session['pgp_2fa_user_id']
+            del request.session['pgp_2fa_timestamp']
+            
+            LoginHistory.objects.create(
+                user=user,
+                ip_hash=hashlib.sha256(
+                    request.META.get('REMOTE_ADDR', '').encode()
+                ).hexdigest(),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
+                success=True
+            )
+            
+            messages.success(request, 'PGP authentication successful!')
+            return redirect('/')
+        else:
+            messages.error(request, 'Invalid challenge code. Please try again.')
+            logger.warning(f"Invalid PGP challenge attempt for user {user.username}")
         
         return render(request, 'accounts/pgp_challenge.html', {
-            'username': user.username
+            'username': user.username,
+            'challenge_format': 'MARKETPLACE-2FA:XXXXXXXXXXXXX'
         })
     
     return redirect('accounts:login')
