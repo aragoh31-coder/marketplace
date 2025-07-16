@@ -339,7 +339,7 @@ def delete_account(request):
 
 @login_required
 def login_history_view(request):
-    history = LoginHistory.objects.filter(user=request.user)[:20]
+    history = LoginHistory.objects.filter(user=request.user).order_by('-login_time')[:5]
     return render(request, 'accounts/login_history.html', {'history': history})
 
 

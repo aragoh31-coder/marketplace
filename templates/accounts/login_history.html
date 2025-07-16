@@ -6,7 +6,7 @@
         <h1>🔐 Login History</h1>
         
         <div class="info-box">
-            <p>Your recent login attempts. IP addresses are hashed for privacy protection.</p>
+            <p>Your last 5 login times.</p>
         </div>
         
         {% if history %}
@@ -16,8 +16,6 @@
                     <tr>
                         <th>Date & Time</th>
                         <th>Status</th>
-                        <th>User Agent</th>
-                        <th>IP Hash</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -31,8 +29,6 @@
                                 <span class="status failed">✗ Failed</span>
                             {% endif %}
                         </td>
-                        <td>{{ login.user_agent|truncatechars:50 }}</td>
-                        <td class="hash">{{ login.ip_hash|slice:":8" }}...</td>
                     </tr>
                     {% endfor %}
                 </tbody>
