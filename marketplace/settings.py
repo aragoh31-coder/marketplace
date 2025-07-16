@@ -164,3 +164,10 @@ LOGGING = {
 }
 
 GPG_BINARY = '/usr/bin/gpg'
+
+PGP_2FA_TIMEOUT = 15  # minutes
+SESSION_SAVE_EVERY_REQUEST = False  # Don't refresh on every request for better 2FA experience
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+CSRF_COOKIE_AGE = 3600  # 1 hour for CSRF tokens
+CSRF_USE_SESSIONS = True  # Store CSRF in session instead of cookie

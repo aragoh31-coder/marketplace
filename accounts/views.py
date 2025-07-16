@@ -131,14 +131,13 @@ def login_view(request):
                     
                     request.session['pgp_2fa_user_id'] = str(user.id)
                     request.session['pgp_2fa_timestamp'] = timezone.now().isoformat()
+                    request.session['pgp_2fa_encrypted_challenge'] = encrypt_result['encrypted_message']
+                    
+                    request.session.save()
                     
                     logger.info(f"Generated encrypted challenge for {username}")
                     
-                    return render(request, 'accounts/pgp_challenge.html', {
-                        'encrypted_challenge': encrypt_result['encrypted_message'],
-                        'username': username,
-                        'challenge_format': 'MARKETPLACE-2FA:XXXXXXXXXXXXX'
-                    })
+                    return redirect('accounts:pgp_challenge')
                 
                 else:
                     login(request, user)
@@ -373,6 +372,7 @@ def test_pgp_encryption(request):
 
 
 def pgp_challenge_view(request):
+    """Handle PGP 2FA challenge verification with enhanced session persistence"""
     logger = logging.getLogger(__name__)
     
     logger.debug(f"DEBUG: pgp_challenge_view called with method: {request.method}")
@@ -380,21 +380,24 @@ def pgp_challenge_view(request):
     
     user_id = request.session.get('pgp_2fa_user_id')
     timestamp = request.session.get('pgp_2fa_timestamp')
+    encrypted_challenge = request.session.get('pgp_2fa_encrypted_challenge')
     
     logger.debug(f"DEBUG: user_id from session: {user_id}")
     logger.debug(f"DEBUG: timestamp from session: {timestamp}")
+    logger.debug(f"DEBUG: encrypted_challenge present: {bool(encrypted_challenge)}")
     
-    if not user_id or not timestamp:
+    if not user_id or not timestamp or not encrypted_challenge:
         logger.debug("DEBUG: Missing session data, redirecting to login")
         messages.error(request, 'No pending 2FA authentication')
         return redirect('accounts:login')
     
     from dateutil import parser
     session_time = parser.parse(timestamp)
-    if timezone.now() - session_time > timedelta(minutes=5):
+    if timezone.now() - session_time > timedelta(minutes=15):
         messages.error(request, '2FA session expired. Please login again.')
-        del request.session['pgp_2fa_user_id']
-        del request.session['pgp_2fa_timestamp']
+        request.session.pop('pgp_2fa_user_id', None)
+        request.session.pop('pgp_2fa_timestamp', None)
+        request.session.pop('pgp_2fa_encrypted_challenge', None)
         return redirect('accounts:login')
     
     try:
@@ -403,6 +406,8 @@ def pgp_challenge_view(request):
         messages.error(request, 'Invalid session')
         return redirect('accounts:login')
     
+    time_remaining = 15 - int((timezone.now() - session_time).total_seconds() / 60)
+    
     if request.method == 'POST':
         decrypted_response = request.POST.get('decrypted_response', '').strip()
         
@@ -410,7 +415,9 @@ def pgp_challenge_view(request):
             messages.error(request, 'Please provide the decrypted challenge')
             return render(request, 'accounts/pgp_challenge.html', {
                 'username': user.username,
-                'challenge_format': 'MARKETPLACE-2FA:XXXXXXXXXXXXX'
+                'encrypted_challenge': encrypted_challenge,
+                'challenge_format': 'MARKETPLACE-2FA:XXXXXXXXXXXXX',
+                'time_remaining': time_remaining
             })
         
         challenge_code = None
@@ -434,8 +441,9 @@ def pgp_challenge_view(request):
         if challenge_code and user.verify_pgp_challenge(challenge_code):
             login(request, user)
             
-            del request.session['pgp_2fa_user_id']
-            del request.session['pgp_2fa_timestamp']
+            request.session.pop('pgp_2fa_user_id', None)
+            request.session.pop('pgp_2fa_timestamp', None)
+            request.session.pop('pgp_2fa_encrypted_challenge', None)
             
             LoginHistory.objects.create(
                 user=user,
@@ -454,7 +462,14 @@ def pgp_challenge_view(request):
         
         return render(request, 'accounts/pgp_challenge.html', {
             'username': user.username,
-            'challenge_format': 'MARKETPLACE-2FA:XXXXXXXXXXXXX'
+            'encrypted_challenge': encrypted_challenge,
+            'challenge_format': 'MARKETPLACE-2FA:XXXXXXXXXXXXX',
+            'time_remaining': time_remaining
         })
     
-    return redirect('accounts:login')
+    return render(request, 'accounts/pgp_challenge.html', {
+        'username': user.username,
+        'encrypted_challenge': encrypted_challenge,
+        'challenge_format': 'MARKETPLACE-2FA:XXXXXXXXXXXXX',
+        'time_remaining': time_remaining
+    })

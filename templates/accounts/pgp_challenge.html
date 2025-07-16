@@ -5,6 +5,11 @@
     <div class="pgp-challenge-container">
         <h1>🔐 PGP Authentication Required</h1>
         
+        <!-- Timer Display -->
+        <div class="timer-display">
+            <p>Time remaining: <span id="timer" class="timer">{{ time_remaining|default:15 }} minutes</span></p>
+        </div>
+        
         <div class="info-box">
             <p>Hello <strong>{{ username }}</strong>,</p>
             <p>Your account has PGP 2FA enabled. Please follow these steps:</p>
@@ -18,7 +23,7 @@
         
         <div class="challenge-section">
             <h2>Encrypted Challenge</h2>
-            <p class="help-text">This message has been encrypted with your PGP public key:</p>
+            <p class="help-text">This challenge is saved in your session. You can safely leave and return to this page.</p>
             
             <div class="pgp-message-container">
                 <textarea id="encrypted-challenge" class="pgp-textarea" readonly>{{ encrypted_challenge }}</textarea>
@@ -28,7 +33,7 @@
             </div>
         </div>
         
-        <form method="post" action="{% url 'accounts:pgp_challenge' %}">
+        <form method="post" action="{% url 'accounts:pgp_challenge' %}" id="challenge-form">
             {% csrf_token %}
             <div class="response-section">
                 <h2>Decrypted Challenge</h2>
@@ -40,9 +45,9 @@
                        class="form-input" 
                        placeholder="MARKETPLACE-2FA:XXXXXXXXXXXXX or just XXXXXXXXXXXXX"
                        autocomplete="off"
-                       value=""
+                       value="{{ request.POST.decrypted_response }}"
                        required>
-                <small class="form-hint">You can paste either the full decrypted message or just the challenge code</small>
+                <small class="form-hint">Your input is automatically saved locally</small>
             </div>
             
             <div class="button-group">
@@ -55,19 +60,36 @@
             </div>
         </form>
         
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <h3>Quick Actions</h3>
+            <button onclick="saveToFile()" class="btn btn-secondary">
+                💾 Save Challenge to File
+            </button>
+            <button onclick="refreshPage()" class="btn btn-secondary">
+                🔄 Refresh Page
+            </button>
+        </div>
+        
         <div class="help-section">
-            <details>
+            <details open>
                 <summary>📚 Need Help?</summary>
                 <div class="help-content">
+                    <h3>💡 Tips to Avoid Losing Your Session</h3>
+                    <ul>
+                        <li>Use the "Save Challenge to File" button to save the encrypted message</li>
+                        <li>Open your PGP tool in a separate window/tab</li>
+                        <li>The page will remember your input for 15 minutes</li>
+                        <li>You can refresh this page without losing the challenge</li>
+                    </ul>
                     <h3>Command Line (GPG)</h3>
-                    <p>To decrypt the challenge:</p>
-                    <pre># Save the encrypted message to a file
-cat > challenge.asc
+                    <pre># Save to file (or use the button above)
+echo "[PASTE ENCRYPTED MESSAGE]" > challenge.asc
 
-# Decrypt it
+# Decrypt
 gpg --decrypt challenge.asc
 
-# Copy the output (format: MARKETPLACE-2FA:XXXXXXXXXXXXX)</pre>
+# Copy the output and paste above</pre>
                     
                     <h3>Kleopatra/GPA (Windows)</h3>
                     <ol>
@@ -101,6 +123,45 @@ gpg --decrypt challenge.asc
 </div>
 
 <style>
+    .timer-display {
+        text-align: center;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #2a2a2a;
+        border-radius: 8px;
+    }
+    
+    .timer {
+        font-weight: bold;
+        color: #4CAF50;
+        font-size: 18px;
+    }
+    
+    .timer.warning {
+        color: #ff9800;
+    }
+    
+    .timer.danger {
+        color: #f44336;
+    }
+    
+    .quick-actions {
+        margin: 30px 0;
+        padding: 20px;
+        background: #1a1a1a;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .quick-actions h3 {
+        margin-bottom: 15px;
+        color: #ccc;
+    }
+    
+    .quick-actions .btn {
+        margin: 5px;
+    }
+
     .pgp-challenge-container {
         max-width: 800px;
         margin: 0 auto;
@@ -338,12 +399,29 @@ gpg --decrypt challenge.asc
 </style>
 
 <script>
+// Auto-save input to sessionStorage
+const inputField = document.getElementById('decrypted-response');
+const savedValue = sessionStorage.getItem('pgp_2fa_response');
+
+if (savedValue && inputField.value === '') {
+    inputField.value = savedValue;
+}
+
+inputField.addEventListener('input', function() {
+    sessionStorage.setItem('pgp_2fa_response', this.value);
+});
+
+// Clear saved value on successful submit
+document.getElementById('challenge-form').addEventListener('submit', function() {
+    sessionStorage.removeItem('pgp_2fa_response');
+});
+
+// Copy challenge function
 function copyChallenge() {
     const textarea = document.getElementById('encrypted-challenge');
     textarea.select();
     document.execCommand('copy');
     
-    // Visual feedback
     const btn = event.target;
     const originalText = btn.textContent;
     btn.textContent = '✓ Copied!';
@@ -354,5 +432,60 @@ function copyChallenge() {
         btn.style.background = '';
     }, 2000);
 }
+
+// Save to file function
+function saveToFile() {
+    const challenge = document.getElementById('encrypted-challenge').value;
+    const blob = new Blob([challenge], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pgp_challenge.asc';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// Refresh page function
+function refreshPage() {
+    window.location.reload();
+}
+
+// Timer countdown
+let timeRemaining = {{ time_remaining|default:15 }} * 60; // Convert to seconds
+const timerElement = document.getElementById('timer');
+
+function updateTimer() {
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    
+    timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    if (timeRemaining <= 300) { // 5 minutes
+        timerElement.classList.add('warning');
+    }
+    if (timeRemaining <= 60) { // 1 minute
+        timerElement.classList.remove('warning');
+        timerElement.classList.add('danger');
+    }
+    
+    if (timeRemaining <= 0) {
+        timerElement.textContent = 'Session expired';
+        inputField.disabled = true;
+        document.querySelector('button[type="submit"]').disabled = true;
+    } else {
+        timeRemaining--;
+    }
+}
+
+// Update timer every second
+setInterval(updateTimer, 1000);
+
+// Prevent page unload if there's input
+window.addEventListener('beforeunload', function(e) {
+    if (inputField.value && inputField.value.length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
 </script>
 {% endblock %}
