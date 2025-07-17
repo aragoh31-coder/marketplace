@@ -12,6 +12,7 @@ import hashlib
 import secrets
 import logging
 from datetime import timedelta
+from dateutil import parser
 from .forms import (
     UserProfileForm, PGPKeyForm, CustomPasswordChangeForm, DeleteAccountForm
 )
@@ -269,33 +270,157 @@ def change_password(request):
 @login_required
 def pgp_settings(request):
     if request.method == 'POST':
+        if 'verify_code' in request.POST:
+            return pgp_verify_key(request)
+        
         form = PGPKeyForm(request.POST)
         if form.is_valid():
-            user = request.user
+            request.session['temp_pgp_key'] = form.cleaned_data['pgp_public_key']
+            request.session['temp_pgp_fingerprint'] = form.fingerprint
+            request.session['temp_pgp_login_enabled'] = form.cleaned_data['enable_pgp_login']
             
-            if form.cleaned_data['pgp_public_key']:
-                pgp_service = PGPService()
-                import_result = pgp_service.import_public_key(form.cleaned_data['pgp_public_key'])
-                
-                if not import_result['success']:
-                    messages.error(request, f'Invalid PGP key: {import_result["error"]}')
-                    return render(request, 'accounts/pgp_settings.html', {'form': form})
-                
-                user.pgp_public_key = form.cleaned_data['pgp_public_key']
-                user.pgp_fingerprint = import_result['fingerprint']
+            verification_code = secrets.token_urlsafe(16)
+            request.session['pgp_verification_code'] = verification_code
+            request.session['pgp_verification_expires'] = (timezone.now() + timedelta(minutes=10)).isoformat()
             
-            user.pgp_login_enabled = form.cleaned_data['enable_pgp_login']
+            pgp_service = PGPService()
             
-            user.save()
-            messages.success(request, 'PGP settings updated successfully!')
-            return redirect('accounts:profile')
+            import_result = pgp_service.import_public_key(form.cleaned_data['pgp_public_key'])
+            if not import_result['success']:
+                messages.error(request, f'Failed to import key for verification: {import_result["error"]}')
+                form = PGPKeyForm(initial={
+                    'pgp_public_key': request.user.pgp_public_key,
+                    'enable_pgp_login': request.user.pgp_login_enabled
+                })
+                return render(request, 'accounts/pgp_settings.html', {
+                    'form': form,
+                    'has_pgp': bool(request.user.pgp_public_key),
+                    'pgp_fingerprint': request.user.pgp_fingerprint
+                })
+            
+            verification_message = (
+                f"PGP Key Verification\n\n"
+                f"Please decrypt this message to verify your key.\n"
+                f"Verification Code: {verification_code}\n\n"
+                f"Enter only the verification code above."
+            )
+            
+            encrypt_result = pgp_service.encrypt_message(
+                verification_message,
+                form.fingerprint
+            )
+            
+            if encrypt_result['success']:
+                return render(request, 'accounts/pgp_verify.html', {
+                    'encrypted_message': encrypt_result['encrypted_message'],
+                    'fingerprint': form.fingerprint[:8] + '...' + form.fingerprint[-8:],
+                    'key_info': getattr(form, 'key_info', {}),
+                })
+            else:
+                messages.error(request, f'Failed to encrypt verification message: {encrypt_result["error"]}')
+                form = PGPKeyForm(initial={
+                    'pgp_public_key': request.user.pgp_public_key,
+                    'enable_pgp_login': request.user.pgp_login_enabled
+                })
     else:
         form = PGPKeyForm(initial={
             'pgp_public_key': request.user.pgp_public_key,
             'enable_pgp_login': request.user.pgp_login_enabled
         })
     
-    return render(request, 'accounts/pgp_settings.html', {'form': form})
+    return render(request, 'accounts/pgp_settings.html', {
+        'form': form,
+        'has_pgp': bool(request.user.pgp_public_key),
+        'pgp_fingerprint': request.user.pgp_fingerprint
+    })
+
+
+@login_required
+def pgp_verify_key(request):
+    """Verify PGP key by checking decryption capability"""
+    if request.method == 'POST':
+        submitted_code = request.POST.get('verify_code', '').strip()
+        
+        stored_code = request.session.get('pgp_verification_code')
+        expires = request.session.get('pgp_verification_expires')
+        temp_key = request.session.get('temp_pgp_key')
+        temp_fingerprint = request.session.get('temp_pgp_fingerprint')
+        temp_login_enabled = request.session.get('temp_pgp_login_enabled', False)
+        
+        if not all([stored_code, expires, temp_key]):
+            messages.error(request, 'Verification session expired. Please try again.')
+            return redirect('accounts:pgp_settings')
+        
+        if timezone.now() > parser.parse(expires):
+            messages.error(request, 'Verification code expired. Please try again.')
+            for key in ['pgp_verification_code', 'pgp_verification_expires', 'temp_pgp_key', 'temp_pgp_fingerprint', 'temp_pgp_login_enabled']:
+                request.session.pop(key, None)
+            return redirect('accounts:pgp_settings')
+        
+        if submitted_code == stored_code:
+            request.user.pgp_public_key = temp_key
+            request.user.pgp_fingerprint = temp_fingerprint
+            request.user.pgp_login_enabled = temp_login_enabled
+            request.user.save()
+            
+            for key in ['pgp_verification_code', 'pgp_verification_expires', 'temp_pgp_key', 'temp_pgp_fingerprint', 'temp_pgp_login_enabled']:
+                request.session.pop(key, None)
+            
+            messages.success(request, 'PGP key verified and saved successfully!')
+            
+            if temp_login_enabled:
+                messages.info(request, 'PGP 2FA is now active. You will need to decrypt a challenge on your next login.')
+            
+            return redirect('accounts:profile')
+        else:
+            messages.error(request, 'Invalid verification code. Please check your decryption.')
+            
+            pgp_service = PGPService()
+            
+            import_result = pgp_service.import_public_key(temp_key)
+            if not import_result['success']:
+                messages.error(request, 'Failed to re-encrypt verification message. Please try again.')
+                return redirect('accounts:pgp_settings')
+            
+            verification_message = (
+                f"PGP Key Verification\n\n"
+                f"Please decrypt this message to verify your key.\n"
+                f"Verification Code: {stored_code}\n\n"
+                f"Enter only the verification code above."
+            )
+            
+            encrypt_result = pgp_service.encrypt_message(
+                verification_message,
+                temp_fingerprint
+            )
+            
+            return render(request, 'accounts/pgp_verify.html', {
+                'encrypted_message': encrypt_result['encrypted_message'],
+                'fingerprint': temp_fingerprint[:8] + '...' + temp_fingerprint[-8:],
+                'error': True
+            })
+    
+    return redirect('accounts:pgp_settings')
+
+
+@login_required
+def pgp_remove_key(request):
+    """Remove PGP key from account"""
+    if request.method == 'POST':
+        from django.contrib.auth import authenticate
+        password = request.POST.get('password')
+        
+        if authenticate(username=request.user.username, password=password):
+            request.user.pgp_public_key = ''
+            request.user.pgp_fingerprint = ''
+            request.user.pgp_login_enabled = False
+            request.user.save()
+            
+            messages.success(request, 'PGP key removed successfully.')
+        else:
+            messages.error(request, 'Invalid password.')
+    
+    return redirect('accounts:pgp_settings')
 
 
 @login_required

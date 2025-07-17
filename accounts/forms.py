@@ -39,7 +39,15 @@ class PGPKeyForm(forms.Form):
             if not ('-----BEGIN PGP PUBLIC KEY BLOCK-----' in key and '-----END PGP PUBLIC KEY BLOCK-----' in key):
                 raise forms.ValidationError("Invalid PGP public key format")
             
-            self.fingerprint = key[:40] if len(key) >= 40 else key
+            from .pgp_service import PGPService
+            pgp_service = PGPService()
+            import_result = pgp_service.import_public_key(key)
+            
+            if not import_result['success']:
+                raise forms.ValidationError(f"Invalid PGP key: {import_result['error']}")
+            
+            self.fingerprint = import_result['fingerprint']
+            self.key_info = pgp_service.get_key_info(import_result['fingerprint'])
         return key
 
 
