@@ -138,6 +138,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'vendors.tasks.cleanup_old_notifications',
         'schedule': 86400.0,  # Daily
     },
+    'refresh-tor-descriptors': {
+        'task': 'vendors.tasks.refresh_tor_descriptors',
+        'schedule': 43200.0,  # Every 12 hours
+    },
 }
 
 BTC_USD_RATE = 118905.27

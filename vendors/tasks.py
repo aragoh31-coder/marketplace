@@ -2,6 +2,7 @@ from celery import shared_task
 from django.utils import timezone
 from django.core.cache import cache
 import logging
+import subprocess
 
 from .models import Vendor
 from products.models import Product
@@ -117,3 +118,52 @@ def cleanup_old_notifications():
     except Exception as e:
         logger.error(f"Error cleaning up notifications: {str(e)}")
         return f"Error: {str(e)}"
+
+
+@shared_task
+def refresh_tor_descriptors():
+    """Refresh Tor hidden service descriptors by reloading the service"""
+    try:
+        logger.info("Starting Tor descriptor refresh...")
+        
+        result = subprocess.run(
+            ['sudo', 'systemctl', 'reload', 'tor@default'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode == 0:
+            logger.info("Tor service reloaded successfully - descriptors will be refreshed")
+            
+            import time
+            time.sleep(5)
+            
+            log_check = subprocess.run(
+                ['sudo', 'tail', '-10', '/var/log/tor/tor.log'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if log_check.returncode == 0 and 'descriptor' in log_check.stdout.lower():
+                logger.info("Tor descriptor refresh completed successfully")
+                return "Tor descriptors refreshed successfully"
+            else:
+                logger.warning("Tor reloaded but no descriptor activity detected in logs")
+                return "Tor reloaded - descriptor status unclear"
+                
+        else:
+            error_msg = f"Failed to reload Tor service: {result.stderr}"
+            logger.error(error_msg)
+            return f"Error: {error_msg}"
+            
+    except subprocess.TimeoutExpired:
+        error_msg = "Tor reload command timed out"
+        logger.error(error_msg)
+        return f"Error: {error_msg}"
+        
+    except Exception as e:
+        error_msg = f"Unexpected error during Tor descriptor refresh: {e}"
+        logger.error(error_msg)
+        return f"Error: {error_msg}"
