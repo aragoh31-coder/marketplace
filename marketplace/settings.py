@@ -68,6 +68,8 @@ WSGI_APPLICATION = 'marketplace.wsgi.application'
 
 DATABASES = {'default': env.db()}
 
+DATABASES['default']['CONN_MAX_AGE'] = 600
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -127,6 +129,17 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
+CELERY_BEAT_SCHEDULE = {
+    'update-vendor-metrics': {
+        'task': 'vendors.tasks.update_vendor_metrics',
+        'schedule': 3600.0,  # Every hour
+    },
+    'cleanup-old-notifications': {
+        'task': 'vendors.tasks.cleanup_old_notifications',
+        'schedule': 86400.0,  # Daily
+    },
+}
+
 BTC_USD_RATE = 118905.27
 XMR_USD_RATE = 340.67
 BTC_EUR_RATE = 108000.00
@@ -143,19 +156,66 @@ XMR_REQUIRED_CONFIRMATIONS = 10
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'simple'
         },
         'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': 'logs/marketplace.log',
+            'maxBytes': 1024 * 1024 * 15,  # 15MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': 'logs/errors.log',
+            'maxBytes': 1024 * 1024 * 15,  # 15MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'pgp_file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': 'pgp_debug.log',
         },
     },
     'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'vendors': {
+            'handlers': ['file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'adminpanel': {
+            'handlers': ['file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'accounts': {
-            'handlers': ['file', 'console'],
+            'handlers': ['pgp_file', 'console'],
             'level': 'DEBUG',
             'propagate': True,
         },
