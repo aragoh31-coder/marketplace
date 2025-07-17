@@ -50,7 +50,7 @@
                 <div class="detail-row">
                     <span class="label">Vendor:</span>
                     <span class="value">
-                        <a href="{% url 'vendors:profile' product.vendor.id %}">
+                        <a href="{% url 'vendors:detail' product.vendor.id %}">
                             {{ product.vendor.vendor_name }}
                         </a>
                         {% if product.vendor.trust_level > 80 %}
