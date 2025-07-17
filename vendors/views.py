@@ -60,11 +60,12 @@ def vendor_dashboard(request):
         
         cache.set(cache_key, metrics, 3600)  # Cache for 1 hour
     
+    orders_data = metrics.get('orders_data', [])
     orders_chart = ChartGenerator.generate_chart(
-        metrics['orders_data'], 'count', 'Orders Over Time', 'line'
+        orders_data, 'count', 'Orders Over Time', 'line'
     )
     revenue_chart = ChartGenerator.generate_chart(
-        metrics['orders_data'], 'revenue', 'Revenue Over Time', 'bar'
+        orders_data, 'revenue', 'Revenue Over Time', 'bar'
     )
     
     notifications = vendor.notifications.filter(is_read=False)[:5]
