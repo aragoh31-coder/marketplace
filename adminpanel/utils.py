@@ -5,7 +5,8 @@ import base64
 import hashlib
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, date
+from decimal import Decimal
 
 import matplotlib
 matplotlib.use('Agg')  # Non-interactive backend
@@ -27,6 +28,10 @@ class ChartGenerator:
             for key, value in item_copy.items():
                 if isinstance(value, datetime):
                     item_copy[key] = value.isoformat()
+                elif isinstance(value, date):
+                    item_copy[key] = value.isoformat()
+                elif isinstance(value, Decimal):
+                    item_copy[key] = float(value)
             serializable_data.append(item_copy)
         
         data_str = json.dumps(serializable_data, sort_keys=True)
