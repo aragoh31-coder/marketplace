@@ -16,7 +16,7 @@
                 </div>
                 <div class="detail-item">
                     <span class="label">Amount:</span>
-                    <span class="value">₿ {{ order.total }}</span>
+                    <span class="value">{% if order.total_btc > 0 %}₿ {{ order.total_btc|floatformat:8 }}{% else %}ɱ {{ order.total_xmr|floatformat:4 }}{% endif %}</span>
                 </div>
                 <div class="detail-item">
                     <span class="label">Status:</span>
