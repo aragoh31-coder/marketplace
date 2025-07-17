@@ -47,14 +47,25 @@ def vendor_dashboard(request):
             created_at__date__range=[start_date, end_date]
         ).values('created_at__date').annotate(
             count=Count('id'),
-            revenue=Sum('total')
+            revenue_btc=Sum('total_btc'),
+            revenue_xmr=Sum('total_xmr')
         ).order_by('created_at__date')
+        
+        total_earnings = Order.objects.filter(
+            items__product__vendor=vendor,
+            status='completed'
+        ).aggregate(
+            total_btc=Sum('total_btc'),
+            total_xmr=Sum('total_xmr')
+        )
         
         metrics = {
             'total_products': vendor.products.filter(is_available=True).count(),
             'total_orders': Order.objects.filter(items__product__vendor=vendor).count(),
             'average_rating': vendor.rating,
             'total_sales': vendor.total_sales,
+            'total_earnings_btc': total_earnings['total_btc'] or 0,
+            'total_earnings_xmr': total_earnings['total_xmr'] or 0,
             'orders_data': list(orders_data),
         }
         
@@ -65,7 +76,7 @@ def vendor_dashboard(request):
         orders_data, 'count', 'Orders Over Time', 'line'
     )
     revenue_chart = ChartGenerator.generate_chart(
-        orders_data, 'revenue', 'Revenue Over Time', 'bar'
+        orders_data, 'revenue_btc', 'BTC Revenue Over Time', 'bar'
     )
     
     notifications = vendor.notifications.filter(is_read=False)[:5]
