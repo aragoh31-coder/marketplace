@@ -82,19 +82,11 @@ def vendor_dashboard(request):
     
     orders_data = metrics.get('orders_data', [])
     
-    chart_data = []
-    for item in orders_data:
-        chart_item = item.copy()
-        if isinstance(item.get('created_at__date'), str):
-            from datetime import datetime
-            chart_item['created_at__date'] = datetime.fromisoformat(item['created_at__date']).date()
-        chart_data.append(chart_item)
-    
     orders_chart = ChartGenerator.generate_chart(
-        chart_data, 'count', 'Orders Over Time', 'line'
+        orders_data, 'count', 'Orders Over Time', 'line'
     )
     revenue_chart = ChartGenerator.generate_chart(
-        chart_data, 'revenue_btc', 'BTC Revenue Over Time', 'bar'
+        orders_data, 'revenue_btc', 'BTC Revenue Over Time', 'bar'
     )
     
     notifications = vendor.notifications.filter(is_read=False)[:5]
