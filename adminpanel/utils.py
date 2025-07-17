@@ -32,6 +32,8 @@ class ChartGenerator:
                     item_copy[key] = value.isoformat()
                 elif isinstance(value, Decimal):
                     item_copy[key] = float(value)
+                elif isinstance(value, str) and key.endswith('_date'):
+                    item_copy[key] = value
             serializable_data.append(item_copy)
         
         data_str = json.dumps(serializable_data, sort_keys=True)
@@ -54,8 +56,20 @@ class ChartGenerator:
             fig = Figure(figsize=(10, 5), dpi=100, facecolor='white')
             ax = fig.add_subplot(111)
             
-            dates = [d.get('date') or d.get('order__created_at__date') for d in data]
+            dates = [d.get('date') or d.get('order__created_at__date') or d.get('created_at__date') for d in data]
             values = [d.get(key, 0) for d in data]
+            
+            processed_dates = []
+            for date_val in dates:
+                if isinstance(date_val, str):
+                    try:
+                        from datetime import datetime
+                        processed_dates.append(datetime.fromisoformat(date_val).date())
+                    except (ValueError, AttributeError):
+                        processed_dates.append(date_val)
+                else:
+                    processed_dates.append(date_val)
+            dates = processed_dates
             
             if chart_type == 'line':
                 ax.plot(dates, values, color='#4CAF50', linewidth=2, marker='o', markersize=4)
