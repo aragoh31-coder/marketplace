@@ -36,18 +36,47 @@ class PGPKeyForm(forms.Form):
     def clean_pgp_public_key(self):
         key = self.cleaned_data.get('pgp_public_key')
         if key:
-            if not ('-----BEGIN PGP PUBLIC KEY BLOCK-----' in key and '-----END PGP PUBLIC KEY BLOCK-----' in key):
-                raise forms.ValidationError("Invalid PGP public key format")
+            key = key.strip()
             
             from .pgp_service import PGPService
             pgp_service = PGPService()
+            
+            validation_result = pgp_service.validate_key_format(key)
+            if not validation_result['success']:
+                error = validation_result['error']
+                if 'BEGIN and END markers' in error:
+                    raise forms.ValidationError("Invalid key format. Please ensure you're copying the entire key including the -----BEGIN PGP PUBLIC KEY BLOCK----- and -----END PGP PUBLIC KEY BLOCK----- lines.")
+                else:
+                    raise forms.ValidationError(f"Invalid key format: {error}")
+            
             import_result = pgp_service.import_public_key(key)
             
             if not import_result['success']:
-                raise forms.ValidationError(f"Invalid PGP key: {import_result['error']}")
+                error = import_result['error']
+                if 'expired' in error.lower():
+                    raise forms.ValidationError("This PGP key has expired. Please use a valid, non-expired key.")
+                elif 'revoked' in error.lower():
+                    raise forms.ValidationError("This PGP key has been revoked. Please use a valid key.")
+                elif 'encryption' in error.lower():
+                    raise forms.ValidationError("This key doesn't support encryption. Please use a key with encryption capability.")
+                elif 'invalid' in error.lower() or 'format' in error.lower():
+                    raise forms.ValidationError("Invalid key format or corrupted key data. Please check your key and try again.")
+                else:
+                    raise forms.ValidationError(f"Key validation failed: {error}")
+            
+            caps = import_result.get('capabilities', {})
+            if not caps.get('can_encrypt') and not caps.get('has_encryption_subkey'):
+                raise forms.ValidationError("This key doesn't support encryption. Please use a key with encryption capability.")
+            
+            if caps.get('is_expired'):
+                raise forms.ValidationError("This PGP key has expired. Please use a valid, non-expired key.")
+            
+            if caps.get('is_revoked'):
+                raise forms.ValidationError("This PGP key has been revoked. Please use a valid key.")
             
             self.fingerprint = import_result['fingerprint']
             self.key_info = pgp_service.get_key_info(import_result['fingerprint'])
+            
         return key
 
 
