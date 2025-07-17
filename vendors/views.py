@@ -59,24 +59,42 @@ def vendor_dashboard(request):
             total_xmr=Sum('total_xmr')
         )
         
+        orders_data_serializable = []
+        for item in orders_data:
+            orders_data_serializable.append({
+                'created_at__date': item['created_at__date'].isoformat(),
+                'count': item['count'],
+                'revenue_btc': float(item['revenue_btc'] or 0),
+                'revenue_xmr': float(item['revenue_xmr'] or 0),
+            })
+        
         metrics = {
             'total_products': vendor.products.filter(is_available=True).count(),
             'total_orders': Order.objects.filter(items__product__vendor=vendor).count(),
             'average_rating': vendor.rating,
             'total_sales': vendor.total_sales,
-            'total_earnings_btc': total_earnings['total_btc'] or 0,
-            'total_earnings_xmr': total_earnings['total_xmr'] or 0,
-            'orders_data': list(orders_data),
+            'total_earnings_btc': float(total_earnings['total_btc'] or 0),
+            'total_earnings_xmr': float(total_earnings['total_xmr'] or 0),
+            'orders_data': orders_data_serializable,
         }
         
         cache.set(cache_key, metrics, 3600)  # Cache for 1 hour
     
     orders_data = metrics.get('orders_data', [])
+    
+    chart_data = []
+    for item in orders_data:
+        chart_item = item.copy()
+        if isinstance(item.get('created_at__date'), str):
+            from datetime import datetime
+            chart_item['created_at__date'] = datetime.fromisoformat(item['created_at__date']).date()
+        chart_data.append(chart_item)
+    
     orders_chart = ChartGenerator.generate_chart(
-        orders_data, 'count', 'Orders Over Time', 'line'
+        chart_data, 'count', 'Orders Over Time', 'line'
     )
     revenue_chart = ChartGenerator.generate_chart(
-        orders_data, 'revenue_btc', 'BTC Revenue Over Time', 'bar'
+        chart_data, 'revenue_btc', 'BTC Revenue Over Time', 'bar'
     )
     
     notifications = vendor.notifications.filter(is_read=False)[:5]
