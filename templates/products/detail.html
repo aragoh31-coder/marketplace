@@ -16,6 +16,15 @@
         
         <div class="product-content">
             <div class="product-main">
+                {% if product.image_url %}
+                <div class="product-image-section">
+                    <img src="{{ product.image_url }}" 
+                         alt="{{ product.name }}" 
+                         class="product-image-large"
+                         onerror="this.style.display='none'">
+                </div>
+                {% endif %}
+                
                 <div class="product-description">
                     <h3>Description</h3>
                     <p>{{ product.description|linebreaks }}</p>
@@ -228,6 +237,19 @@
         padding: 6px 12px;
         border-radius: 4px;
         font-size: 14px;
+    }
+    
+    .product-image-section {
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .product-image-large {
+        max-width: 100%;
+        max-height: 400px;
+        border-radius: 8px;
+        border: 1px solid #444;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     }
     
     @media (max-width: 768px) {
