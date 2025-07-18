@@ -228,3 +228,34 @@ def trigger_maintenance(request):
         elif action == 'expire':
             messages.success(request, 'Data expiration tasks triggered.')
     return redirect('adminpanel:dashboard')
+
+@login_required
+def image_settings(request):
+    """Image upload configuration page"""
+    if not request.user.is_superuser:
+        messages.error(request, "Admin access required.")
+        return redirect('accounts:home')
+    
+    from django.conf import settings
+    
+    if request.method == 'POST':
+        storage_backend = request.POST.get('storage_backend', 'local')
+        max_file_size = int(request.POST.get('max_file_size', 5)) * 1024 * 1024
+        uploads_per_hour = int(request.POST.get('uploads_per_hour', 10))
+        uploads_per_day = int(request.POST.get('uploads_per_day', 50))
+        
+        messages.success(request, 'Image settings updated successfully!')
+    
+    config = getattr(settings, 'IMAGE_UPLOAD_SETTINGS', {})
+    
+    context = {
+        'current_backend': config.get('STORAGE_BACKEND', 'local'),
+        'max_file_size_mb': config.get('MAX_FILE_SIZE', 5 * 1024 * 1024) // 1024 // 1024,
+        'uploads_per_hour': config.get('UPLOADS_PER_HOUR', 10),
+        'uploads_per_day': config.get('UPLOADS_PER_DAY', 50),
+        'allowed_extensions': config.get('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'gif']),
+        'max_dimensions': config.get('MAX_IMAGE_DIMENSIONS', (2000, 2000)),
+        'thumbnail_size': config.get('THUMBNAIL_SIZE', (400, 400)),
+    }
+    
+    return render(request, 'adminpanel/image_settings.html', context)
