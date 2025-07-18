@@ -22,4 +22,5 @@ urlpatterns = [
     path('orders/<uuid:order_id>/cancel/', views.cancel_order, name='cancel_order'),
     
     path('settings/', views.vendor_settings, name='settings'),
+    path('vacation/', views.vacation_mode, name='vacation_mode'),
 ]

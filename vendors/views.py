@@ -406,3 +406,18 @@ def vendor_profile(request, vendor_id):
         'page_obj': page_obj,
         'total_sales': total_sales,
     })
+
+
+@login_required
+def vacation_mode(request):
+    """Toggle vacation mode"""
+    if not hasattr(request.user, 'vendor'):
+        return redirect('vendors:apply')
+    
+    vendor = request.user.vendor
+    
+    if request.method == 'POST':
+        Product.objects.filter(vendor=vendor).update(is_active=False)
+        messages.info(request, 'All products deactivated.')
+        
+    return redirect('vendors:settings')

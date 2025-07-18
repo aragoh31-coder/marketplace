@@ -54,16 +54,10 @@ class ProductForm(forms.ModelForm):
 class VendorSettingsForm(forms.ModelForm):
     class Meta:
         model = Vendor
-        fields = [
-            'description', 'response_time'
-        ]
+        fields = ['description']
         widgets = {
             'description': forms.Textarea(attrs={
                 'rows': 5,
                 'class': 'form-input'
             }),
-            'response_time': forms.DurationField(widget=forms.TextInput(attrs={
-                'placeholder': 'e.g., 1 day, 2 hours',
-                'class': 'form-input'
-            })),
         }
