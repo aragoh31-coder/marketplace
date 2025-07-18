@@ -24,7 +24,7 @@ class ProductForm(forms.ModelForm):
     image = forms.FileField(
         required=False,
         widget=forms.FileInput(attrs={
-            'accept': 'image/jpeg,image/png,image/gif',
+            'accept': 'image/jpeg,image/png,image/gif,image/bmp,image/webp',
             'class': 'form-input'
         }),
         help_text='Max 2MB. JPEG, PNG, GIF, BMP, or WebP (all converted to JPEG).'
