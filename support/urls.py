@@ -8,7 +8,7 @@ urlpatterns = [
     path('faq/', views.faq_view, name='faq'),
     path('tickets/', views.ticket_list, name='tickets'),
     path('tickets/create/', views.create_ticket, name='create_ticket'),
-    path('tickets/<int:ticket_id>/', views.ticket_detail, name='ticket_detail'),
+    path('tickets/<uuid:ticket_id>/', views.ticket_detail, name='ticket_detail'),
     path('feedback/', views.submit_feedback, name='feedback'),
-    path('feedback/<int:order_id>/', views.leave_feedback, name='leave_feedback'),
+    path('feedback/<uuid:order_id>/', views.leave_feedback, name='leave_feedback'),
 ]
