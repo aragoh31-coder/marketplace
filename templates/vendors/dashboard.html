@@ -64,28 +64,28 @@
         <div class="vendor-actions">
             <h2>Vendor Actions</h2>
             <div class="actions-grid">
-                <a href="{% url 'products:list' %}" class="action-card">
+                <a href="{% url 'vendors:products' %}" class="action-card">
                     <div class="action-icon">📦</div>
                     <div class="action-title">View Products</div>
-                    <div class="action-desc">Browse marketplace products</div>
+                    <div class="action-desc">Browse your products</div>
                 </a>
                 
-                <a href="{% url 'products:list' %}" class="action-card">
+                <a href="{% url 'vendors:products' %}" class="action-card">
                     <div class="action-icon">📋</div>
                     <div class="action-title">Manage Products</div>
-                    <div class="action-desc">View product listings</div>
+                    <div class="action-desc">Edit your product listings</div>
                 </a>
                 
-                <a href="{% url 'products:list' %}" class="action-card">
+                <a href="{% url 'vendors:orders' %}" class="action-card">
                     <div class="action-icon">📊</div>
                     <div class="action-title">View Orders</div>
-                    <div class="action-desc">Check marketplace activity</div>
+                    <div class="action-desc">Check your orders</div>
                 </a>
                 
-                <a href="{% url 'products:list' %}" class="action-card">
+                <a href="{% url 'vendors:settings' %}" class="action-card">
                     <div class="action-icon">💬</div>
-                    <div class="action-title">Messages</div>
-                    <div class="action-desc">Customer communications</div>
+                    <div class="action-title">Settings</div>
+                    <div class="action-desc">Vendor settings</div>
                 </a>
             </div>
         </div>
