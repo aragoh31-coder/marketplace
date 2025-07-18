@@ -275,6 +275,7 @@ def pgp_settings(request):
             return pgp_verify_key(request)
         
         form = PGPKeyForm(request.POST)
+        
         if form.is_valid():
             request.session['temp_pgp_key'] = form.cleaned_data['pgp_public_key']
             request.session['temp_pgp_fingerprint'] = getattr(form, 'fingerprint', None)

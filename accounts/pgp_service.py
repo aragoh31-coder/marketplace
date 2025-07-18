@@ -102,8 +102,14 @@ trust-model always
             elif in_key_block and line:
                 if re.match(r'^[A-Za-z0-9+/=]+$', line):
                     normalized_lines.append(line)
-                elif line.startswith('Version:') or line.startswith('Comment:'):
+                elif line.startswith('=') and re.match(r'^=[A-Za-z0-9+/=]+$', line):
                     normalized_lines.append(line)
+                elif line.startswith('Version:') or line.startswith('Comment:') or line.startswith('Hash:'):
+                    normalized_lines.append(line)
+                elif line and not line.startswith('-'):
+                    cleaned_line = ''.join(c for c in line if c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=')
+                    if cleaned_line and len(cleaned_line) >= 4:
+                        normalized_lines.append(cleaned_line)
         
         normalized_key = '\n'.join(normalized_lines)
         
