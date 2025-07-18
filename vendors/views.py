@@ -485,12 +485,12 @@ def vacation_settings(request):
                     message=form.cleaned_data.get('vacation_message', ''),
                     ends_at=form.cleaned_data.get('vacation_ends')
                 )
-                messages.success(request, 'Vacation mode activated. All products are now hidden.')
+                messages.success(request, 'Vacation mode activated. Products will show "On Vacation Listing" status.')
                 return redirect('vendors:vacation_settings')
         
         elif action == 'deactivate':
             vendor.deactivate_vacation_mode()
-            messages.success(request, 'Vacation mode deactivated. Products are now visible again.')
+            messages.success(request, 'Vacation mode deactivated. Products are available for purchase again.')
             return redirect('vendors:vacation_settings')
     
     form = VacationModeForm(initial={
