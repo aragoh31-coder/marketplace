@@ -12,6 +12,16 @@ from django_ratelimit.decorators import ratelimit
 
 from .models import Vendor, SubVendor, SubVendorActivityLog
 from .forms import VendorApplicationForm, ProductForm, VendorSettingsForm, VacationModeForm, SubVendorForm
+
+
+def get_client_ip(request):
+    """Get client IP address from request"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 from products.models import Product
 from orders.models import Order, OrderItem
 from adminpanel.utils import ChartGenerator
@@ -657,6 +667,7 @@ def deactivate_subvendor(request, subvendor_id):
 
 
 @login_required
+@ratelimit(key='user', rate='30/m', method='GET')
 def subvendor_activity_log(request, subvendor_id):
     """View sub-vendor activity log"""
     vendor = get_object_or_404(Vendor, user=request.user)
