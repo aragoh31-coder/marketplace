@@ -17,6 +17,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from core.views import serve_secure_image
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
@@ -31,4 +32,6 @@ urlpatterns = [
     path('support/', include('support.urls')),
     path('adminpanel/', include('adminpanel.urls')),
     path('disputes/', include('disputes.urls')),
+    
+    path('secure-images/<path:path>', serve_secure_image, name='secure_image'),
 ]

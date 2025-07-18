@@ -173,13 +173,14 @@ def create_product(request):
     vendor = request.user.vendor
     
     if request.method == 'POST':
-        form = ProductForm(request.POST)
+        form = ProductForm(request.POST, request.FILES)
         if form.is_valid():
-            product = form.save(commit=False)
-            product.vendor = vendor
-            product.save()
-            messages.success(request, 'Product created successfully!')
-            return redirect('vendors:products')
+            product = form.save(commit=False, user=request.user)
+            if product:  # Check if form processing succeeded
+                product.vendor = vendor
+                product.save()
+                messages.success(request, 'Product created successfully!')
+                return redirect('vendors:products')
     else:
         form = ProductForm()
     
@@ -197,11 +198,12 @@ def edit_product(request, product_id):
     product = get_object_or_404(Product, id=product_id, vendor=vendor)
     
     if request.method == 'POST':
-        form = ProductForm(request.POST, instance=product)
+        form = ProductForm(request.POST, request.FILES, instance=product)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Product updated successfully!')
-            return redirect('vendors:products')
+            updated_product = form.save(user=request.user)
+            if updated_product:  # Check if form processing succeeded
+                messages.success(request, 'Product updated successfully!')
+                return redirect('vendors:products')
     else:
         form = ProductForm(instance=product)
     

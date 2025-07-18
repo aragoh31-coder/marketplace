@@ -37,8 +37,48 @@ class Product(PrivacyModel):
     is_available = models.BooleanField(default=True)
     steganography_data = models.TextField(blank=True, null=True)  # Encrypted field
     
+    image_filename = models.CharField(max_length=255, blank=True)
+    thumbnail_filename = models.CharField(max_length=255, blank=True)
+    
     def __str__(self):
         return f"{self.name} - {self.vendor.vendor_name}"
+    
+    @property
+    def image_url(self):
+        """Get image URL based on storage backend"""
+        if not self.image_filename:
+            return None
+        
+        from django.conf import settings
+        config = settings.IMAGE_UPLOAD_SETTINGS
+        if config['STORAGE_BACKEND'] == 'remote':
+            base_url = config['REMOTE_STORAGE_CONFIG']['PUBLIC_URL']
+            return f"{base_url}/{self.image_filename}"
+        else:
+            return f"/secure-images/products/{self.image_filename}"
+    
+    @property
+    def thumbnail_url(self):
+        """Get thumbnail URL"""
+        if not self.thumbnail_filename:
+            return None
+        
+        from django.conf import settings
+        config = settings.IMAGE_UPLOAD_SETTINGS
+        if config['STORAGE_BACKEND'] == 'remote':
+            base_url = config['REMOTE_STORAGE_CONFIG']['PUBLIC_URL']
+            return f"{base_url}/{self.thumbnail_filename}"
+        else:
+            return f"/secure-images/products/{self.thumbnail_filename}"
+    
+    def delete(self, *args, **kwargs):
+        """Override delete to remove images"""
+        if self.image_filename or self.thumbnail_filename:
+            from core.security.image_security import SecureImageProcessor
+            processor = SecureImageProcessor()
+            processor.delete_images(self.image_filename, self.thumbnail_filename)
+        
+        super().delete(*args, **kwargs)
 
 
 class ProductImage(PrivacyModel):

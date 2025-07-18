@@ -1,6 +1,7 @@
 from django import forms
 from .models import Vendor
 from products.models import Product
+from core.security.image_security import SecureImageProcessor
 
 class VendorApplicationForm(forms.ModelForm):
     terms_accepted = forms.BooleanField(
@@ -20,6 +21,15 @@ class VendorApplicationForm(forms.ModelForm):
         }
 
 class ProductForm(forms.ModelForm):
+    image = forms.FileField(
+        required=False,
+        widget=forms.FileInput(attrs={
+            'accept': 'image/jpeg,image/png,image/gif',
+            'class': 'form-input'
+        }),
+        help_text='Max 5MB. JPEG, PNG, or GIF only.'
+    )
+    
     class Meta:
         model = Product
         fields = [
@@ -50,6 +60,47 @@ class ProductForm(forms.ModelForm):
                 'class': 'form-input'
             }),
         }
+    
+    def clean_image(self):
+        image = self.cleaned_data.get('image')
+        
+        if image:
+            if image.size > 5 * 1024 * 1024:
+                raise forms.ValidationError("Image file too large (max 5MB)")
+            
+            name = image.name.lower()
+            if not any(name.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif']):
+                raise forms.ValidationError("Invalid file type. Use JPEG, PNG, or GIF.")
+        
+        return image
+    
+    def save(self, commit=True, user=None):
+        instance = super().save(commit=False)
+        
+        image = self.cleaned_data.get('image')
+        if image and user:
+            processor = SecureImageProcessor()
+            success, filename, thumb_filename = processor.validate_and_process_image(
+                image, user
+            )
+            
+            if success:
+                if instance.pk and (instance.image_filename or instance.thumbnail_filename):
+                    processor.delete_images(
+                        instance.image_filename, 
+                        instance.thumbnail_filename
+                    )
+                
+                instance.image_filename = filename
+                instance.thumbnail_filename = thumb_filename
+            else:
+                self.add_error('image', filename)  # filename contains error message
+                return None
+        
+        if commit:
+            instance.save()
+        
+        return instance
 
 class VendorSettingsForm(forms.ModelForm):
     class Meta:

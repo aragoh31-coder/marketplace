@@ -237,3 +237,34 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 
 CSRF_COOKIE_AGE = 3600  # 1 hour for CSRF tokens
 CSRF_USE_SESSIONS = True  # Store CSRF in session instead of cookie
+
+IMAGE_UPLOAD_SETTINGS = {
+    'MAX_FILE_SIZE': 5 * 1024 * 1024,  # 5MB max
+    'ALLOWED_EXTENSIONS': ['jpg', 'jpeg', 'png', 'gif'],
+    'ALLOWED_MIMETYPES': ['image/jpeg', 'image/png', 'image/gif'],
+    
+    'MAX_IMAGE_DIMENSIONS': (2000, 2000),  # Max width/height
+    'THUMBNAIL_SIZE': (400, 400),
+    'STRIP_METADATA': True,
+    'REPROCESS_ALL': True,  # Always reprocess images for security
+    
+    'STORAGE_BACKEND': 'local',  # 'local' or 'remote'
+    'LOCAL_UPLOAD_PATH': 'secure_uploads/',
+    'REMOTE_STORAGE_CONFIG': {
+        'HOST': os.environ.get('REMOTE_IMAGE_HOST', ''),
+        'PORT': int(os.environ.get('REMOTE_IMAGE_PORT', 22)),
+        'USERNAME': os.environ.get('REMOTE_IMAGE_USER', ''),
+        'KEY_PATH': os.environ.get('REMOTE_IMAGE_KEY_PATH', ''),
+        'REMOTE_PATH': os.environ.get('REMOTE_IMAGE_PATH', '/var/www/images/'),
+        'PUBLIC_URL': os.environ.get('REMOTE_IMAGE_URL', ''),
+    },
+    
+    'UPLOADS_PER_HOUR': 10,
+    'UPLOADS_PER_DAY': 50,
+}
+
+SECURE_UPLOAD_ROOT = Path(BASE_DIR).parent / 'secure_uploads'
+SECURE_UPLOAD_ROOT.mkdir(exist_ok=True)
+
+TEMP_UPLOAD_ROOT = Path(BASE_DIR).parent / 'temp_uploads'
+TEMP_UPLOAD_ROOT.mkdir(exist_ok=True)
