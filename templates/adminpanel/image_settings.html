@@ -62,7 +62,19 @@
             
             <div class="form-group">
                 <label for="max_file_size">Max File Size (MB)</label>
-                <input type="number" name="max_file_size" id="max_file_size" value="{{ settings.max_file_size_mb }}" min="1" max="50" class="form-input">
+                <input type="number" name="max_file_size" id="max_file_size" value="2" min="0.5" max="2" step="0.5" class="form-input" readonly>
+                <small>Fixed at 2MB for security</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="jpeg_quality">JPEG Quality (1-100)</label>
+                <input type="number" name="jpeg_quality" id="jpeg_quality" value="{{ current_settings.JPEG_QUALITY|default:85 }}" min="50" max="95" class="form-input">
+                <small>Higher = better quality but larger files</small>
+            </div>
+
+            <div class="form-group">
+                <label for="thumbnail_quality">Thumbnail Quality (1-100)</label>
+                <input type="number" name="thumbnail_quality" id="thumbnail_quality" value="{{ current_settings.THUMBNAIL_QUALITY|default:75 }}" min="50" max="85" class="form-input">
             </div>
             
             <div class="form-group">
@@ -82,9 +94,11 @@
                 <li>✓ Magic number validation</li>
                 <li>✓ Malicious content scanning</li>
                 <li>✓ Metadata stripping</li>
-                <li>✓ Image re-encoding</li>
+                <li>✓ Image re-encoding to JPEG</li>
                 <li>✓ Secure filename generation</li>
                 <li>✓ Rate limiting</li>
+                <li>✓ 2MB maximum file size</li>
+                <li>✓ Automatic compression</li>
             </ul>
         </div>
         

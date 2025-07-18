@@ -20,17 +20,15 @@ def serve_secure_image(request, path):
     if not full_path.exists() or not full_path.is_file():
         raise Http404("Image not found")
     
-    allowed_extensions = settings.IMAGE_UPLOAD_SETTINGS['ALLOWED_EXTENSIONS']
-    if not any(path.lower().endswith(f'.{ext}') for ext in allowed_extensions):
-        raise Http404("Invalid file type")
+    # Only serve .jpg files
+    if not path.lower().endswith('.jpg'):
+        raise Http404("Only JPEG images are served")
     
     try:
         with open(full_path, 'rb') as f:
             content = f.read()
         
-        content_type, _ = mimetypes.guess_type(str(full_path))
-        if not content_type:
-            content_type = 'image/jpeg'
+        content_type = 'image/jpeg'
         
         response = HttpResponse(content, content_type=content_type)
         response['X-Content-Type-Options'] = 'nosniff'

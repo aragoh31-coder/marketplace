@@ -239,11 +239,20 @@ CSRF_COOKIE_AGE = 3600  # 1 hour for CSRF tokens
 CSRF_USE_SESSIONS = True  # Store CSRF in session instead of cookie
 
 IMAGE_UPLOAD_SETTINGS = {
-    'MAX_FILE_SIZE': 5 * 1024 * 1024,  # 5MB max
-    'ALLOWED_EXTENSIONS': ['jpg', 'jpeg', 'png', 'gif'],
-    'ALLOWED_MIMETYPES': ['image/jpeg', 'image/png', 'image/gif'],
+    'MAX_FILE_SIZE': 2 * 1024 * 1024,  # 2MB max (reduced from 5MB)
+    'ALLOWED_EXTENSIONS': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],  # Input formats
+    'ALLOWED_MIMETYPES': [
+        'image/jpeg', 
+        'image/png', 
+        'image/gif', 
+        'image/bmp',
+        'image/webp'
+    ],
     
-    'MAX_IMAGE_DIMENSIONS': (2000, 2000),  # Max width/height
+    'OUTPUT_FORMAT': 'JPEG',  # New setting
+    'JPEG_QUALITY': 85,  # New setting
+    'THUMBNAIL_QUALITY': 75,  # New setting
+    'MAX_IMAGE_DIMENSIONS': (1920, 1080),  # Reduced from (2000, 2000)
     'THUMBNAIL_SIZE': (400, 400),
     'STRIP_METADATA': True,
     'REPROCESS_ALL': True,  # Always reprocess images for security

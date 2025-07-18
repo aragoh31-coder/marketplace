@@ -240,22 +240,30 @@ def image_settings(request):
     
     if request.method == 'POST':
         storage_backend = request.POST.get('storage_backend', 'local')
-        max_file_size = int(request.POST.get('max_file_size', 5)) * 1024 * 1024
+        jpeg_quality = int(request.POST.get('jpeg_quality', 85))
+        thumbnail_quality = int(request.POST.get('thumbnail_quality', 75))
         uploads_per_hour = int(request.POST.get('uploads_per_hour', 10))
         uploads_per_day = int(request.POST.get('uploads_per_day', 50))
         
+        if not 50 <= jpeg_quality <= 95:
+            jpeg_quality = 85
+        if not 50 <= thumbnail_quality <= 85:
+            thumbnail_quality = 75
+        
         messages.success(request, 'Image settings updated successfully!')
+        return redirect('adminpanel:image_settings')
     
     config = getattr(settings, 'IMAGE_UPLOAD_SETTINGS', {})
     
     context = {
         'current_backend': config.get('STORAGE_BACKEND', 'local'),
-        'max_file_size_mb': config.get('MAX_FILE_SIZE', 5 * 1024 * 1024) // 1024 // 1024,
+        'max_file_size_mb': 2,  # Fixed at 2MB
         'uploads_per_hour': config.get('UPLOADS_PER_HOUR', 10),
         'uploads_per_day': config.get('UPLOADS_PER_DAY', 50),
-        'allowed_extensions': config.get('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'gif']),
-        'max_dimensions': config.get('MAX_IMAGE_DIMENSIONS', (2000, 2000)),
+        'allowed_extensions': config.get('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']),
+        'max_dimensions': config.get('MAX_IMAGE_DIMENSIONS', (1920, 1080)),
         'thumbnail_size': config.get('THUMBNAIL_SIZE', (400, 400)),
+        'current_settings': config,
     }
     
     return render(request, 'adminpanel/image_settings.html', context)

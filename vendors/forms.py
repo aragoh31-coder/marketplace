@@ -27,7 +27,7 @@ class ProductForm(forms.ModelForm):
             'accept': 'image/jpeg,image/png,image/gif',
             'class': 'form-input'
         }),
-        help_text='Max 5MB. JPEG, PNG, or GIF only.'
+        help_text='Max 2MB. JPEG, PNG, GIF, BMP, or WebP (all converted to JPEG).'
     )
     
     class Meta:
@@ -65,12 +65,17 @@ class ProductForm(forms.ModelForm):
         image = self.cleaned_data.get('image')
         
         if image:
-            if image.size > 5 * 1024 * 1024:
-                raise forms.ValidationError("Image file too large (max 5MB)")
+            if image.size > 2 * 1024 * 1024:
+                raise forms.ValidationError(
+                    f"Image file too large. Maximum size is 2MB (your file: {image.size / 1024 / 1024:.1f}MB)"
+                )
             
             name = image.name.lower()
-            if not any(name.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif']):
-                raise forms.ValidationError("Invalid file type. Use JPEG, PNG, or GIF.")
+            allowed = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+            if not any(name.endswith(ext) for ext in allowed):
+                raise forms.ValidationError(
+                    "Invalid file type. Supported formats: JPEG, PNG, GIF, BMP, WebP"
+                )
         
         return image
     

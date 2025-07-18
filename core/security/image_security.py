@@ -180,7 +180,7 @@ class SecureImageProcessor:
         return False
     
     def _process_image(self, file_content):
-        """Process image with PIL to remove threats"""
+        """Process image and convert to JPEG"""
         try:
             img = Image.open(BytesIO(file_content))
             
@@ -188,10 +188,16 @@ class SecureImageProcessor:
             img = Image.open(BytesIO(file_content))  # Reopen after verify
             
             if img.width > self.max_dimensions[0] or img.height > self.max_dimensions[1]:
-                img.thumbnail(self.max_dimensions, Image.Resampling.LANCZOS)
+                ratio = min(
+                    self.max_dimensions[0] / img.width,
+                    self.max_dimensions[1] / img.height
+                )
+                new_size = (int(img.width * ratio), int(img.height * ratio))
+                img = img.resize(new_size, Image.Resampling.LANCZOS)
             
-            if img.mode not in ('RGB', 'L'):
+            if img.mode != 'RGB':
                 if img.mode == 'RGBA':
+                    # Create white background
                     background = Image.new('RGB', img.size, (255, 255, 255))
                     background.paste(img, mask=img.split()[3])
                     img = background
@@ -204,11 +210,38 @@ class SecureImageProcessor:
             thumbnail.thumbnail(self.config['THUMBNAIL_SIZE'], Image.Resampling.LANCZOS)
             
             output = BytesIO()
-            img.save(output, format='JPEG', quality=85, optimize=True, progressive=False)
+            img.save(
+                output, 
+                format='JPEG', 
+                quality=self.config.get('JPEG_QUALITY', 85), 
+                optimize=True, 
+                progressive=False
+            )
             output.seek(0)
             
+            if output.getbuffer().nbytes > self.max_size:
+                output = BytesIO()
+                img.save(
+                    output, 
+                    format='JPEG', 
+                    quality=70,  # Lower quality for smaller size
+                    optimize=True
+                )
+                output.seek(0)
+                
+                if output.getbuffer().nbytes > self.max_size:
+                    img.thumbnail((1280, 720), Image.Resampling.LANCZOS)
+                    output = BytesIO()
+                    img.save(output, format='JPEG', quality=70, optimize=True)
+                    output.seek(0)
+            
             thumb_output = BytesIO()
-            thumbnail.save(thumb_output, format='JPEG', quality=75, optimize=True)
+            thumbnail.save(
+                thumb_output, 
+                format='JPEG', 
+                quality=self.config.get('THUMBNAIL_QUALITY', 75), 
+                optimize=True
+            )
             thumb_output.seek(0)
             
             return output, thumb_output
@@ -218,15 +251,11 @@ class SecureImageProcessor:
             return None, None
     
     def _generate_secure_filename(self, original_filename):
-        """Generate cryptographically secure filename"""
-        ext = original_filename.split('.')[-1].lower()
-        if ext not in self.allowed_extensions:
-            ext = 'jpg'
-        
+        """Generate cryptographically secure filename - always .jpg"""
         random_name = secrets.token_urlsafe(32)
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         
-        filename = f"{timestamp}_{random_name}.{ext}"
+        filename = f"{timestamp}_{random_name}.jpg"
         
         filename = re.sub(r'[^a-zA-Z0-9._-]', '', filename)
         

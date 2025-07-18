@@ -5,6 +5,17 @@
 {% block content %}
 <div class="card">
     <h2>Admin Dashboard</h2>
+    
+    <div class="admin-nav">
+        <a href="{% url 'adminpanel:users' %}" class="btn btn-secondary">👥 Users</a>
+        <a href="{% url 'adminpanel:vendors' %}" class="btn btn-secondary">🏪 Vendors</a>
+        <a href="{% url 'adminpanel:products' %}" class="btn btn-secondary">📦 Products</a>
+        <a href="{% url 'adminpanel:orders' %}" class="btn btn-secondary">📋 Orders</a>
+        <a href="{% url 'adminpanel:disputes' %}" class="btn btn-secondary">⚖️ Disputes</a>
+        <a href="{% url 'adminpanel:withdrawals' %}" class="btn btn-secondary">💸 Withdrawals</a>
+        <a href="{% url 'adminpanel:logs' %}" class="btn btn-secondary">📊 Logs</a>
+        <a href="{% url 'adminpanel:image_settings' %}" class="btn btn-secondary">🖼️ Image Settings</a>
+    </div>
     <div class="metrics">
         <div>Users: {{ users_count }} (Active: {{ active_users }})</div>
         <div>Vendors: {{ vendors_count }} (Approved: {{ approved_vendors }})</div>
@@ -50,4 +61,30 @@
         <button type="submit" class="btn">Expire Data</button>
     </form>
 </div>
+
+<style>
+    .admin-nav {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        margin: 20px 0;
+        padding: 20px;
+        background: var(--bg-card);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+    }
+    
+    .admin-nav .btn {
+        text-align: center;
+        padding: 12px;
+        text-decoration: none;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+    
+    .admin-nav .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 255, 136, 0.2);
+    }
+</style>
 {% endblock %}
