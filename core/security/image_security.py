@@ -169,11 +169,13 @@ class SecureImageProcessor:
                 logger.warning(f"Malicious pattern detected: {pattern}")
                 return True
         
-        if b'<' in scan_start or b'<' in scan_end:  # Potential HTML/XML content
-            null_count = scan_start.count(b'\x00') + scan_end.count(b'\x00')
-            if null_count > 5:
-                logger.warning(f"Excessive null bytes in text content: {null_count}")
-                return True
+        script_indicators = [b'script', b'javascript', b'eval', b'function', b'var ', b'document']
+        script_count = sum(1 for indicator in script_indicators 
+                          if indicator in scan_start or indicator in scan_end)
+        
+        if script_count >= 2:  # Multiple script indicators suggest embedded code
+            logger.warning(f"Multiple script indicators detected: {script_count}")
+            return True
         
         return False
     

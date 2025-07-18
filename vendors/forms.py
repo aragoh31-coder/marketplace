@@ -77,6 +77,14 @@ class ProductForm(forms.ModelForm):
     def save(self, commit=True, user=None):
         instance = super().save(commit=False)
         
+        if user:
+            from vendors.models import Vendor
+            try:
+                vendor = Vendor.objects.get(user=user)
+                instance.vendor = vendor
+            except Vendor.DoesNotExist:
+                raise forms.ValidationError("User must be an approved vendor to create products")
+        
         image = self.cleaned_data.get('image')
         if image and user:
             processor = SecureImageProcessor()
