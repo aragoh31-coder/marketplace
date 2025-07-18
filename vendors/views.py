@@ -10,11 +10,14 @@ from django.core.paginator import Paginator
 from django.core.cache import cache
 from django_ratelimit.decorators import ratelimit
 
-from .models import Vendor
-from .forms import VendorApplicationForm, ProductForm, VendorSettingsForm
+from .models import Vendor, SubVendor, SubVendorActivityLog
+from .forms import VendorApplicationForm, ProductForm, VendorSettingsForm, VacationModeForm, SubVendorForm
 from products.models import Product
 from orders.models import Order, OrderItem
 from adminpanel.utils import ChartGenerator
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 @ratelimit(key='ip', rate='10/m', method='GET')
@@ -47,11 +50,20 @@ def vendor_detail(request, pk):
 @login_required
 @ratelimit(key='user', rate='30/m', method='GET')
 def vendor_dashboard(request):
+    try:
+        subvendor = SubVendor.objects.get(user=request.user, is_active=True)
+        return subvendor_dashboard(request, subvendor)
+    except SubVendor.DoesNotExist:
+        pass
+    
     if not hasattr(request.user, 'vendor'):
         messages.error(request, 'You are not registered as a vendor.')
         return redirect('vendors:apply')
     
     vendor = request.user.vendor
+    
+    if vendor.is_on_vacation:
+        messages.warning(request, 'Your store is in vacation mode. Products are hidden from customers.')
     
     today = timezone.now().date()
     week_ago = today - timedelta(days=7)
@@ -128,6 +140,40 @@ def vendor_dashboard(request):
     }
     
     return render(request, 'vendors/dashboard.html', context)
+
+
+def subvendor_dashboard(request, subvendor):
+    """Dashboard for sub-vendor accounts"""
+    vendor = subvendor.main_vendor
+    
+    subvendor.last_login = timezone.now()
+    subvendor.save()
+    
+    context = {
+        'is_subvendor': True,
+        'subvendor': subvendor,
+        'vendor': vendor,
+        'permissions': {
+            'view_orders': subvendor.can_view_orders,
+            'respond_messages': subvendor.can_respond_messages,
+            'update_tracking': subvendor.can_update_tracking,
+            'process_refunds': subvendor.can_process_refunds,
+        },
+        'message_limit': subvendor.daily_message_limit,
+        'messages_sent_today': subvendor.messages_sent_today,
+    }
+    
+    if subvendor.can_view_orders:
+        vendor_orders = Order.objects.filter(
+            items__product__vendor=vendor
+        ).distinct()
+        
+        context['pending_orders'] = vendor_orders.filter(
+            status__in=['paid', 'created']
+        ).count()
+        context['recent_orders'] = vendor_orders.order_by('-created_at')[:10]
+    
+    return render(request, 'vendors/subvendor_dashboard.html', context)
 
 
 @login_required
@@ -411,15 +457,221 @@ def vendor_profile(request, vendor_id):
 
 
 @login_required
-def vacation_mode(request):
-    """Toggle vacation mode"""
+def vacation_settings(request):
+    """Manage vacation mode settings"""
     if not hasattr(request.user, 'vendor'):
+        messages.error(request, 'You are not registered as a vendor.')
         return redirect('vendors:apply')
     
     vendor = request.user.vendor
     
     if request.method == 'POST':
-        Product.objects.filter(vendor=vendor).update(is_active=False)
-        messages.info(request, 'All products deactivated.')
+        action = request.POST.get('action')
         
-    return redirect('vendors:settings')
+        if action == 'activate':
+            form = VacationModeForm(request.POST)
+            if form.is_valid():
+                vendor.activate_vacation_mode(
+                    message=form.cleaned_data.get('vacation_message', ''),
+                    ends_at=form.cleaned_data.get('vacation_ends')
+                )
+                messages.success(request, 'Vacation mode activated. All products are now hidden.')
+                return redirect('vendors:vacation_settings')
+        
+        elif action == 'deactivate':
+            vendor.deactivate_vacation_mode()
+            messages.success(request, 'Vacation mode deactivated. Products are now visible again.')
+            return redirect('vendors:vacation_settings')
+    
+    form = VacationModeForm(initial={
+        'vacation_message': vendor.vacation_message,
+        'vacation_ends': vendor.vacation_ends
+    })
+    
+    return render(request, 'vendors/vacation_settings.html', {
+        'form': form,
+        'vendor': vendor,
+    })
+
+
+@login_required
+def manage_subvendors(request):
+    """Manage sub-vendor accounts"""
+    if not hasattr(request.user, 'vendor'):
+        messages.error(request, 'You are not registered as a vendor.')
+        return redirect('vendors:apply')
+    
+    vendor = request.user.vendor
+    subvendors = vendor.sub_vendors.all().order_by('-created_at')
+    
+    return render(request, 'vendors/manage_subvendors.html', {
+        'vendor': vendor,
+        'subvendors': subvendors,
+        'can_create_more': subvendors.count() < 2,
+    })
+
+
+@login_required
+def create_subvendor(request):
+    """Create a new sub-vendor account"""
+    if not hasattr(request.user, 'vendor'):
+        messages.error(request, 'You are not registered as a vendor.')
+        return redirect('vendors:apply')
+    
+    vendor = request.user.vendor
+    
+    if vendor.sub_vendors.count() >= 2:
+        messages.error(request, 'You can only create up to 2 sub-vendor accounts.')
+        return redirect('vendors:manage_subvendors')
+    
+    if request.method == 'POST':
+        form = SubVendorForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            
+            full_username = f"{vendor.vendor_name.lower()}_{username}"
+            
+            if User.objects.filter(username=full_username).exists():
+                messages.error(request, 'This sub-vendor username already exists.')
+                return render(request, 'vendors/create_subvendor.html', {'form': form})
+            
+            sub_user = User.objects.create_user(
+                username=full_username,
+                password=password,
+                email=f"{full_username}@subvendor.local"
+            )
+            
+            sub_vendor = SubVendor.objects.create(
+                main_vendor=vendor,
+                user=sub_user,
+                created_by=request.user,
+                can_view_orders=form.cleaned_data['can_view_orders'],
+                can_respond_messages=form.cleaned_data['can_respond_messages'],
+                can_update_tracking=form.cleaned_data['can_update_tracking'],
+                can_process_refunds=form.cleaned_data['can_process_refunds'],
+                daily_message_limit=form.cleaned_data['daily_message_limit'],
+            )
+            
+            SubVendorActivityLog.objects.create(
+                sub_vendor=sub_vendor,
+                action='account_created',
+                details={
+                    'created_by': request.user.username,
+                    'permissions': {
+                        'view_orders': sub_vendor.can_view_orders,
+                        'respond_messages': sub_vendor.can_respond_messages,
+                        'update_tracking': sub_vendor.can_update_tracking,
+                        'process_refunds': sub_vendor.can_process_refunds,
+                    }
+                }
+            )
+            
+            messages.success(request, f'Sub-vendor account created: {username}')
+            return redirect('vendors:manage_subvendors')
+    else:
+        form = SubVendorForm()
+    
+    return render(request, 'vendors/create_subvendor.html', {
+        'form': form,
+        'vendor': vendor,
+    })
+
+
+@login_required
+def edit_subvendor(request, subvendor_id):
+    """Edit sub-vendor permissions"""
+    vendor = get_object_or_404(Vendor, user=request.user)
+    subvendor = get_object_or_404(SubVendor, id=subvendor_id, main_vendor=vendor)
+    
+    if request.method == 'POST':
+        form = SubVendorForm(request.POST, instance=subvendor, editing=True)
+        if form.is_valid():
+            old_permissions = {
+                'view_orders': subvendor.can_view_orders,
+                'respond_messages': subvendor.can_respond_messages,
+                'update_tracking': subvendor.can_update_tracking,
+                'process_refunds': subvendor.can_process_refunds,
+            }
+            
+            form.save()
+            
+            new_permissions = {
+                'view_orders': subvendor.can_view_orders,
+                'respond_messages': subvendor.can_respond_messages,
+                'update_tracking': subvendor.can_update_tracking,
+                'process_refunds': subvendor.can_process_refunds,
+            }
+            
+            SubVendorActivityLog.objects.create(
+                sub_vendor=subvendor,
+                action='permissions_updated',
+                details={
+                    'updated_by': request.user.username,
+                    'old_permissions': old_permissions,
+                    'new_permissions': new_permissions,
+                }
+            )
+            
+            messages.success(request, 'Sub-vendor permissions updated.')
+            return redirect('vendors:manage_subvendors')
+    else:
+        form = SubVendorForm(instance=subvendor, editing=True)
+    
+    return render(request, 'vendors/edit_subvendor.html', {
+        'form': form,
+        'subvendor': subvendor,
+        'vendor': vendor,
+    })
+
+
+@login_required
+def deactivate_subvendor(request, subvendor_id):
+    """Deactivate a sub-vendor account"""
+    vendor = get_object_or_404(Vendor, user=request.user)
+    subvendor = get_object_or_404(SubVendor, id=subvendor_id, main_vendor=vendor)
+    
+    if request.method == 'POST':
+        subvendor.is_active = False
+        subvendor.deactivated_at = timezone.now()
+        subvendor.save()
+        
+        subvendor.user.is_active = False
+        subvendor.user.save()
+        
+        SubVendorActivityLog.objects.create(
+            sub_vendor=subvendor,
+            action='account_deactivated',
+            details={
+                'deactivated_by': request.user.username,
+            }
+        )
+        
+        messages.success(request, f'Sub-vendor account {subvendor.user.username} has been deactivated.')
+        return redirect('vendors:manage_subvendors')
+    
+    return render(request, 'vendors/deactivate_subvendor.html', {
+        'subvendor': subvendor,
+        'vendor': vendor,
+    })
+
+
+@login_required
+def subvendor_activity_log(request, subvendor_id):
+    """View sub-vendor activity log"""
+    vendor = get_object_or_404(Vendor, user=request.user)
+    subvendor = get_object_or_404(SubVendor, id=subvendor_id, main_vendor=vendor)
+    
+    activities = subvendor.activity_logs.all()[:100]
+    
+    return render(request, 'vendors/subvendor_activity_log.html', {
+        'subvendor': subvendor,
+        'activities': activities,
+        'vendor': vendor,
+    })
+
+
+@login_required
+def vacation_mode(request):
+    """Legacy vacation mode toggle - redirect to new settings"""
+    return redirect('vendors:vacation_settings')

@@ -269,6 +269,7 @@ def change_password(request):
 
 @login_required
 def pgp_settings(request):
+    """Handle PGP key upload with verification"""
     if request.method == 'POST':
         if 'verify_code' in request.POST:
             return pgp_verify_key(request)
@@ -276,7 +277,7 @@ def pgp_settings(request):
         form = PGPKeyForm(request.POST)
         if form.is_valid():
             request.session['temp_pgp_key'] = form.cleaned_data['pgp_public_key']
-            request.session['temp_pgp_fingerprint'] = form.fingerprint
+            request.session['temp_pgp_fingerprint'] = getattr(form, 'fingerprint', None)
             request.session['temp_pgp_login_enabled'] = form.cleaned_data['enable_pgp_login']
             
             verification_code = secrets.token_urlsafe(16)
@@ -305,15 +306,28 @@ def pgp_settings(request):
                 f"Enter only the verification code above."
             )
             
+            fingerprint = getattr(form, 'fingerprint', import_result.get('fingerprint'))
+            if not fingerprint:
+                messages.error(request, 'Failed to get key fingerprint for verification.')
+                form = PGPKeyForm(initial={
+                    'pgp_public_key': request.user.pgp_public_key,
+                    'enable_pgp_login': request.user.pgp_login_enabled
+                })
+                return render(request, 'accounts/pgp_settings.html', {
+                    'form': form,
+                    'has_pgp': bool(request.user.pgp_public_key),
+                    'pgp_fingerprint': request.user.pgp_fingerprint
+                })
+            
             encrypt_result = pgp_service.encrypt_message(
                 verification_message,
-                form.fingerprint
+                fingerprint
             )
             
             if encrypt_result['success']:
                 return render(request, 'accounts/pgp_verify.html', {
                     'encrypted_message': encrypt_result['encrypted_message'],
-                    'fingerprint': form.fingerprint[:8] + '...' + form.fingerprint[-8:],
+                    'fingerprint': fingerprint[:8] + '...' + fingerprint[-8:],
                     'key_info': getattr(form, 'key_info', {}),
                 })
             else:

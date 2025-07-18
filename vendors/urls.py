@@ -23,4 +23,10 @@ urlpatterns = [
     
     path('settings/', views.vendor_settings, name='settings'),
     path('vacation/', views.vacation_mode, name='vacation_mode'),
+    path('vacation/settings/', views.vacation_settings, name='vacation_settings'),
+    path('subvendors/', views.manage_subvendors, name='manage_subvendors'),
+    path('subvendors/create/', views.create_subvendor, name='create_subvendor'),
+    path('subvendors/<uuid:subvendor_id>/edit/', views.edit_subvendor, name='edit_subvendor'),
+    path('subvendors/<uuid:subvendor_id>/deactivate/', views.deactivate_subvendor, name='deactivate_subvendor'),
+    path('subvendors/<uuid:subvendor_id>/activity/', views.subvendor_activity_log, name='subvendor_activity_log'),
 ]

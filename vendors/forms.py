@@ -1,7 +1,12 @@
 from django import forms
-from .models import Vendor
+from django.utils import timezone
+from datetime import datetime, timedelta
+from .models import Vendor, SubVendor
+from django.contrib.auth import get_user_model
 from products.models import Product
 from core.security.image_security import SecureImageProcessor
+
+User = get_user_model()
 
 class VendorApplicationForm(forms.ModelForm):
     terms_accepted = forms.BooleanField(
@@ -125,3 +130,113 @@ class VendorSettingsForm(forms.ModelForm):
                 'class': 'form-input'
             }),
         }
+
+
+class VacationModeForm(forms.Form):
+    vacation_message = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'rows': 4,
+            'class': 'form-input',
+            'placeholder': 'Message to display to customers (e.g., "On vacation until Dec 25. Orders will be processed after I return.")'
+        }),
+        required=False,
+        label='Vacation Message'
+    )
+    
+    vacation_ends = forms.DateTimeField(
+        widget=forms.DateTimeInput(attrs={
+            'type': 'datetime-local',
+            'class': 'form-input',
+            'min': timezone.now().strftime('%Y-%m-%dT%H:%M'),
+        }),
+        required=False,
+        label='Vacation Ends (Optional)'
+    )
+    
+    def clean_vacation_ends(self):
+        ends = self.cleaned_data.get('vacation_ends')
+        if ends and ends < timezone.now():
+            raise forms.ValidationError('End date must be in the future.')
+        return ends
+
+
+class SubVendorForm(forms.ModelForm):
+    username = forms.CharField(
+        max_length=30,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'support1'
+        }),
+        help_text='Will be prefixed with your vendor name'
+    )
+    
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-input',
+        }),
+        help_text='Strong password for sub-vendor account'
+    )
+    
+    confirm_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-input',
+        })
+    )
+    
+    daily_message_limit = forms.IntegerField(
+        min_value=10,
+        max_value=500,
+        initial=100,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-input',
+        })
+    )
+    
+    class Meta:
+        model = SubVendor
+        fields = [
+            'can_view_orders', 
+            'can_respond_messages',
+            'can_update_tracking',
+            'can_process_refunds',
+            'daily_message_limit'
+        ]
+        widgets = {
+            'can_view_orders': forms.CheckboxInput(attrs={'class': 'form-check'}),
+            'can_respond_messages': forms.CheckboxInput(attrs={'class': 'form-check'}),
+            'can_update_tracking': forms.CheckboxInput(attrs={'class': 'form-check'}),
+            'can_process_refunds': forms.CheckboxInput(attrs={'class': 'form-check'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.editing = kwargs.pop('editing', False)
+        super().__init__(*args, **kwargs)
+        
+        if self.editing:
+            del self.fields['username']
+            del self.fields['password']
+            del self.fields['confirm_password']
+    
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if username:
+            if len(username) < 3:
+                raise forms.ValidationError('Username must be at least 3 characters.')
+            if not username.replace('_', '').isalnum():
+                raise forms.ValidationError('Username can only contain letters, numbers, and underscores.')
+        return username
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        if not self.editing:
+            password = cleaned_data.get('password')
+            confirm = cleaned_data.get('confirm_password')
+            
+            if password and confirm and password != confirm:
+                raise forms.ValidationError('Passwords do not match.')
+            
+            if password and len(password) < 8:
+                raise forms.ValidationError('Password must be at least 8 characters.')
+        
+        return cleaned_data
