@@ -87,7 +87,14 @@
             </div>
             
             <div class="product-actions">
-                {% if product.stock_quantity > 0 and product.is_available %}
+                {% if product.vendor.is_on_vacation %}
+                <div class="vacation-status">
+                    <span class="vacation-badge">🏖️ On Vacation Listing</span>
+                    {% if product.vendor.vacation_message %}
+                    <p class="vacation-message">{{ product.vendor.vacation_message }}</p>
+                    {% endif %}
+                </div>
+                {% elif product.stock_quantity > 0 and product.is_available %}
                 <form method="post" action="{% url 'orders:add_to_cart' product.id %}">
                     {% csrf_token %}
                     <input type="hidden" name="honeypot_field" class="honeypot">
@@ -332,6 +339,28 @@
         .product-grid {
             grid-template-columns: repeat(3, 1fr);
         }
+    }
+    
+    .vacation-status {
+        text-align: center;
+        padding: 15px;
+        background: #2a2a2a;
+        border: 1px solid #ff9800;
+        border-radius: 6px;
+    }
+    
+    .vacation-badge {
+        display: block;
+        color: #ff9800;
+        font-weight: bold;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+    
+    .vacation-message {
+        color: #ccc;
+        font-size: 12px;
+        margin: 0;
     }
 </style>
 {% endblock %}

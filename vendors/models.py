@@ -47,14 +47,6 @@ class Vendor(PrivacyModel):
         return True
     
     def activate_vacation_mode(self, message='', ends_at=None):
-        from products.models import Product
-        
-        if not self.vacation_mode:
-            Product.objects.filter(vendor=self, is_active=True).update(
-                was_active_before_vacation=True,
-                is_active=False
-            )
-        
         self.vacation_mode = True
         self.vacation_message = message
         self.vacation_started = timezone.now()
@@ -62,17 +54,6 @@ class Vendor(PrivacyModel):
         self.save()
     
     def deactivate_vacation_mode(self):
-        from products.models import Product
-        
-        if self.vacation_mode:
-            Product.objects.filter(
-                vendor=self, 
-                was_active_before_vacation=True
-            ).update(
-                is_active=True,
-                was_active_before_vacation=False
-            )
-        
         self.vacation_mode = False
         self.vacation_message = ''
         self.vacation_started = None

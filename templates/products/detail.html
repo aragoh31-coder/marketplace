@@ -72,7 +72,15 @@
                         <div class="price-xmr">ɱ {{ product.price_xmr }}</div>
                     </div>
                     
-                    {% if product.stock_quantity > 0 and product.is_available %}
+                    {% if product.vendor.is_on_vacation %}
+                        <div class="vacation-notice">
+                            <h4>🏖️ Vendor on Vacation</h4>
+                            <p>{{ product.vendor.vacation_message|default:"This vendor is currently on vacation and not accepting new orders." }}</p>
+                            {% if product.vendor.vacation_ends %}
+                                <p><strong>Expected return:</strong> {{ product.vendor.vacation_ends|date:"M d, Y" }}</p>
+                            {% endif %}
+                        </div>
+                    {% elif product.stock_quantity > 0 and product.is_available %}
                         <form method="post" action="{% url 'orders:add_to_cart' product.id %}">
                             {% csrf_token %}
                             <div class="quantity-selector">
@@ -257,6 +265,27 @@
             grid-template-columns: 1fr;
             gap: 20px;
         }
+    }
+    
+    .vacation-notice {
+        background: #2a2a2a;
+        border: 2px solid #ff9800;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    
+    .vacation-notice h4 {
+        color: #ff9800;
+        margin: 0 0 15px 0;
+        font-size: 18px;
+    }
+    
+    .vacation-notice p {
+        color: #ccc;
+        margin: 10px 0;
+        line-height: 1.5;
     }
 </style>
 {% endblock %}

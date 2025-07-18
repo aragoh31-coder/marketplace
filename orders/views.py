@@ -15,6 +15,11 @@ def cart_view(request):
 @login_required
 def add_to_cart(request, product_id):
     product = get_object_or_404(Product, id=product_id, is_available=True)
+    
+    if product.vendor.is_on_vacation:
+        messages.error(request, f'Cannot add {product.name} to cart - vendor is on vacation.')
+        return redirect('products:detail', pk=product_id)
+    
     cart, created = Cart.objects.get_or_create(user=request.user)
     
     cart_item, created = CartItem.objects.get_or_create(

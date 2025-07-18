@@ -36,7 +36,6 @@ class Product(PrivacyModel):
     stock_quantity = models.IntegerField(default=0)
     is_available = models.BooleanField(default=True)
     steganography_data = models.TextField(blank=True, null=True)  # Encrypted field
-    was_active_before_vacation = models.BooleanField(default=False)
     
     image_filename = models.CharField(max_length=255, blank=True)
     thumbnail_filename = models.CharField(max_length=255, blank=True)
