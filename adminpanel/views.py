@@ -41,13 +41,16 @@ def admin_login(request):
                 request.session.pop(f'admin_failed_attempts_{username}', None)
                 request.session.pop(f'admin_lockout_time_{username}', None)
                 
-                request.session['admin_pending_user_id'] = user.id
+                request.session['admin_pending_user_id'] = str(user.id)
                 request.session['admin_login_timestamp'] = timezone.now().timestamp()
                 
                 AdminLog.objects.create(
-                    user=user,
-                    action='LOGIN',
-                    details=f'First authentication step completed for {username}'
+                    admin_user=user,
+                    action_type='LOGIN',
+                    target_model='User',
+                    target_id=str(user.id),
+                    description=f'First authentication step completed for {username}',
+                    ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
                 )
                 
                 return redirect('adminpanel:secondary_auth')
@@ -92,9 +95,12 @@ def secondary_auth(request):
                     request.session.set_expiry(settings.ADMIN_PANEL_CONFIG['SESSION_TIMEOUT'])
                     
                     AdminLog.objects.create(
-                        user=user,
-                        action='LOGIN',
-                        details=f'Admin login completed for {user.username}'
+                        admin_user=user,
+                        action_type='LOGIN',
+                        target_model='User',
+                        target_id=str(user.id),
+                        description=f'Admin login completed for {user.username}',
+                        ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
                     )
                     
                     messages.success(request, 'Welcome to the admin panel!')
@@ -136,9 +142,12 @@ def pgp_verify(request):
                     request.session.set_expiry(settings.ADMIN_PANEL_CONFIG['SESSION_TIMEOUT'])
                     
                     AdminLog.objects.create(
-                        user=user,
-                        action='LOGIN',
-                        details=f'Admin login with PGP verification completed for {user.username}'
+                        admin_user=user,
+                        action_type='LOGIN',
+                        target_model='User',
+                        target_id=str(user.id),
+                        description=f'Admin login with PGP verification completed for {user.username}',
+                        ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
                     )
                     
                     messages.success(request, 'PGP verification successful! Welcome to the admin panel!')
@@ -364,19 +373,23 @@ def admin_user_detail(request, username):
     total_orders = user.orders.count()
     completed_orders = user.orders.filter(status='COMPLETED').count()
     
-    buyer_disputes = user.buyer_disputes.order_by('-created_at')[:5]
-    vendor_disputes = user.vendor_disputes.order_by('-created_at')[:5]
+    buyer_disputes = user.filed_disputes.order_by('-created_at')[:5]
+    vendor_disputes = user.received_disputes.order_by('-created_at')[:5]
     total_disputes = buyer_disputes.count() + vendor_disputes.count()
     
     vendor_info = None
     vendor_stats = {}
     if hasattr(user, 'vendor'):
         vendor_info = user.vendor
+        from products.models import Product
+        vendor_products = Product.objects.filter(vendor=vendor_info)
+        vendor_orders = Order.objects.filter(items__product__in=vendor_products).distinct()
+        
         vendor_stats = {
             'total_products': vendor_info.products.count(),
             'active_products': vendor_info.products.filter(is_active=True).count(),
-            'total_sales': vendor_info.orders.filter(status='COMPLETED').count(),
-            'pending_orders': vendor_info.orders.filter(status='PENDING').count(),
+            'total_sales': vendor_orders.filter(status='COMPLETED').count(),
+            'pending_orders': vendor_orders.filter(status='PENDING').count(),
             'vendor_rating': vendor_info.rating,
             'is_approved': vendor_info.is_approved,
             'vacation_mode': getattr(vendor_info, 'vacation_mode', False),
@@ -432,9 +445,12 @@ def admin_user_action(request, username):
             user.is_active = False
             user.save()
             AdminLog.objects.create(
-                user=request.user,
-                action='UPDATE',
-                details=f'Banned user {user.username}'
+                admin_user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                description=f'Banned user {user.username}',
+                ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
             )
             messages.success(request, f'User {user.username} has been banned.')
             
@@ -442,9 +458,12 @@ def admin_user_action(request, username):
             user.is_active = True
             user.save()
             AdminLog.objects.create(
-                user=request.user,
-                action='UPDATE',
-                details=f'Unbanned user {user.username}'
+                admin_user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                description=f'Unbanned user {user.username}',
+                ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
             )
             messages.success(request, f'User {user.username} has been unbanned.')
             
@@ -454,9 +473,12 @@ def admin_user_action(request, username):
             user.pgp_login_enabled = False
             user.save()
             AdminLog.objects.create(
-                user=request.user,
-                action='UPDATE',
-                details=f'Reset 2FA for user {user.username}'
+                admin_user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                description=f'Reset 2FA for user {user.username}',
+                ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
             )
             messages.success(request, f'2FA has been reset for {user.username}.')
             
@@ -464,9 +486,12 @@ def admin_user_action(request, username):
             user.is_staff = True
             user.save()
             AdminLog.objects.create(
-                user=request.user,
-                action='UPDATE',
-                details=f'Granted staff privileges to {user.username}'
+                admin_user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                description=f'Granted staff privileges to {user.username}',
+                ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
             )
             messages.success(request, f'{user.username} is now a staff member.')
             
@@ -474,9 +499,12 @@ def admin_user_action(request, username):
             user.is_staff = False
             user.save()
             AdminLog.objects.create(
-                user=request.user,
-                action='UPDATE',
-                details=f'Removed staff privileges from {user.username}'
+                admin_user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                description=f'Removed staff privileges from {user.username}',
+                ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
             )
             messages.success(request, f'Staff privileges removed from {user.username}.')
     
