@@ -73,7 +73,7 @@ def vendor_dashboard(request):
     vendor = request.user.vendor
     
     if vendor.is_on_vacation:
-        messages.warning(request, 'Your store is in vacation mode. Products are hidden from customers.')
+        messages.warning(request, 'Your store is in vacation mode. Products are visible but marked as "On Vacation Listing" and cannot be purchased.')
     
     today = timezone.now().date()
     week_ago = today - timedelta(days=7)
