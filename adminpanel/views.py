@@ -1,7 +1,15 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
-from django.db.models import Sum, Count, Avg
+from django.db.models import Sum, Count, Avg, Q
+from django.core.paginator import Paginator
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from datetime import timedelta
+import secrets
+import json
 from accounts.models import User
 from vendors.models import Vendor
 from products.models import Product
@@ -9,94 +17,473 @@ from orders.models import Order
 from disputes.models import Dispute
 from wallets.models import Wallet, Transaction
 from messaging.models import Message
-# from core.utils import log_event  # TODO: Implement logging utility
-from django.utils import timezone
-from datetime import timedelta
+from .models import AdminLog
+from .forms import SecondaryAuthForm, AdminPGPChallengeForm, AdminLoginForm
+from django.conf import settings
+
+def admin_login(request):
+    """Enhanced admin login with triple authentication"""
+    if request.method == 'POST':
+        form = AdminLoginForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            
+            user = authenticate(request, username=username, password=password)
+            if user and user.is_superuser:
+                failed_attempts = request.session.get(f'admin_failed_attempts_{username}', 0)
+                lockout_time = request.session.get(f'admin_lockout_time_{username}')
+                
+                if lockout_time and timezone.now().timestamp() < lockout_time:
+                    messages.error(request, 'Account temporarily locked due to failed attempts.')
+                    return render(request, 'adminpanel/locked.html')
+                
+                request.session.pop(f'admin_failed_attempts_{username}', None)
+                request.session.pop(f'admin_lockout_time_{username}', None)
+                
+                request.session['admin_pending_user_id'] = user.id
+                request.session['admin_login_timestamp'] = timezone.now().timestamp()
+                
+                AdminLog.objects.create(
+                    user=user,
+                    action='LOGIN',
+                    details=f'First authentication step completed for {username}'
+                )
+                
+                return redirect('adminpanel:secondary_auth')
+            else:
+                failed_attempts = request.session.get(f'admin_failed_attempts_{username}', 0) + 1
+                request.session[f'admin_failed_attempts_{username}'] = failed_attempts
+                
+                if failed_attempts >= settings.ADMIN_PANEL_CONFIG['MAX_FAILED_ATTEMPTS']:
+                    lockout_time = timezone.now().timestamp() + settings.ADMIN_PANEL_CONFIG['LOCKOUT_DURATION']
+                    request.session[f'admin_lockout_time_{username}'] = lockout_time
+                    messages.error(request, 'Too many failed attempts. Account locked.')
+                    return render(request, 'adminpanel/locked.html')
+                
+                messages.error(request, 'Invalid credentials or insufficient permissions.')
+    else:
+        form = AdminLoginForm()
+    
+    return render(request, 'adminpanel/login.html', {'form': form})
+
+
+def secondary_auth(request):
+    """Secondary password authentication"""
+    pending_user_id = request.session.get('admin_pending_user_id')
+    if not pending_user_id:
+        return redirect('adminpanel:login')
+    
+    if request.method == 'POST':
+        form = SecondaryAuthForm(request.POST)
+        if form.is_valid():
+            secondary_password = form.cleaned_data['password']
+            
+            if secondary_password == settings.ADMIN_PANEL_CONFIG['SECONDARY_PASSWORD']:
+                user = User.objects.get(id=pending_user_id)
+                
+                if settings.ADMIN_PGP_CONFIG['ENFORCE_PGP'] and user.pgp_public_key:
+                    return redirect('adminpanel:pgp_verify')
+                else:
+                    login(request, user)
+                    request.session.pop('admin_pending_user_id', None)
+                    request.session.pop('admin_login_timestamp', None)
+                    
+                    request.session.set_expiry(settings.ADMIN_PANEL_CONFIG['SESSION_TIMEOUT'])
+                    
+                    AdminLog.objects.create(
+                        user=user,
+                        action='LOGIN',
+                        details=f'Admin login completed for {user.username}'
+                    )
+                    
+                    messages.success(request, 'Welcome to the admin panel!')
+                    return redirect('adminpanel:dashboard')
+            else:
+                messages.error(request, 'Invalid secondary password.')
+    else:
+        form = SecondaryAuthForm()
+    
+    return render(request, 'adminpanel/secondary_auth.html', {'form': form})
+
+
+def pgp_verify(request):
+    """PGP challenge verification for admin access"""
+    pending_user_id = request.session.get('admin_pending_user_id')
+    if not pending_user_id:
+        return redirect('adminpanel:login')
+    
+    user = User.objects.get(id=pending_user_id)
+    
+    if request.method == 'POST':
+        form = AdminPGPChallengeForm(request.POST)
+        if form.is_valid():
+            signed_response = form.cleaned_data['signed_challenge']
+            challenge = request.session.get('admin_pgp_challenge')
+            
+            if challenge:
+                from accounts.pgp_service import PGPService
+                pgp_service = PGPService()
+                
+                verify_result = pgp_service.verify_signature(signed_response, challenge)
+                
+                if verify_result['success']:
+                    login(request, user)
+                    request.session.pop('admin_pending_user_id', None)
+                    request.session.pop('admin_login_timestamp', None)
+                    request.session.pop('admin_pgp_challenge', None)
+                    
+                    request.session.set_expiry(settings.ADMIN_PANEL_CONFIG['SESSION_TIMEOUT'])
+                    
+                    AdminLog.objects.create(
+                        user=user,
+                        action='LOGIN',
+                        details=f'Admin login with PGP verification completed for {user.username}'
+                    )
+                    
+                    messages.success(request, 'PGP verification successful! Welcome to the admin panel!')
+                    return redirect('adminpanel:dashboard')
+                else:
+                    messages.error(request, 'PGP signature verification failed.')
+            else:
+                messages.error(request, 'Challenge expired. Please start over.')
+                return redirect('adminpanel:login')
+    else:
+        challenge = f"Admin Panel Access Challenge\nTimestamp: {timezone.now().isoformat()}\nRandom: {secrets.token_urlsafe(16)}"
+        request.session['admin_pgp_challenge'] = challenge
+        form = AdminPGPChallengeForm()
+    
+    challenge = request.session.get('admin_pgp_challenge', '')
+    return render(request, 'adminpanel/pgp_verify.html', {
+        'form': form,
+        'challenge': challenge,
+        'user': user
+    })
+
+
+def locked_account(request):
+    """Display account lockout page"""
+    return render(request, 'adminpanel/locked.html')
+
+
+def admin_logout(request):
+    """Admin logout"""
+    if request.user.is_authenticated:
+        AdminLog.objects.create(
+            user=request.user,
+            action='LOGOUT',
+            details=f'Admin logout for {request.user.username}'
+        )
+    
+    logout(request)
+    messages.success(request, 'You have been logged out.')
+    return redirect('adminpanel:login')
+
 
 @login_required
-def dashboard(request):
+def admin_dashboard(request):
+    """Enhanced admin dashboard with comprehensive metrics"""
     if not request.user.is_superuser:
         messages.error(request, "Admin access required.")
-        return redirect('accounts:home')
+        return redirect('adminpanel:login')
     
-    users_count = User.objects.count()
-    active_users = User.objects.filter(last_activity__gte=timezone.now() - timedelta(days=30)).count()
-    vendors_count = Vendor.objects.count()
+    total_users = User.objects.count()
+    active_users = User.objects.filter(is_active=True).count()
+    new_users_today = User.objects.filter(date_joined__date=timezone.now().date()).count()
+    new_users_week = User.objects.filter(date_joined__gte=timezone.now() - timedelta(days=7)).count()
+    
+    total_vendors = Vendor.objects.count()
     approved_vendors = Vendor.objects.filter(is_approved=True).count()
-    products_count = Product.objects.count()
-    orders_count = Order.objects.count()
-    open_disputes = Dispute.objects.filter(status='open').count()
-    total_escrow = Order.objects.filter(status='PAID').aggregate(Sum('total_btc'))['total_btc__sum'] or 0
-    total_btc = Wallet.objects.filter(currency='BTC').aggregate(Sum('balance'))['balance__sum'] or 0
-    total_xmr = Wallet.objects.filter(currency='XMR').aggregate(Sum('balance'))['balance__sum'] or 0
-    total_balance = total_btc + total_xmr
+    pending_vendors = Vendor.objects.filter(is_approved=False).count()
     
-    recent_orders = Order.objects.select_related('user').order_by('-created_at')[:10]
-    recent_transactions = Transaction.objects.order_by('-created_at')[:10]
-    recent_messages = Message.objects.order_by('-created_at')[:10]
+    total_products = Product.objects.count()
+    active_products = Product.objects.filter(is_active=True).count()
+    total_orders = Order.objects.count()
+    orders_today = Order.objects.filter(created_at__date=timezone.now().date()).count()
     
-    avg_order_value = Order.objects.aggregate(Avg('total_btc'))['total_btc__avg'] or 0
-    order_status_counts = Order.objects.values('status').annotate(count=Count('id'))
+    total_disputes = Dispute.objects.count()
+    open_disputes = Dispute.objects.filter(status='OPEN').count()
+    resolved_disputes = Dispute.objects.filter(status='RESOLVED').count()
+    
+    try:
+        btc_revenue = Transaction.objects.filter(
+            transaction_type='DEPOSIT',
+            currency='BTC'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        xmr_revenue = Transaction.objects.filter(
+            transaction_type='DEPOSIT',
+            currency='XMR'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        btc_revenue_month = Transaction.objects.filter(
+            transaction_type='DEPOSIT',
+            currency='BTC',
+            created_at__gte=month_start
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        xmr_revenue_month = Transaction.objects.filter(
+            transaction_type='DEPOSIT',
+            currency='XMR',
+            created_at__gte=month_start
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+    except Exception:
+        btc_revenue = xmr_revenue = btc_revenue_month = xmr_revenue_month = 0
+    
+    recent_users = User.objects.order_by('-date_joined')[:5]
+    recent_orders = Order.objects.order_by('-created_at')[:5]
+    recent_disputes = Dispute.objects.order_by('-created_at')[:3]
     
     context = {
-        'users_count': users_count,
+        'total_users': total_users,
         'active_users': active_users,
-        'vendors_count': vendors_count,
+        'new_users_today': new_users_today,
+        'new_users_week': new_users_week,
+        'total_vendors': total_vendors,
         'approved_vendors': approved_vendors,
-        'products_count': products_count,
-        'orders_count': orders_count,
+        'pending_vendors': pending_vendors,
+        'total_products': total_products,
+        'active_products': active_products,
+        'total_orders': total_orders,
+        'orders_today': orders_today,
+        'total_disputes': total_disputes,
         'open_disputes': open_disputes,
-        'total_escrow': total_escrow,
-        'total_balance': total_balance,
-        'avg_order_value': avg_order_value,
-        'order_status_counts': order_status_counts,
+        'resolved_disputes': resolved_disputes,
+        'btc_revenue': btc_revenue,
+        'xmr_revenue': xmr_revenue,
+        'btc_revenue_month': btc_revenue_month,
+        'xmr_revenue_month': xmr_revenue_month,
+        'recent_users': recent_users,
         'recent_orders': recent_orders,
-        'recent_transactions': recent_transactions,
-        'recent_messages': recent_messages,
+        'recent_disputes': recent_disputes,
     }
     return render(request, 'adminpanel/dashboard.html', context)
 
-@login_required
-def users_list(request):
-    if not request.user.is_superuser:
-        messages.error(request, "Admin access required.")
-        return redirect('accounts:home')
-    
-    users = User.objects.all().order_by('-last_activity')
-    context = {'users': users}
-    return render(request, 'adminpanel/users.html', context)
+
+dashboard = admin_dashboard
 
 @login_required
-def user_detail(request, user_id):
+def admin_users(request):
+    """Enhanced user listing with search and filters"""
     if not request.user.is_superuser:
         messages.error(request, "Admin access required.")
-        return redirect('accounts:home')
+        return redirect('adminpanel:login')
     
-    user = User.objects.get(id=user_id)
-    wallet = Wallet.objects.filter(user=user).first()
-    orders = Order.objects.filter(user=user)
-    messages_sent = Message.objects.filter(sender=user).count()
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    vendor_filter = request.GET.get('vendor', '')
+    
+    users = User.objects.all()
+    
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        )
+    
+    if status_filter == 'active':
+        users = users.filter(is_active=True)
+    elif status_filter == 'inactive':
+        users = users.filter(is_active=False)
+    elif status_filter == 'staff':
+        users = users.filter(is_staff=True)
+    
+    if vendor_filter == 'vendors':
+        users = users.filter(vendor__isnull=False)
+    elif vendor_filter == 'non_vendors':
+        users = users.filter(vendor__isnull=True)
+    
+    users = users.order_by('-date_joined')
+    
+    paginator = Paginator(users, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'vendor_filter': vendor_filter,
+        'total_users': users.count(),
+    }
+    return render(request, 'adminpanel/users.html', context)
+
+
+users_list = admin_users
+
+@login_required
+def admin_user_detail(request, username):
+    """Comprehensive user details view with financial data"""
+    if not request.user.is_superuser:
+        messages.error(request, "Admin access required.")
+        return redirect('adminpanel:login')
+    
+    user = get_object_or_404(User, username=username)
+    
+    try:
+        wallet = user.wallet
+        btc_balance = wallet.btc_balance
+        xmr_balance = wallet.xmr_balance
+    except:
+        wallet = None
+        btc_balance = xmr_balance = 0
+    
+    transactions = []
+    total_deposits_btc = total_deposits_xmr = 0
+    total_withdrawals_btc = total_withdrawals_xmr = 0
+    
+    if wallet:
+        transactions = wallet.transactions.order_by('-created_at')[:20]
+        
+        deposits_btc = wallet.transactions.filter(
+            transaction_type='DEPOSIT', currency='BTC'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        deposits_xmr = wallet.transactions.filter(
+            transaction_type='DEPOSIT', currency='XMR'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        withdrawals_btc = wallet.transactions.filter(
+            transaction_type='WITHDRAWAL', currency='BTC'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        withdrawals_xmr = wallet.transactions.filter(
+            transaction_type='WITHDRAWAL', currency='XMR'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        total_deposits_btc = deposits_btc
+        total_deposits_xmr = deposits_xmr
+        total_withdrawals_btc = withdrawals_btc
+        total_withdrawals_xmr = withdrawals_xmr
+    
+    orders = user.orders.order_by('-created_at')[:10]
+    total_orders = user.orders.count()
+    completed_orders = user.orders.filter(status='COMPLETED').count()
+    
+    buyer_disputes = user.buyer_disputes.order_by('-created_at')[:5]
+    vendor_disputes = user.vendor_disputes.order_by('-created_at')[:5]
+    total_disputes = buyer_disputes.count() + vendor_disputes.count()
+    
+    vendor_info = None
+    vendor_stats = {}
+    if hasattr(user, 'vendor'):
+        vendor_info = user.vendor
+        vendor_stats = {
+            'total_products': vendor_info.products.count(),
+            'active_products': vendor_info.products.filter(is_active=True).count(),
+            'total_sales': vendor_info.orders.filter(status='COMPLETED').count(),
+            'pending_orders': vendor_info.orders.filter(status='PENDING').count(),
+            'vendor_rating': vendor_info.rating,
+            'is_approved': vendor_info.is_approved,
+            'vacation_mode': getattr(vendor_info, 'vacation_mode', False),
+        }
+    
+    security_info = {
+        'pgp_enabled': bool(user.pgp_public_key),
+        'pgp_fingerprint': user.pgp_fingerprint,
+        'two_factor_enabled': user.pgp_login_enabled,
+        'last_login': user.last_login,
+        'date_joined': user.date_joined,
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser,
+    }
+    
     context = {
         'user': user,
         'wallet': wallet,
+        'btc_balance': btc_balance,
+        'xmr_balance': xmr_balance,
+        'transactions': transactions,
+        'total_deposits_btc': total_deposits_btc,
+        'total_deposits_xmr': total_deposits_xmr,
+        'total_withdrawals_btc': total_withdrawals_btc,
+        'total_withdrawals_xmr': total_withdrawals_xmr,
         'orders': orders,
-        'messages_sent': messages_sent,
+        'total_orders': total_orders,
+        'completed_orders': completed_orders,
+        'buyer_disputes': buyer_disputes,
+        'vendor_disputes': vendor_disputes,
+        'total_disputes': total_disputes,
+        'vendor_info': vendor_info,
+        'vendor_stats': vendor_stats,
+        'security_info': security_info,
     }
     return render(request, 'adminpanel/user_detail.html', context)
 
+
+user_detail = admin_user_detail
+
 @login_required
-def ban_user(request, user_id):
+def admin_user_action(request, username):
+    """Handle various user management actions"""
     if not request.user.is_superuser:
         messages.error(request, "Admin access required.")
-        return redirect('accounts:home')
+        return redirect('adminpanel:login')
+    
+    user = get_object_or_404(User, username=username)
+    action = request.POST.get('action')
     
     if request.method == 'POST':
-        user = User.objects.get(id=user_id)
-        user.is_active = False
-        user.save()
-        # log_event('user_banned', {'user_id': user_id, 'admin': request.user.username})
-        messages.success(request, f'User {user.username} banned.')
-    return redirect('adminpanel:users')
+        if action == 'ban':
+            user.is_active = False
+            user.save()
+            AdminLog.objects.create(
+                user=request.user,
+                action='UPDATE',
+                details=f'Banned user {user.username}'
+            )
+            messages.success(request, f'User {user.username} has been banned.')
+            
+        elif action == 'unban':
+            user.is_active = True
+            user.save()
+            AdminLog.objects.create(
+                user=request.user,
+                action='UPDATE',
+                details=f'Unbanned user {user.username}'
+            )
+            messages.success(request, f'User {user.username} has been unbanned.')
+            
+        elif action == 'reset_2fa':
+            user.pgp_public_key = ''
+            user.pgp_fingerprint = ''
+            user.pgp_login_enabled = False
+            user.save()
+            AdminLog.objects.create(
+                user=request.user,
+                action='UPDATE',
+                details=f'Reset 2FA for user {user.username}'
+            )
+            messages.success(request, f'2FA has been reset for {user.username}.')
+            
+        elif action == 'make_staff':
+            user.is_staff = True
+            user.save()
+            AdminLog.objects.create(
+                user=request.user,
+                action='UPDATE',
+                details=f'Granted staff privileges to {user.username}'
+            )
+            messages.success(request, f'{user.username} is now a staff member.')
+            
+        elif action == 'remove_staff':
+            user.is_staff = False
+            user.save()
+            AdminLog.objects.create(
+                user=request.user,
+                action='UPDATE',
+                details=f'Removed staff privileges from {user.username}'
+            )
+            messages.success(request, f'Staff privileges removed from {user.username}.')
+    
+    return redirect('adminpanel:user_detail', username=username)
+
+
+ban_user = admin_user_action
 
 @login_required
 def vendors_list(request):

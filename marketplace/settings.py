@@ -277,3 +277,19 @@ SECURE_UPLOAD_ROOT.mkdir(exist_ok=True)
 
 TEMP_UPLOAD_ROOT = Path(BASE_DIR).parent / 'temp_uploads'
 TEMP_UPLOAD_ROOT.mkdir(exist_ok=True)
+
+try:
+    from config.admin_config import ADMIN_PANEL_CONFIG, ADMIN_PGP_CONFIG
+except ImportError:
+    ADMIN_PANEL_CONFIG = {
+        'SECONDARY_PASSWORD': 'DefaultSecondaryPass123!',
+        'REQUIRE_PGP_AFTER_AUTH': False,
+        'MAX_FAILED_ATTEMPTS': 3,
+        'LOCKOUT_DURATION': 3600,
+        'SESSION_TIMEOUT': 7200,
+    }
+    ADMIN_PGP_CONFIG = {
+        'ENFORCE_PGP': False,
+        'CHALLENGE_TIMEOUT': 300,
+        'ADMIN_PUBLIC_KEY': '',
+    }

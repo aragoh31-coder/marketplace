@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
-    dashboard, users_list, user_detail, ban_user,
+    admin_login, admin_logout, secondary_auth, pgp_verify, locked_account,
+    admin_dashboard, admin_users, admin_user_detail, admin_user_action,
     vendors_list, approve_vendor,
     products_list, delete_product,
     orders_list,
@@ -11,11 +12,18 @@ from .views import (
 
 app_name = 'adminpanel'
 urlpatterns = [
-    path('', dashboard, name='dashboard'),
-    path('dashboard/', dashboard, name='dashboard'),
-    path('users/', users_list, name='users'),
-    path('user/<uuid:user_id>/', user_detail, name='user_detail'),
-    path('ban_user/<uuid:user_id>/', ban_user, name='ban_user'),
+    path('login/', admin_login, name='login'),
+    path('logout/', admin_logout, name='logout'),
+    path('secondary-auth/', secondary_auth, name='secondary_auth'),
+    path('pgp-verify/', pgp_verify, name='pgp_verify'),
+    path('locked/', locked_account, name='locked'),
+    
+    path('', admin_dashboard, name='dashboard'),
+    path('dashboard/', admin_dashboard, name='dashboard'),
+    path('users/', admin_users, name='users'),
+    path('user/<str:username>/', admin_user_detail, name='user_detail'),
+    path('user/<str:username>/action/', admin_user_action, name='user_action'),
+    
     path('vendors/', vendors_list, name='vendors'),
     path('approve_vendor/<uuid:vendor_id>/', approve_vendor, name='approve_vendor'),
     path('products/', products_list, name='products'),
