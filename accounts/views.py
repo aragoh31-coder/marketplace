@@ -25,10 +25,21 @@ User = get_user_model()
 class CustomUserCreationForm(forms.ModelForm):
     password1 = forms.CharField(label='Password', widget=forms.PasswordInput)
     password2 = forms.CharField(label='Password confirmation', widget=forms.PasswordInput)
+    honeypot_field = forms.CharField(
+        required=False, 
+        widget=forms.HiddenInput(),
+        label=''
+    )
 
     class Meta:
         model = User
         fields = ('username', 'email')
+
+    def clean_honeypot_field(self):
+        honeypot = self.cleaned_data.get('honeypot_field')
+        if honeypot:
+            raise forms.ValidationError('Bot detected')
+        return honeypot
 
     def clean_password2(self):
         password1 = self.cleaned_data.get("password1")

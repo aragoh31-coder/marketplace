@@ -686,3 +686,29 @@ def subvendor_activity_log(request, subvendor_id):
 def vacation_mode(request):
     """Legacy vacation mode toggle - redirect to new settings"""
     return redirect('vendors:vacation_settings')
+
+
+@login_required
+def vendor_stats(request):
+    """Display comprehensive vendor statistics"""
+    vendors = Vendor.objects.filter(is_approved=True, is_active=True).annotate(
+        total_orders=Count('products__orderitem__order', distinct=True),
+        total_revenue_btc=Sum('products__orderitem__order__total_btc'),
+        total_revenue_xmr=Sum('products__orderitem__order__total_xmr'),
+        avg_rating=Avg('feedback__rating')
+    ).order_by('-total_orders')
+    
+    total_vendors = vendors.count()
+    total_bonded_vendors = vendors.filter(bond_paid=True).count()
+    total_revenue_btc = vendors.aggregate(Sum('total_revenue_btc'))['total_revenue_btc__sum'] or 0
+    total_revenue_xmr = vendors.aggregate(Sum('total_revenue_xmr'))['total_revenue_xmr__sum'] or 0
+    
+    context = {
+        'vendors': vendors[:20],
+        'total_vendors': total_vendors,
+        'total_bonded_vendors': total_bonded_vendors,
+        'total_revenue_btc': total_revenue_btc,
+        'total_revenue_xmr': total_revenue_xmr,
+    }
+    
+    return render(request, 'vendors/stats.html', context)

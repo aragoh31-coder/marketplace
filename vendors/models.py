@@ -32,6 +32,12 @@ class Vendor(PrivacyModel):
     vacation_started = models.DateTimeField(null=True, blank=True)
     vacation_ends = models.DateTimeField(null=True, blank=True)
     
+    pgp_key = models.TextField(blank=True, null=True)
+    bond_paid = models.BooleanField(default=False)
+    bond_amount = models.DecimalField(max_digits=20, decimal_places=8, default=0.0)
+    bond_currency = models.CharField(max_length=3, choices=[('BTC', 'Bitcoin'), ('XMR', 'Monero')], default='BTC')
+    bond_transaction_id = models.CharField(max_length=255, blank=True, null=True)
+    
     def __str__(self):
         return self.vendor_name
     

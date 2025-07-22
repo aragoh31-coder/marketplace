@@ -29,4 +29,5 @@ urlpatterns = [
     path('subvendors/<uuid:subvendor_id>/edit/', views.edit_subvendor, name='edit_subvendor'),
     path('subvendors/<uuid:subvendor_id>/deactivate/', views.deactivate_subvendor, name='deactivate_subvendor'),
     path('subvendors/<uuid:subvendor_id>/activity/', views.subvendor_activity_log, name='subvendor_activity_log'),
+    path('stats/', views.vendor_stats, name='vendor_stats'),
 ]

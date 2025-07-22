@@ -1,6 +1,7 @@
 from django import forms
-from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.forms import PasswordChangeForm, AuthenticationForm
 from django.contrib.auth import password_validation
+from django.core.exceptions import ValidationError
 from .models import User
 import gnupg
 
@@ -99,6 +100,20 @@ class CustomPasswordChangeForm(PasswordChangeForm):
             'placeholder': 'Confirm new password'
         })
     )
+
+
+class LoginForm(AuthenticationForm):
+    honeypot_field = forms.CharField(
+        required=False, 
+        widget=forms.HiddenInput(),
+        label=''
+    )
+    
+    def clean_honeypot_field(self):
+        honeypot = self.cleaned_data.get('honeypot_field')
+        if honeypot:
+            raise ValidationError('Bot detected')
+        return honeypot
 
 
 class DeleteAccountForm(forms.Form):

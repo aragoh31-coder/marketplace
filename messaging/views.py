@@ -223,3 +223,13 @@ def message_detail(request, pk):
         message.save()
     
     return render(request, 'messaging/detail.html', {'message': message})
+
+
+def check_new_messages(user):
+    """Check if user has unread messages"""
+    return Message.objects.filter(recipient=user, is_read=False).exists()
+
+
+def get_unread_message_count(user):
+    """Get count of unread messages for user"""
+    return Message.objects.filter(recipient=user, is_read=False).count()

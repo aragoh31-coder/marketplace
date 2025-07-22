@@ -21,6 +21,7 @@ class Order(PrivacyModel):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    buyer_wallet = models.ForeignKey('wallets.Wallet', on_delete=models.CASCADE, related_name='buyer_orders', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     total_btc = models.DecimalField(max_digits=20, decimal_places=8, default=0)
     total_xmr = models.DecimalField(max_digits=20, decimal_places=8, default=0)
