@@ -4,8 +4,10 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.db.models import Sum, Count, Avg, Q
 from django.core.paginator import Paginator
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
@@ -26,6 +28,8 @@ from .models import AdminLog, AdminProfile, AdminAction, SecurityAlert
 from .forms import SecondaryAuthForm, AdminPGPChallengeForm, AdminLoginForm, AdminTripleAuthForm
 from .security import AdminSecurityManager, TripleAuthenticator
 from .decorators import require_2fa, require_triple_auth, log_admin_action, admin_required
+from apps.security.models import SecurityEvent, SecurityAuditLog
+from apps.security.forms import TripleAuthForm
 from django.conf import settings
 
 def admin_login(request):
@@ -580,6 +584,177 @@ def admin_user_detail(request, username):
     }
     
     return render(request, 'adminpanel/user_detail.html', context)
+
+
+@require_triple_auth
+def triple_auth(request):
+    """Triple authentication for sensitive admin operations"""
+    if request.method == 'POST':
+        # Generate PGP challenge
+        challenge_text = f"Admin verification challenge: {secrets.token_urlsafe(16)}"
+        
+        request.session['pgp_challenge'] = {
+            'text': challenge_text,
+            'expected_response': challenge_text,  # In real implementation, this would be encrypted
+            'timestamp': time.time()
+        }
+        
+        form = TripleAuthForm(
+            user=request.user,
+            pgp_challenge=request.session.get('pgp_challenge'),
+            data=request.POST
+        )
+        
+        if form.is_valid():
+            cache.set(f'triple_auth_verified:{request.user.id}', True, 300)  # 5 minutes
+            
+            SecurityAuditLog.objects.create(
+                user=request.user,
+                category='authentication',
+                action='triple_auth_success',
+                details={'timestamp': timezone.now().isoformat()},
+                session_key=request.session.session_key or '',
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                risk_level='high'
+            )
+            
+            messages.success(request, 'Triple authentication successful.')
+            
+            next_url = request.GET.get('next', reverse('adminpanel:dashboard'))
+            return redirect(next_url)
+        else:
+            SecurityAuditLog.objects.create(
+                user=request.user,
+                category='authentication',
+                action='triple_auth_failed',
+                details={'errors': form.errors.as_json()},
+                session_key=request.session.session_key or '',
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                risk_level='high'
+            )
+    else:
+        # Generate PGP challenge for GET request
+        challenge_text = f"Admin verification challenge: {secrets.token_urlsafe(16)}"
+        
+        request.session['pgp_challenge'] = {
+            'text': challenge_text,
+            'expected_response': challenge_text,
+            'timestamp': time.time()
+        }
+        
+        form = TripleAuthForm(user=request.user)
+    
+    context = {
+        'form': form,
+        'pgp_challenge_message': request.session.get('pgp_challenge', {}).get('text', ''),
+    }
+    
+    return render(request, 'adminpanel/triple_auth.html', context)
+
+
+@admin_required
+def withdrawal_management(request):
+    """Comprehensive withdrawal management interface"""
+    status_filter = request.GET.get('status', 'pending')
+    currency_filter = request.GET.get('currency', '')
+    risk_filter = request.GET.get('risk', '')
+    
+    withdrawals = WithdrawalRequest.objects.all()
+    
+    if status_filter:
+        withdrawals = withdrawals.filter(status=status_filter)
+    if currency_filter:
+        withdrawals = withdrawals.filter(currency=currency_filter)
+    if risk_filter == 'high':
+        withdrawals = withdrawals.filter(risk_score__gte=70)
+    elif risk_filter == 'medium':
+        withdrawals = withdrawals.filter(risk_score__gte=40, risk_score__lt=70)
+    elif risk_filter == 'low':
+        withdrawals = withdrawals.filter(risk_score__lt=40)
+    
+    withdrawals = withdrawals.order_by('-created_at')
+    
+    stats = {
+        'total_pending': WithdrawalRequest.objects.filter(status='pending').count(),
+        'total_reviewing': WithdrawalRequest.objects.filter(status='reviewing').count(),
+        'total_approved': WithdrawalRequest.objects.filter(status='approved').count(),
+        'total_rejected': WithdrawalRequest.objects.filter(status='rejected').count(),
+        'high_risk_pending': WithdrawalRequest.objects.filter(
+            status='pending', risk_score__gte=70
+        ).count(),
+    }
+    
+    context = {
+        'withdrawals': withdrawals,
+        'stats': stats,
+        'status_filter': status_filter,
+        'currency_filter': currency_filter,
+        'risk_filter': risk_filter,
+    }
+    
+    return render(request, 'adminpanel/withdrawal_management.html', context)
+
+
+@require_triple_auth
+def approve_withdrawal(request, withdrawal_id):
+    """Approve a withdrawal request with triple authentication"""
+    withdrawal = get_object_or_404(WithdrawalRequest, id=withdrawal_id)
+    
+    if request.method == 'POST':
+        if withdrawal.status != 'pending':
+            messages.error(request, 'Withdrawal is not in pending status.')
+            return redirect('adminpanel:withdrawal_management')
+        
+        wallet = withdrawal.user.wallet
+        balance_field = f'balance_{withdrawal.currency}'
+        current_balance = getattr(wallet, balance_field)
+        
+        if current_balance < withdrawal.amount:
+            messages.error(request, 'Insufficient balance for withdrawal.')
+            return redirect('adminpanel:withdrawal_management')
+        
+        withdrawal.status = 'approved'
+        withdrawal.processed_by = request.user
+        withdrawal.processed_at = timezone.now()
+        withdrawal.admin_notes = request.POST.get('admin_notes', '')
+        withdrawal.save()
+        
+        new_balance = current_balance - withdrawal.amount
+        setattr(wallet, balance_field, new_balance)
+        wallet.save()
+        
+        Transaction.objects.create(
+            user=withdrawal.user,
+            type='withdrawal',
+            amount=withdrawal.amount,
+            currency=withdrawal.currency,
+            balance_before=current_balance,
+            balance_after=new_balance,
+            reference=f'WR-{withdrawal.id}',
+            related_object_type='WithdrawalRequest',
+            related_object_id=withdrawal.id,
+            metadata={
+                'withdrawal_address': withdrawal.address,
+                'approved_by': request.user.username,
+                'admin_notes': withdrawal.admin_notes
+            }
+        )
+        
+        log_admin_action(request, 'withdrawal_approved', withdrawal, {
+            'amount': str(withdrawal.amount),
+            'currency': withdrawal.currency,
+            'user': withdrawal.user.username,
+            'admin_notes': withdrawal.admin_notes
+        })
+        
+        messages.success(request, f'Withdrawal {withdrawal.id} approved successfully.')
+        return redirect('adminpanel:withdrawal_management')
+    
+    context = {
+        'withdrawal': withdrawal,
+    }
+    
+    return render(request, 'adminpanel/withdrawal_approve_confirm.html', context)
 
 
 user_detail = admin_user_detail

@@ -63,6 +63,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'apps.security.context_processors.captcha_data',
+                'apps.security.context_processors.security_context',
             ],
         },
     },

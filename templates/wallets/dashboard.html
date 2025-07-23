@@ -224,25 +224,6 @@
     </div>
     {% endif %}
     
-    <!-- Risk Assessment -->
-    {% if wallet.risk_score > 30 %}
-    <div class="risk-assessment {% if wallet.risk_score > 70 %}risk-high{% endif %}">
-        <h3>⚠️ Risk Assessment</h3>
-        <p><strong>Current Risk Score:</strong> {{ wallet.risk_score }}/100</p>
-        {% if wallet.risk_factors %}
-        <p><strong>Risk Factors:</strong></p>
-        <ul>
-            {% for factor in wallet.risk_factors %}
-            <li>{{ factor }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        {% if wallet.risk_score > 70 %}
-        <p><strong>⚠️ High Risk:</strong> Manual review required for withdrawals over security limits.</p>
-        {% endif %}
-    </div>
-    {% endif %}
-    
     <!-- Balance Overview -->
     <div class="balance-card">
         <h2>💎 Your Balances</h2>
@@ -268,22 +249,14 @@
     
     <!-- Withdrawal Limits -->
     <div class="withdrawal-limits">
-        <h3>💳 Withdrawal Limits & Velocity</h3>
+        <h3>💳 Withdrawal Limits</h3>
         <div class="limit-item">
             <span>Daily BTC Limit:</span>
-            <span>{{ wallet.daily_btc_used|floatformat:8 }} / {{ wallet.daily_btc_limit|floatformat:8 }} BTC</span>
+            <span>{{ wallet.daily_withdrawal_limit_btc|floatformat:8 }} BTC</span>
         </div>
         <div class="limit-item">
             <span>Daily XMR Limit:</span>
-            <span>{{ wallet.daily_xmr_used|floatformat:12 }} / {{ wallet.daily_xmr_limit|floatformat:12 }} XMR</span>
-        </div>
-        <div class="limit-item">
-            <span>Weekly BTC Limit:</span>
-            <span>{{ wallet.weekly_btc_used|floatformat:8 }} / {{ wallet.weekly_btc_limit|floatformat:8 }} BTC</span>
-        </div>
-        <div class="limit-item">
-            <span>Weekly XMR Limit:</span>
-            <span>{{ wallet.weekly_xmr_used|floatformat:12 }} / {{ wallet.weekly_xmr_limit|floatformat:12 }} XMR</span>
+            <span>{{ wallet.daily_withdrawal_limit_xmr|floatformat:12 }} XMR</span>
         </div>
         <div class="limit-item">
             <span>Account Age:</span>
@@ -383,7 +356,6 @@
         <div class="security-item">
             <span class="security-icon status-enabled">✅</span>
             <span>Privacy Protection: No IP Address Logging</span>
-        </div>
         </div>
         <div class="security-item">
             <span class="security-icon status-enabled">✅</span>

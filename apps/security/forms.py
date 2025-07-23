@@ -426,3 +426,72 @@ def captcha_context(request):
         'captcha_enabled': True,
         'security_enabled': True
     }
+
+
+class TripleAuthForm(forms.Form):
+    """Triple authentication form for admin access"""
+    
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Admin Password'
+        }),
+        label='Admin Password'
+    )
+    
+    secondary_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Secondary Password'
+        }),
+        label='Secondary Password'
+    )
+    
+    pgp_challenge_response = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'placeholder': 'Decrypt the PGP challenge and paste the result here',
+            'rows': 4
+        }),
+        label='PGP Challenge Response'
+    )
+    
+    def __init__(self, user=None, pgp_challenge=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        self.pgp_challenge = pgp_challenge
+    
+    def clean_password(self):
+        """Validate admin password"""
+        password = self.cleaned_data.get('password')
+        if not self.user or not self.user.check_password(password):
+            raise forms.ValidationError("Invalid admin password.")
+        return password
+    
+    def clean_secondary_password(self):
+        """Validate secondary password"""
+        secondary = self.cleaned_data.get('secondary_password')
+        if not self.user:
+            raise forms.ValidationError("Admin profile not found.")
+        
+        main_password = self.cleaned_data.get('password', '')
+        if secondary == main_password:
+            raise forms.ValidationError("Secondary password must be different from main password.")
+        
+        return secondary
+    
+    def clean_pgp_challenge_response(self):
+        """Validate PGP challenge response"""
+        response = self.cleaned_data.get('pgp_challenge_response', '').strip()
+        
+        if not response:
+            raise forms.ValidationError("PGP challenge response required.")
+        
+        if not self.pgp_challenge:
+            raise forms.ValidationError("No PGP challenge available.")
+        
+        expected_response = self.pgp_challenge.get('expected_response', '')
+        if response != expected_response:
+            raise forms.ValidationError("Invalid PGP challenge response.")
+        
+        return response
