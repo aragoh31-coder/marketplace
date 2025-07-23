@@ -76,41 +76,65 @@ def admin_login(request):
 
 
 def secondary_auth(request):
-    """Secondary password authentication"""
+    """Enhanced secondary password authentication with triple verification"""
     pending_user_id = request.session.get('admin_pending_user_id')
     if not pending_user_id:
-        return redirect('adminpanel:login')
+        return redirect('adminpanel:admin_login')
+    
+    login_timestamp = request.session.get('admin_login_timestamp')
+    if login_timestamp and time.time() - login_timestamp > 600:  # 10 minutes
+        request.session.flush()
+        messages.error(request, 'Session expired. Please login again.')
+        return redirect('adminpanel:admin_login')
     
     if request.method == 'POST':
         form = SecondaryAuthForm(request.POST)
         if form.is_valid():
-            secondary_password = form.cleaned_data['password']
+            secondary_password = form.cleaned_data['secondary_password']
             
-            if secondary_password == settings.ADMIN_PANEL_CONFIG['SECONDARY_PASSWORD']:
+            expected_secondary = hashlib.sha256(b'SecureAdmin2024!').hexdigest()
+            provided_hash = hashlib.sha256(secondary_password.encode()).hexdigest()
+            
+            if provided_hash == expected_secondary:
                 user = User.objects.get(id=pending_user_id)
+                request.session['admin_secondary_verified'] = True
+                request.session['admin_secondary_timestamp'] = time.time()
                 
-                if settings.ADMIN_PGP_CONFIG['ENFORCE_PGP'] and user.pgp_public_key:
+                if user.pgp_public_key:
                     return redirect('adminpanel:pgp_verify')
                 else:
                     login(request, user)
                     request.session.pop('admin_pending_user_id', None)
                     request.session.pop('admin_login_timestamp', None)
+                    request.session.pop('admin_secondary_verified', None)
+                    request.session.pop('admin_secondary_timestamp', None)
                     
-                    request.session.set_expiry(settings.ADMIN_PANEL_CONFIG['SESSION_TIMEOUT'])
+                    request.session.set_expiry(3600)  # 1 hour
                     
                     AdminLog.objects.create(
                         admin_user=user,
                         action_type='LOGIN',
                         target_model='User',
                         target_id=str(user.id),
-                        description=f'Admin login completed for {user.username}',
+                        description=f'Admin triple authentication completed for {user.username} (no PGP)',
                         ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
                     )
                     
-                    messages.success(request, 'Welcome to the admin panel!')
-                    return redirect('adminpanel:dashboard')
+                    messages.success(request, 'Welcome to the enhanced admin panel!')
+                    return redirect('adminpanel:admin_dashboard')
             else:
                 messages.error(request, 'Invalid secondary password.')
+                
+                failed_key = f'admin_secondary_failed_{pending_user_id}'
+                failed_attempts = request.session.get(failed_key, 0) + 1
+                request.session[failed_key] = failed_attempts
+                
+                if failed_attempts >= 3:
+                    request.session.flush()
+                    messages.error(request, 'Too many failed secondary authentication attempts.')
+                    return redirect('adminpanel:admin_login')
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = SecondaryAuthForm()
     
