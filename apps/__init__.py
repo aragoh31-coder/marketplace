@@ -13,5 +13,8 @@ try:
         'RateLimitMiddleware',
         'BotDetector',
     ]
-except ImportError:
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Failed to import security modules: {e}")
     __all__ = []
