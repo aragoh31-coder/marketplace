@@ -209,8 +209,8 @@ def profile_view(request):
     
     try:
         wallet = user.wallet
-        btc_balance = wallet.btc_balance
-        xmr_balance = wallet.xmr_balance
+        btc_balance = wallet.balance_btc
+        xmr_balance = wallet.balance_xmr
     except:
         btc_balance = 0
         xmr_balance = 0

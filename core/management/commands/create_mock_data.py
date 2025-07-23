@@ -205,24 +205,16 @@ class Command(BaseCommand):
         return vendors
 
     def create_vendor_wallets(self, user):
-        """Create BTC and XMR wallets for vendor"""
+        """Create wallet for vendor"""
         Wallet.objects.get_or_create(
             user=user,
-            currency='BTC',
             defaults={
-                'address': f"bc1q{secrets.token_hex(20)}",
-                'private_key': f"encrypted_btc_key_{secrets.token_hex(16)}",
-                'balance': Decimal(str(random.uniform(0.1, 5.0))),
-            }
-        )
-        
-        Wallet.objects.get_or_create(
-            user=user,
-            currency='XMR',
-            defaults={
-                'address': f"4A{secrets.token_hex(32)}",
-                'private_key': f"encrypted_xmr_key_{secrets.token_hex(16)}",
-                'balance': Decimal(str(random.uniform(10, 500))),
+                'balance_btc': Decimal(str(random.uniform(0.1, 5.0))),
+                'balance_xmr': Decimal(str(random.uniform(10, 500))),
+                'escrow_btc': Decimal('0.00000000'),
+                'escrow_xmr': Decimal('0.000000000000'),
+                'daily_withdrawal_limit_btc': Decimal('1.00000000'),
+                'daily_withdrawal_limit_xmr': Decimal('100.000000000000'),
             }
         )
 
@@ -380,21 +372,15 @@ class Command(BaseCommand):
         return buyers
 
     def create_buyer_wallets(self, user):
-        """Create BTC and XMR wallets for buyer"""
+        """Create wallet for buyer"""
         Wallet.objects.create(
             user=user,
-            currency='BTC',
-            address=f"bc1q{secrets.token_hex(20)}",
-            private_key=f"encrypted_btc_key_{secrets.token_hex(16)}",
-            balance=Decimal(str(random.uniform(0.01, 0.5))),
-        )
-        
-        Wallet.objects.create(
-            user=user,
-            currency='XMR',
-            address=f"4A{secrets.token_hex(32)}",
-            private_key=f"encrypted_xmr_key_{secrets.token_hex(16)}",
-            balance=Decimal(str(random.uniform(1, 50))),
+            balance_btc=Decimal(str(random.uniform(0.01, 0.5))),
+            balance_xmr=Decimal(str(random.uniform(1, 50))),
+            escrow_btc=Decimal('0.00000000'),
+            escrow_xmr=Decimal('0.000000000000'),
+            daily_withdrawal_limit_btc=Decimal('1.00000000'),
+            daily_withdrawal_limit_xmr=Decimal('100.000000000000'),
         )
 
     def create_orders(self, buyers, products):

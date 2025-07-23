@@ -335,11 +335,13 @@ def admin_user_detail(request, username):
     
     try:
         wallet = user.wallet
-        btc_balance = wallet.btc_balance
-        xmr_balance = wallet.xmr_balance
+        btc_balance = wallet.balance_btc
+        xmr_balance = wallet.balance_xmr
+        btc_escrow = wallet.escrow_btc
+        xmr_escrow = wallet.escrow_xmr
     except:
         wallet = None
-        btc_balance = xmr_balance = 0
+        btc_balance = xmr_balance = btc_escrow = xmr_escrow = 0
     
     transactions = []
     total_deposits_btc = total_deposits_xmr = 0
@@ -410,6 +412,8 @@ def admin_user_detail(request, username):
         'wallet': wallet,
         'btc_balance': btc_balance,
         'xmr_balance': xmr_balance,
+        'btc_escrow': btc_escrow,
+        'xmr_escrow': xmr_escrow,
         'transactions': transactions,
         'total_deposits_btc': total_deposits_btc,
         'total_deposits_xmr': total_deposits_xmr,

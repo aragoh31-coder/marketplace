@@ -795,7 +795,7 @@
                             <span class="badge">{{ cart_count }}</span>
                         {% endif %}
                     </a>
-                    <a href="{% url 'wallets:deposit' %}" class="nav-link">Wallet</a>
+                    <a href="{% url 'wallets:dashboard' %}" class="nav-link">Wallet</a>
                     <a href="{% url 'messaging:list' %}" class="nav-link">
                         Messages
                         {% if unread_messages %}
@@ -852,7 +852,7 @@
                         <span class="badge">{{ cart_count }}</span>
                     {% endif %}
                 </a>
-                <a href="{% url 'wallets:deposit' %}" class="mobile-nav-link">💰 Wallet</a>
+                <a href="{% url 'wallets:dashboard' %}" class="mobile-nav-link">💰 Wallet</a>
                 <a href="{% url 'messaging:list' %}" class="mobile-nav-link">
                     💬 Messages
                     {% if unread_messages %}
@@ -913,7 +913,7 @@
                         <span class="badge">{{ cart_count }}</span>
                     {% endif %}
                 </a>
-                <a href="{% url 'wallets:deposit' %}" class="bottom-nav-link">
+                <a href="{% url 'wallets:dashboard' %}" class="bottom-nav-link">
                     <span class="bottom-nav-icon">💰</span>
                     <span>Wallet</span>
                 </a>
