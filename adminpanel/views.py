@@ -22,7 +22,7 @@ from disputes.models import Dispute
 from wallets.models import Wallet, Transaction, WithdrawalRequest, AuditLog
 from messaging.models import Message
 from .models import AdminLog, AdminProfile, AdminAction, SecurityAlert
-from .forms import SecondaryAuthForm, AdminPGPChallengeForm, AdminLoginForm
+from .forms import SecondaryAuthForm, AdminPGPChallengeForm, AdminLoginForm, AdminTripleAuthForm
 from .security import AdminSecurityManager, TripleAuthenticator
 from django.conf import settings
 
