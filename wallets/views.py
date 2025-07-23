@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
@@ -66,6 +67,38 @@ def dashboard(request):
         not last_check.resolved
     )
     
+    from django.utils import timezone
+    today = timezone.now().date()
+    daily_btc_used = WithdrawalRequest.objects.filter(
+        user=request.user,
+        currency='btc',
+        created_at__date=today,
+        status__in=['approved', 'processing', 'completed']
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    
+    daily_xmr_used = WithdrawalRequest.objects.filter(
+        user=request.user,
+        currency='xmr',
+        created_at__date=today,
+        status__in=['approved', 'processing', 'completed']
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    
+    security_score = 0
+    if wallet.two_fa_enabled:
+        security_score += 30
+    if wallet.withdrawal_pin:
+        security_score += 25
+    if request.user.pgp_public_key:
+        security_score += 25
+    
+    account_age = (timezone.now().date() - request.user.date_joined.date()).days
+    if account_age >= 90:
+        security_score += 20
+    elif account_age >= 30:
+        security_score += 15
+    elif account_age >= 7:
+        security_score += 10
+
     context = {
         'wallet': wallet,
         'btc_available': btc_available,
@@ -73,6 +106,9 @@ def dashboard(request):
         'pending_withdrawals': pending_withdrawals,
         'recent_transactions': recent_transactions,
         'show_balance_warning': show_balance_warning,
+        'daily_btc_used': daily_btc_used,
+        'daily_xmr_used': daily_xmr_used,
+        'security_score': min(security_score, 100),
     }
     
     security_alerts = SecurityAlert.objects.filter(

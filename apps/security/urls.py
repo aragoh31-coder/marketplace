@@ -5,7 +5,9 @@ app_name = 'security'
 
 urlpatterns = [
     path('status/', views.security_status, name='security_status'),
-    path('challenge/', views.bot_challenge, name='bot_challenge'),
+    path('bot-challenge/', views.bot_challenge, name='bot_challenge'),
     path('captcha/', views.captcha_challenge, name='captcha_challenge'),
     path('rate-limited/', views.rate_limited, name='rate_limited'),
+    path('ip-change/', views.ip_change_detected, name='ip_change_detected'),
+    path('session-expired/', views.session_expired, name='session_expired'),
 ]

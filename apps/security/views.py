@@ -146,7 +146,22 @@ def captcha_challenge(request):
 
 def rate_limited(request):
     """Display rate limit message"""
-    return render(request, 'security/rate_limited.html', {
+    return render(request, 'security/rate_limited_enhanced.html', {
         'retry_after': 3600,  # 1 hour
         'limit_type': request.GET.get('type', 'general')
+    })
+
+
+def ip_change_detected(request):
+    """Handle IP address change detection"""
+    return render(request, 'security/ip_change_detected.html', {
+        'support_contact': 'support@marketplace.onion'
+    })
+
+
+def session_expired(request):
+    """Handle session expiration"""
+    return render(request, 'security/session_expired.html', {
+        'login_url': '/accounts/login/',
+        'timeout_reason': request.GET.get('reason', 'inactivity')
     })
