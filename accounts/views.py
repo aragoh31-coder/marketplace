@@ -84,7 +84,7 @@ def register(request):
             messages.success(request, 'Registration successful!')
             return redirect('accounts:home')
     else:
-        form = CustomUserCreationForm()
+        form = SecureRegistrationForm()
     return render(request, 'accounts/register.html', {'form': form})
 
 
@@ -147,7 +147,7 @@ def login_view(request):
                     messages.success(request, 'Logged in successfully!')
                     return redirect('/')
     else:
-        form = AuthenticationForm()
+        form = SecureLoginForm()
     
     return render(request, 'accounts/login.html', {'form': form})
 
