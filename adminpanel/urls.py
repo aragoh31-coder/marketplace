@@ -8,7 +8,9 @@ from .views import (
     disputes_list, resolve_dispute,
     withdrawals_list, approve_withdrawal,
     system_logs, trigger_maintenance, image_settings,
-    admin_withdrawal_detail, admin_security_logs, admin_wallet_overview
+    admin_withdrawal_detail, admin_security_logs, admin_wallet_overview,
+    withdrawal_management, withdrawal_detail, withdrawal_approve, 
+    withdrawal_reject, withdrawal_add_notes
 )
 
 app_name = 'adminpanel'
@@ -40,4 +42,10 @@ urlpatterns = [
     path('withdrawal/<int:withdrawal_id>/', admin_withdrawal_detail, name='withdrawal_detail'),
     path('security-logs/', admin_security_logs, name='security_logs'),
     path('wallet-overview/', admin_wallet_overview, name='wallet_overview'),
+    
+    path('withdrawal-management/', withdrawal_management, name='withdrawal_management'),
+    path('withdrawal-detail/<int:withdrawal_id>/', withdrawal_detail, name='withdrawal_detail'),
+    path('withdrawal-approve/<int:withdrawal_id>/', withdrawal_approve, name='withdrawal_approve'),
+    path('withdrawal-reject/<int:withdrawal_id>/', withdrawal_reject, name='withdrawal_reject'),
+    path('withdrawal-notes/<int:withdrawal_id>/', withdrawal_add_notes, name='withdrawal_add_notes'),
 ]

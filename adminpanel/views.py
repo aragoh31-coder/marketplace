@@ -638,6 +638,195 @@ def approve_withdrawal(request, withdrawal_id):
     messages.success(request, 'Withdrawal approved.')
     return redirect('adminpanel:withdrawals')
 
+def require_admin_auth(view_func):
+    """Decorator to require admin authentication"""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            return redirect('adminpanel:login')
+        
+        admin_session = request.session.get('admin_authenticated')
+        if not admin_session:
+            return redirect('adminpanel:login')
+        
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+@require_admin_auth
+def withdrawal_management(request):
+    """Manage withdrawal requests with enhanced security"""
+    from wallets.models import WithdrawalRequest
+    
+    status_filter = request.GET.get('status', 'all')
+    risk_filter = request.GET.get('risk', 'all')
+    
+    withdrawals = WithdrawalRequest.objects.all().select_related('user')
+    
+    if status_filter != 'all':
+        withdrawals = withdrawals.filter(status=status_filter)
+    
+    if risk_filter == 'high':
+        withdrawals = withdrawals.filter(risk_score__gte=60)
+    elif risk_filter == 'medium':
+        withdrawals = withdrawals.filter(risk_score__gte=40, risk_score__lt=60)
+    elif risk_filter == 'low':
+        withdrawals = withdrawals.filter(risk_score__lt=40)
+    
+    withdrawals = withdrawals.order_by('-risk_score', '-created_at')
+    
+    paginator = Paginator(withdrawals, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    stats = {
+        'pending_count': WithdrawalRequest.objects.filter(status='pending').count(),
+        'reviewing_count': WithdrawalRequest.objects.filter(status='reviewing').count(),
+        'high_risk_count': WithdrawalRequest.objects.filter(risk_score__gte=60).count(),
+        'manual_review_count': WithdrawalRequest.objects.filter(manual_review_required=True).count(),
+    }
+    
+    context = {
+        'page_obj': page_obj,
+        'stats': stats,
+        'status_filter': status_filter,
+        'risk_filter': risk_filter,
+    }
+    
+    return render(request, 'adminpanel/withdrawal_management.html', context)
+
+@require_admin_auth
+def withdrawal_detail(request, withdrawal_id):
+    """View detailed withdrawal information"""
+    from wallets.models import WithdrawalRequest
+    withdrawal = get_object_or_404(WithdrawalRequest, id=withdrawal_id)
+    
+    import logging
+    logger = logging.getLogger('marketplace.admin')
+    logger.info(
+        f"Admin {request.user.username} accessed withdrawal detail {withdrawal_id}",
+        extra={'session_key': request.session.session_key}
+    )
+    
+    context = {
+        'withdrawal': withdrawal,
+    }
+    
+    return render(request, 'adminpanel/withdrawal_detail.html', context)
+
+@require_admin_auth
+def withdrawal_approve(request, withdrawal_id):
+    """Approve a withdrawal request"""
+    from wallets.models import WithdrawalRequest, AuditLog
+    from django.views.decorators.http import require_POST
+    
+    if request.method != 'POST':
+        return redirect('adminpanel:withdrawal_detail', withdrawal_id=withdrawal_id)
+    
+    withdrawal = get_object_or_404(WithdrawalRequest, id=withdrawal_id)
+    
+    if withdrawal.status not in ['pending', 'reviewing']:
+        messages.error(request, 'Withdrawal cannot be approved in current status.')
+        return redirect('adminpanel:withdrawal_detail', withdrawal_id=withdrawal_id)
+    
+    withdrawal.status = 'approved'
+    withdrawal.approved_by = request.user
+    withdrawal.approved_at = timezone.now()
+    withdrawal.save()
+    
+    import logging
+    logger = logging.getLogger('marketplace.admin')
+    logger.info(
+        f"Admin {request.user.username} approved withdrawal {withdrawal_id} "
+        f"for user {withdrawal.user.username} amount {withdrawal.amount} {withdrawal.currency}",
+        extra={'session_key': request.session.session_key}
+    )
+    
+    AuditLog.objects.create(
+        user=withdrawal.user,
+        action='withdrawal_approved',
+        ip_address='privacy_protected',
+        user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        details={
+            'withdrawal_id': withdrawal_id,
+            'amount': str(withdrawal.amount),
+            'currency': withdrawal.currency,
+            'approved_by': request.user.username,
+            'admin_session': request.session.session_key
+        },
+        risk_score=0
+    )
+    
+    messages.success(request, f'Withdrawal #{withdrawal_id} has been approved.')
+    return redirect('adminpanel:withdrawal_detail', withdrawal_id=withdrawal_id)
+
+@require_admin_auth
+def withdrawal_reject(request, withdrawal_id):
+    """Reject a withdrawal request"""
+    from wallets.models import WithdrawalRequest, AuditLog
+    
+    if request.method != 'POST':
+        return redirect('adminpanel:withdrawal_detail', withdrawal_id=withdrawal_id)
+    
+    withdrawal = get_object_or_404(WithdrawalRequest, id=withdrawal_id)
+    
+    if withdrawal.status not in ['pending', 'reviewing']:
+        messages.error(request, 'Withdrawal cannot be rejected in current status.')
+        return redirect('adminpanel:withdrawal_detail', withdrawal_id=withdrawal_id)
+    
+    withdrawal.status = 'rejected'
+    withdrawal.rejected_by = request.user
+    withdrawal.rejected_at = timezone.now()
+    withdrawal.save()
+    
+    import logging
+    logger = logging.getLogger('marketplace.admin')
+    logger.info(
+        f"Admin {request.user.username} rejected withdrawal {withdrawal_id} "
+        f"for user {withdrawal.user.username} amount {withdrawal.amount} {withdrawal.currency}",
+        extra={'session_key': request.session.session_key}
+    )
+    
+    AuditLog.objects.create(
+        user=withdrawal.user,
+        action='withdrawal_rejected',
+        ip_address='privacy_protected',
+        user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        details={
+            'withdrawal_id': withdrawal_id,
+            'amount': str(withdrawal.amount),
+            'currency': withdrawal.currency,
+            'rejected_by': request.user.username,
+            'admin_session': request.session.session_key
+        },
+        risk_score=0
+    )
+    
+    messages.success(request, f'Withdrawal #{withdrawal_id} has been rejected.')
+    return redirect('adminpanel:withdrawal_detail', withdrawal_id=withdrawal_id)
+
+@require_admin_auth
+def withdrawal_add_notes(request, withdrawal_id):
+    """Add admin notes to withdrawal"""
+    from wallets.models import WithdrawalRequest
+    
+    if request.method != 'POST':
+        return redirect('adminpanel:withdrawal_detail', withdrawal_id=withdrawal_id)
+    
+    withdrawal = get_object_or_404(WithdrawalRequest, id=withdrawal_id)
+    
+    admin_notes = request.POST.get('admin_notes', '').strip()
+    withdrawal.admin_notes = admin_notes
+    withdrawal.save()
+    
+    import logging
+    logger = logging.getLogger('marketplace.admin')
+    logger.info(
+        f"Admin {request.user.username} updated notes for withdrawal {withdrawal_id}",
+        extra={'session_key': request.session.session_key}
+    )
+    
+    messages.success(request, 'Admin notes have been updated.')
+    return redirect('adminpanel:withdrawal_detail', withdrawal_id=withdrawal_id)
+
 @login_required
 def admin_withdrawal_detail(request, withdrawal_id):
     """Detailed view of withdrawal request for admin processing"""
@@ -665,7 +854,7 @@ def admin_withdrawal_detail(request, withdrawal_id):
                 target_model='WithdrawalRequest',
                 target_id=str(withdrawal.id),
                 description=f'Approved withdrawal #{withdrawal.id} for {withdrawal.amount} {withdrawal.currency}',
-                ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
+                ip_address='privacy_protected'  # Privacy protection
             )
             
             messages.success(request, f'Withdrawal #{withdrawal.id} approved successfully.')
@@ -683,7 +872,7 @@ def admin_withdrawal_detail(request, withdrawal_id):
                 target_model='WithdrawalRequest',
                 target_id=str(withdrawal.id),
                 description=f'Rejected withdrawal #{withdrawal.id} for {withdrawal.amount} {withdrawal.currency}',
-                ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
+                ip_address='privacy_protected'  # Privacy protection
             )
             
             messages.success(request, f'Withdrawal #{withdrawal.id} rejected.')
