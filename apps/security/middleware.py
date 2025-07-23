@@ -1,100 +1,183 @@
+import time
+import hashlib
+import json
+import re
+from django.http import HttpResponseForbidden, JsonResponse, HttpResponse
 from django.core.cache import cache
-from django.shortcuts import redirect
+from django.conf import settings
+from django.utils.deprecation import MiddlewareMixin
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from django.contrib.auth.models import AnonymousUser
 from django.contrib import messages
 from django.utils import timezone
-from django.conf import settings
-from django.http import HttpResponseForbidden
-from django.shortcuts import render
-import logging
-import hashlib
-import re
-import time
 from datetime import timedelta
+import logging
 
 logger = logging.getLogger('wallet.security')
 
 
-class WalletSecurityMiddleware:
-    """Security middleware for wallet operations"""
+class WalletSecurityMiddleware(MiddlewareMixin):
+    """Enhanced wallet security middleware with comprehensive protection"""
     
     def __init__(self, get_response):
         self.get_response = get_response
+        super().__init__(get_response)
     
-    def __call__(self, request):
-        if request.user.is_authenticated:
-            if settings.WALLET_SECURITY.get('REQUIRE_IP_MATCH'):
-                self.check_ip_consistency(request)
-            
-            self.check_session_timeout(request)
-            
-            request.session['last_activity'] = timezone.now().timestamp()
+    def process_request(self, request):
+        if request.path.startswith('/static/') or request.path.startswith('/admin/'):
+            return None
         
-        response = self.get_response(request)
+        if self._is_advanced_bot(request):
+            return self._handle_bot_detection(request)
         
-        response['X-Content-Type-Options'] = 'nosniff'
-        response['X-XSS-Protection'] = '1; mode=block'
-        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        if not self._check_ip_consistency(request):
+            return self._handle_ip_inconsistency(request)
         
-        return response
+        if not self._check_session_timeout(request):
+            return self._handle_session_timeout(request)
+        
+        if not self._check_multi_window_rate_limit(request):
+            return self._handle_rate_limit(request)
+        
+        return None
     
-    def check_ip_consistency(self, request):
-        """Ensure user's IP hasn't changed during session"""
-        current_ip = self.get_client_ip(request)
-        session_ip = request.session.get('ip_address')
+    def process_response(self, request, response):
+        return self._add_security_headers(response)
+    
+    def _is_advanced_bot(self, request):
+        """Advanced bot detection with multiple signals"""
+        user_agent = request.META.get('HTTP_USER_AGENT', '').lower()
+        
+        bot_patterns = [
+            'bot', 'crawler', 'spider', 'scraper', 'curl', 'wget',
+            'python-requests', 'scrapy', 'selenium', 'phantomjs',
+            'headless', 'automation', 'test'
+        ]
+        
+        for pattern in bot_patterns:
+            if pattern in user_agent:
+                return True
+        
+        essential_headers = ['HTTP_ACCEPT', 'HTTP_ACCEPT_LANGUAGE', 'HTTP_ACCEPT_ENCODING']
+        missing_headers = sum(1 for header in essential_headers if not request.META.get(header))
+        
+        if missing_headers >= 2:
+            return True
+        
+        accept = request.META.get('HTTP_ACCEPT', '')
+        if accept and 'text/html' not in accept and request.method == 'GET':
+            return True
+        
+        return False
+    
+    def _check_ip_consistency(self, request):
+        """Check IP address consistency for authenticated users"""
+        if not request.user.is_authenticated:
+            return True
+        
+        current_ip = self._get_client_ip(request)
+        session_ip = request.session.get('login_ip')
         
         if session_ip and session_ip != current_ip:
-            logger.warning(
-                f"IP address change detected for user {request.user.username}: "
-                f"{session_ip} -> {current_ip}"
-            )
-            
-            from wallets.models import AuditLog
-            AuditLog.objects.create(
-                user=request.user,
-                action='security_alert',
-                ip_address=current_ip,
-                user_agent=request.META.get('HTTP_USER_AGENT', ''),
-                details={
-                    'alert_type': 'ip_change',
-                    'previous_ip': session_ip,
-                    'new_ip': current_ip
-                },
-                flagged=True,
-                risk_score=50
-            )
-            
-            from django.contrib.auth import logout
-            logout(request)
-            messages.warning(
-                request, 
-                "Your session has been terminated due to IP address change. "
-                "Please log in again."
-            )
-            
+            logger.warning(f"IP change detected for user {request.user.username}")
+            return False
+        
         if not session_ip:
-            request.session['ip_address'] = current_ip
+            request.session['login_ip'] = current_ip
+        
+        return True
     
-    def check_session_timeout(self, request):
-        """Check for session timeout"""
+    def _check_session_timeout(self, request):
+        """Enhanced session timeout with activity tracking"""
+        if not request.user.is_authenticated:
+            return True
+        
         last_activity = request.session.get('last_activity')
         if last_activity:
-            timeout = settings.WALLET_SECURITY.get('SESSION_TIMEOUT_MINUTES', 30)
-            if timezone.now().timestamp() - last_activity > (timeout * 60):
-                from django.contrib.auth import logout
-                logout(request)
-                messages.info(
-                    request, 
-                    "Your session has expired due to inactivity."
-                )
+            inactive_time = timezone.now().timestamp() - last_activity
+            
+            if request.path.startswith('/wallets/'):
+                timeout = 900  # 15 minutes for wallet operations
+            elif request.path.startswith('/adminpanel/'):
+                timeout = 600  # 10 minutes for admin
+            else:
+                timeout = 1800  # 30 minutes for general
+            
+            if inactive_time > timeout:
+                request.session.flush()
+                return False
+        
+        request.session['last_activity'] = timezone.now().timestamp()
+        return True
     
-    def get_client_ip(self, request):
-        """Get client IP address"""
+    def _check_multi_window_rate_limit(self, request):
+        """Multi-window rate limiting with different limits"""
+        ip = self._get_client_ip(request)
+        current_time = time.time()
+        
+        limits = [
+            ('1min', 60, 20),    # 20 requests per minute
+            ('5min', 300, 50),   # 50 requests per 5 minutes
+            ('1hour', 3600, 200) # 200 requests per hour
+        ]
+        
+        for window_name, window_size, limit in limits:
+            cache_key = f"rate_limit:{window_name}:{ip}"
+            requests = cache.get(cache_key, [])
+            
+            requests = [req_time for req_time in requests if current_time - req_time < window_size]
+            
+            if len(requests) >= limit:
+                return False
+            
+            requests.append(current_time)
+            cache.set(cache_key, requests, window_size)
+        
+        return True
+    
+    def _get_client_ip(self, request):
+        """Get client IP with proxy support"""
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
+            ip = x_forwarded_for.split(',')[0].strip()
         else:
-            ip = request.META.get('REMOTE_ADDR')
+            ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
         return ip
+    
+    def _handle_bot_detection(self, request):
+        """Handle detected bots"""
+        return render(request, 'security/bot_detected.html', status=403)
+    
+    def _handle_ip_inconsistency(self, request):
+        """Handle IP address changes"""
+        request.session.flush()
+        return redirect('accounts:login')
+    
+    def _handle_session_timeout(self, request):
+        """Handle session timeout"""
+        return redirect('accounts:login')
+    
+    def _handle_rate_limit(self, request):
+        """Handle rate limit exceeded"""
+        return render(request, 'security/rate_limited.html', status=429)
+    
+    def _add_security_headers(self, response):
+        """Add comprehensive security headers"""
+        security_headers = {
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'DENY',
+            'X-XSS-Protection': '1; mode=block',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+            'Content-Security-Policy': "default-src 'self'; script-src 'none'; object-src 'none';",
+            'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+            'Permissions-Policy': 'geolocation=(), microphone=(), camera=()'
+        }
+        
+        for header, value in security_headers.items():
+            response[header] = value
+        
+        return response
 
 
 class RateLimitMiddleware:
@@ -181,10 +264,11 @@ class EnhancedSecurityMiddleware:
     def __call__(self, request):
         if self._is_bot_request(request):
             logger.warning(f"Bot detected: {request.META.get('HTTP_USER_AGENT', '')}")
-            return render(request, 'security/captcha_challenge.html', {
-                'challenge_question': '2 + 2',
+            return render(request, 'security/bot_challenge.html', {
+                'challenge_question': 'What is 2 + 2?',
                 'challenge_id': 'bot_challenge',
-                'timestamp': time.time()
+                'timestamp': time.time(),
+                'expected_answer': 4
             })
         
         if self._is_suspicious_request(request):
