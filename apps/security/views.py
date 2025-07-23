@@ -8,6 +8,7 @@ from django.conf import settings
 from wallets.models import AuditLog
 import random
 import time
+import hashlib
 
 
 @login_required
@@ -115,6 +116,10 @@ def captcha_challenge(request):
         user_answer = request.POST.get('captcha_answer', '').strip()
         expected_answer = request.session.get('captcha_answer', '')
         
+        if request.POST.get('website') or request.POST.get('email_address'):
+            messages.error(request, 'Bot detected. Access denied.')
+            return redirect('security:captcha_challenge')
+        
         if user_answer.lower() == expected_answer.lower():
             request.session['captcha_verified'] = True
             request.session.pop('captcha_answer', None)
@@ -122,18 +127,20 @@ def captcha_challenge(request):
             next_url = request.session.get('captcha_next', '/')
             request.session.pop('captcha_next', None)
             
+            messages.success(request, 'Verification successful!')
             return redirect(next_url)
         else:
             messages.error(request, 'Incorrect CAPTCHA answer. Please try again.')
     
-    words = ['SECURE', 'MARKET', 'CRYPTO', 'WALLET', 'TRADE']
+    words = ['SECURE', 'MARKET', 'CRYPTO', 'WALLET', 'TRADE', 'PRIVACY', 'SAFETY']
     captcha_word = random.choice(words)
     
     request.session['captcha_answer'] = captcha_word
     
     return render(request, 'security/captcha_challenge.html', {
         'captcha_word': captcha_word,
-        'captcha_image_text': captcha_word  # For text-based CAPTCHA
+        'timestamp': time.time(),
+        'form_hash': hashlib.sha256(f"{time.time()}:{captcha_word}".encode()).hexdigest()[:16]
     })
 
 
