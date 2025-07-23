@@ -1,12 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash, get_user_model
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Count, Q
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from apps.security.forms import SecureLoginForm, SecureRegistrationForm
 from products.models import Product
 import hashlib
 import secrets
@@ -63,35 +64,15 @@ def home(request):
 
 def register_view(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        confirm_password = request.POST.get('confirm_password')
-        
-        if not username or not password:
-            messages.error(request, 'Username and password are required')
-            return render(request, 'accounts/register.html')
-        
-        if password != confirm_password:
-            messages.error(request, 'Passwords do not match')
-            return render(request, 'accounts/register.html')
-        
-        if User.objects.filter(username=username).exists():
-            messages.error(request, 'Username already exists')
-            return render(request, 'accounts/register.html')
-        
-        try:
-            with transaction.atomic():
-                user = User.objects.create_user(
-                    username=username,
-                    password=password
-                )
-                log_event('user_registered', {'user_id': str(user.id), 'username': username})
-                messages.success(request, 'Registration successful! Please log in.')
-                return redirect('accounts:login')
-        except Exception as e:
-            messages.error(request, f'Registration failed: {str(e)}')
-    
-    return render(request, 'accounts/register.html')
+        form = SecureRegistrationForm(request.POST, request=request)
+        if form.is_valid():
+            user = form.save()
+            username = form.cleaned_data.get('username')
+            messages.success(request, f'Account created for {username}!')
+            return redirect('accounts:login')
+    else:
+        form = SecureRegistrationForm(request=request)
+    return render(request, 'accounts/register.html', {'form': form})
 
 
 def register(request):
@@ -111,7 +92,7 @@ def login_view(request):
     logger = logging.getLogger(__name__)
     
     if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
+        form = SecureLoginForm(request, data=request.POST)
         if form.is_valid():
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')

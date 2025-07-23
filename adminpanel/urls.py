@@ -7,7 +7,8 @@ from .views import (
     orders_list,
     disputes_list, resolve_dispute,
     withdrawals_list, approve_withdrawal,
-    system_logs, trigger_maintenance, image_settings
+    system_logs, trigger_maintenance, image_settings,
+    admin_withdrawal_detail, admin_security_logs, admin_wallet_overview
 )
 
 app_name = 'adminpanel'
@@ -36,4 +37,7 @@ urlpatterns = [
     path('logs/', system_logs, name='logs'),
     path('maintenance/', trigger_maintenance, name='maintenance'),
     path('image-settings/', image_settings, name='image_settings'),
+    path('withdrawal/<int:withdrawal_id>/', admin_withdrawal_detail, name='withdrawal_detail'),
+    path('security-logs/', admin_security_logs, name='security_logs'),
+    path('wallet-overview/', admin_wallet_overview, name='wallet_overview'),
 ]

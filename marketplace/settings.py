@@ -44,8 +44,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware',
-    'wallets.middleware.WalletSecurityMiddleware',
-    'wallets.middleware.RateLimitMiddleware',
+    'apps.security.middleware.SecurityMiddleware',
+    'apps.security.middleware.WalletSecurityMiddleware',
+    'apps.security.middleware.RateLimitMiddleware',
+    'apps.security.bot_detection.BotDetectionMiddleware',
+    'apps.security.bot_detection.SecurityHeadersMiddleware',
 ]
 
 ROOT_URLCONF = 'marketplace.urls'
@@ -340,6 +343,18 @@ WALLET_SECURITY = {
     'AUDIT_LOG_RETENTION_DAYS': 365,
     
     'RECONCILIATION_SCHEDULE': '0 */6 * * *',  # Every 6 hours
+}
+
+SECURITY_SETTINGS = {
+    'ENABLE_BOT_DETECTION': True,
+    'ENABLE_RATE_LIMITING': True,
+    'ENABLE_HONEYPOT_PROTECTION': True,
+    'ENABLE_MATH_CAPTCHA': True,
+    'MAX_LOGIN_ATTEMPTS_PER_IP': 20,
+    'MAX_LOGIN_ATTEMPTS_PER_USER': 5,
+    'MAX_REGISTRATION_ATTEMPTS_PER_IP': 3,
+    'FORM_SUBMISSION_RATE_LIMIT': 10,
+    'SESSION_SECURITY_TIMEOUT': 3600,
 }
 
 ADMIN_EMAIL = env('ADMIN_EMAIL', default='admin@marketplace.local')

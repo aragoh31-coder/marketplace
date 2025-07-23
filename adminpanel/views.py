@@ -150,17 +150,32 @@ def pgp_verify(request):
                         ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
                     )
                     
-                    messages.success(request, 'PGP verification successful! Welcome to the admin panel!')
+                    messages.success(request, 'Welcome to the admin panel!')
                     return redirect('adminpanel:dashboard')
                 else:
-                    messages.error(request, 'PGP signature verification failed.')
+                    messages.error(request, 'Invalid PGP signature.')
             else:
-                messages.error(request, 'Challenge expired. Please start over.')
-                return redirect('adminpanel:login')
+                messages.error(request, 'PGP challenge expired.')
     else:
-        challenge = f"Admin Panel Access Challenge\nTimestamp: {timezone.now().isoformat()}\nRandom: {secrets.token_urlsafe(16)}"
-        request.session['admin_pgp_challenge'] = challenge
         form = AdminPGPChallengeForm()
+        
+        from accounts.pgp_service import PGPService
+        pgp_service = PGPService()
+        
+        challenge = f"Admin login challenge for {user.username} at {timezone.now().isoformat()}"
+        request.session['admin_pgp_challenge'] = challenge
+        
+        encrypt_result = pgp_service.encrypt_message(challenge, user.pgp_fingerprint)
+        
+        if not encrypt_result['success']:
+            messages.error(request, 'Failed to generate PGP challenge.')
+            return redirect('adminpanel:login')
+    
+    return render(request, 'adminpanel/pgp_verify.html', {
+        'form': form,
+        'user': user,
+        'encrypted_challenge': encrypt_result.get('encrypted_message', '') if 'encrypt_result' in locals() else ''
+    })
     
     challenge = request.session.get('admin_pgp_challenge', '')
     return render(request, 'adminpanel/pgp_verify.html', {
@@ -622,6 +637,132 @@ def approve_withdrawal(request, withdrawal_id):
     # log_event('withdrawal_approved', {'withdrawal_id': withdrawal_id, 'admin': request.user.username})
     messages.success(request, 'Withdrawal approved.')
     return redirect('adminpanel:withdrawals')
+
+@login_required
+def admin_withdrawal_detail(request, withdrawal_id):
+    """Detailed view of withdrawal request for admin processing"""
+    if not request.user.is_superuser:
+        messages.error(request, "Admin access required.")
+        return redirect('adminpanel:login')
+    
+    from wallets.models import WithdrawalRequest
+    withdrawal = get_object_or_404(WithdrawalRequest, id=withdrawal_id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        admin_notes = request.POST.get('admin_notes', '')
+        
+        if action == 'approve':
+            withdrawal.status = 'approved'
+            withdrawal.processed_by = request.user
+            withdrawal.processed_at = timezone.now()
+            withdrawal.admin_notes = admin_notes
+            withdrawal.save()
+            
+            AdminLog.objects.create(
+                admin_user=request.user,
+                action_type='UPDATE',
+                target_model='WithdrawalRequest',
+                target_id=str(withdrawal.id),
+                description=f'Approved withdrawal #{withdrawal.id} for {withdrawal.amount} {withdrawal.currency}',
+                ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
+            )
+            
+            messages.success(request, f'Withdrawal #{withdrawal.id} approved successfully.')
+            
+        elif action == 'reject':
+            withdrawal.status = 'rejected'
+            withdrawal.processed_by = request.user
+            withdrawal.processed_at = timezone.now()
+            withdrawal.admin_notes = admin_notes
+            withdrawal.save()
+            
+            AdminLog.objects.create(
+                admin_user=request.user,
+                action_type='UPDATE',
+                target_model='WithdrawalRequest',
+                target_id=str(withdrawal.id),
+                description=f'Rejected withdrawal #{withdrawal.id} for {withdrawal.amount} {withdrawal.currency}',
+                ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
+            )
+            
+            messages.success(request, f'Withdrawal #{withdrawal.id} rejected.')
+        
+        return redirect('adminpanel:withdrawal_detail', withdrawal_id=withdrawal.id)
+    
+    context = {
+        'withdrawal': withdrawal,
+        'user': withdrawal.user,
+    }
+    return render(request, 'adminpanel/withdrawal_detail.html', context)
+
+
+@login_required
+def admin_security_logs(request):
+    """View security audit logs"""
+    if not request.user.is_superuser:
+        messages.error(request, "Admin access required.")
+        return redirect('adminpanel:login')
+    
+    from wallets.models import AuditLog
+    
+    flagged_logs = AuditLog.objects.filter(flagged=True).order_by('-created_at')[:50]
+    
+    high_risk_logs = AuditLog.objects.filter(
+        risk_score__gte=60
+    ).order_by('-created_at')[:50]
+    
+    context = {
+        'flagged_logs': flagged_logs,
+        'high_risk_logs': high_risk_logs,
+    }
+    return render(request, 'adminpanel/security_logs.html', context)
+
+
+@login_required
+def admin_wallet_overview(request):
+    """Comprehensive wallet system overview"""
+    if not request.user.is_superuser:
+        messages.error(request, "Admin access required.")
+        return redirect('adminpanel:login')
+    
+    from wallets.models import Wallet, WithdrawalRequest, Transaction, WalletBalanceCheck
+    from django.db.models import Sum, Count
+    
+    total_wallets = Wallet.objects.count()
+    total_btc = Wallet.objects.aggregate(Sum('balance_btc'))['balance_btc__sum'] or 0
+    total_xmr = Wallet.objects.aggregate(Sum('balance_xmr'))['balance_xmr__sum'] or 0
+    total_escrow_btc = Wallet.objects.aggregate(Sum('escrow_btc'))['escrow_btc__sum'] or 0
+    total_escrow_xmr = Wallet.objects.aggregate(Sum('escrow_xmr'))['escrow_xmr__sum'] or 0
+    
+    pending_withdrawals = WithdrawalRequest.objects.filter(status='pending').count()
+    reviewing_withdrawals = WithdrawalRequest.objects.filter(status='reviewing').count()
+    high_risk_withdrawals = WithdrawalRequest.objects.filter(
+        status__in=['pending', 'reviewing'],
+        risk_score__gte=60
+    ).count()
+    
+    recent_discrepancies = WalletBalanceCheck.objects.filter(
+        discrepancy_found=True,
+        resolved=False
+    ).order_by('-checked_at')[:10]
+    
+    recent_transactions = Transaction.objects.order_by('-created_at')[:20]
+    
+    context = {
+        'total_wallets': total_wallets,
+        'total_btc': total_btc,
+        'total_xmr': total_xmr,
+        'total_escrow_btc': total_escrow_btc,
+        'total_escrow_xmr': total_escrow_xmr,
+        'pending_withdrawals': pending_withdrawals,
+        'reviewing_withdrawals': reviewing_withdrawals,
+        'high_risk_withdrawals': high_risk_withdrawals,
+        'recent_discrepancies': recent_discrepancies,
+        'recent_transactions': recent_transactions,
+    }
+    return render(request, 'adminpanel/wallet_overview.html', context)
+
 
 @login_required
 def system_logs(request):
