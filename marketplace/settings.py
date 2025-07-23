@@ -46,9 +46,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware',
     'apps.security.middleware.WalletSecurityMiddleware',
-    'apps.security.middleware.RateLimitMiddleware',
-    'apps.security.middleware.BotDetectionMiddleware',
-    'apps.security.middleware.SecurityHeadersMiddleware',
+    'apps.security.middleware.EnhancedSecurityMiddleware',
+    'wallets.middleware.RateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'marketplace.urls'
