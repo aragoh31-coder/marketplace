@@ -165,6 +165,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'wallets.tasks.update_conversion_rates',
         'schedule': 300.0,  # Every 5 minutes
     },
+    'monitor-wallet-security': {
+        'task': 'wallets.tasks.monitor_wallet_security',
+        'schedule': 86400.0,  # Daily
+    },
 }
 
 BTC_USD_RATE = 118905.27
