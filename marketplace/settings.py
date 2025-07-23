@@ -249,19 +249,24 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
-        'wallet.security': {
+        'wallets.security': {
             'handlers': ['error_file'],
             'level': 'WARNING',
             'propagate': False,
         },
-        'wallet.admin': {
+        'wallets.admin': {
             'handlers': ['error_file'],
             'level': 'INFO',
             'propagate': False,
         },
-        'wallet.tasks': {
+        'wallets.tasks': {
             'handlers': ['file'],
             'level': 'INFO',
+            'propagate': False,
+        },
+        'marketplace.security': {
+            'handlers': ['error_file'],
+            'level': 'WARNING',
             'propagate': False,
         },
     },
