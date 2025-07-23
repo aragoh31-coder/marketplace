@@ -6,6 +6,7 @@ from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
 from django.views.generic import FormView
 from django.urls import reverse_lazy
+from django.utils import timezone
 from .forms import SecureLoginForm, SecureRegistrationForm
 from .utils import log_security_event, detect_suspicious_patterns
 import logging

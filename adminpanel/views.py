@@ -698,6 +698,8 @@ def withdrawal_management(request):
 @require_triple_auth
 def approve_withdrawal(request, withdrawal_id):
     """Approve a withdrawal request with triple authentication"""
+    from wallets.models import WithdrawalRequest, Transaction
+    
     withdrawal = get_object_or_404(WithdrawalRequest, id=withdrawal_id)
     
     if request.method == 'POST':
