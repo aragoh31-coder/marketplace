@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.core.cache import cache
 from django.conf import settings
+from django.views.decorators.csrf import csrf_protect
 from wallets.models import AuditLog
 import random
 import time
@@ -165,3 +166,74 @@ def session_expired(request):
         'login_url': '/accounts/login/',
         'timeout_reason': request.GET.get('reason', 'inactivity')
     })
+
+
+@login_required
+def user_security_dashboard(request):
+    """User security dashboard with risk assessment"""
+    from wallets.models import AuditLog
+    from .utils import calculate_security_score, detect_suspicious_patterns
+    
+    security_score = calculate_security_score(request.user)
+    
+    recent_logs = AuditLog.objects.filter(
+        user=request.user
+    ).order_by('-created_at')[:10]
+    
+    login_analysis = detect_suspicious_patterns(
+        request.user, 
+        'login',
+        {'user_agent': request.META.get('HTTP_USER_AGENT', '')}
+    )
+    
+    context = {
+        'security_score': security_score,
+        'recent_logs': recent_logs,
+        'login_analysis': login_analysis,
+    }
+    
+    return render(request, 'security/user_dashboard.html', context)
+
+
+@login_required
+@csrf_protect
+def security_settings(request):
+    """User security settings management"""
+    from .forms import SecuritySettingsForm
+    from .utils import log_security_event
+    
+    if request.method == 'POST':
+        form = SecuritySettingsForm(request.POST, user=request.user)
+        if form.is_valid():
+            user = request.user
+            
+            if hasattr(user, 'profile'):
+                profile = user.profile
+                profile.security_notifications = form.cleaned_data.get('security_notifications', True)
+                profile.login_notifications = form.cleaned_data.get('login_notifications', True)
+                profile.save()
+            
+            log_security_event(
+                user,
+                'settings_change',
+                {
+                    'changed_fields': list(form.changed_data),
+                    'security_notifications': form.cleaned_data.get('security_notifications'),
+                    'login_notifications': form.cleaned_data.get('login_notifications')
+                },
+                risk_score=5
+            )
+            
+            messages.success(request, 'Security settings updated successfully!')
+            return redirect('security:settings')
+    else:
+        initial_data = {}
+        if hasattr(request.user, 'profile'):
+            profile = request.user.profile
+            initial_data = {
+                'security_notifications': getattr(profile, 'security_notifications', True),
+                'login_notifications': getattr(profile, 'login_notifications', True),
+            }
+        form = SecuritySettingsForm(initial=initial_data, user=request.user)
+    
+    return render(request, 'security/settings.html', {'form': form})

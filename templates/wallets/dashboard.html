@@ -384,18 +384,17 @@
             <span class="security-icon status-enabled">✅</span>
             <span>Privacy Protection: No IP Address Logging</span>
         </div>
+        </div>
         <div class="security-item">
             <span class="security-icon status-enabled">✅</span>
             <span>Manual Withdrawal Review: Active</span>
         </div>
         <div class="security-item">
-            <span class="security-icon {% if wallet.risk_score < 30 %}status-enabled{% elif wallet.risk_score < 70 %}status-warning{% else %}status-disabled{% endif %}">
+            <span class="security-icon{% if wallet.risk_score < 30 %} status-enabled{% elif wallet.risk_score < 70 %} status-warning{% else %} status-disabled{% endif %}">
                 {% if wallet.risk_score < 30 %}✅{% elif wallet.risk_score < 70 %}⚠️{% else %}❌{% endif %}
             </span>
             <span>Risk Assessment: 
-                {% if wallet.risk_score < 30 %}Low Risk ({{ wallet.risk_score }}/100)
-                {% elif wallet.risk_score < 70 %}Medium Risk ({{ wallet.risk_score }}/100)
-                {% else %}High Risk ({{ wallet.risk_score }}/100){% endif %}
+                {% if wallet.risk_score < 30 %}Low Risk ({{ wallet.risk_score }}/100){% elif wallet.risk_score < 70 %}Medium Risk ({{ wallet.risk_score }}/100){% else %}High Risk ({{ wallet.risk_score }}/100){% endif %}
             </span>
         </div>
         {% if wallet.last_security_check %}
