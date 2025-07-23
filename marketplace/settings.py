@@ -44,6 +44,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware',
+    'wallets.middleware.WalletSecurityMiddleware',
+    'wallets.middleware.RateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'marketplace.urls'
@@ -225,6 +227,26 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+        'wallet': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'wallet.security': {
+            'handlers': ['error_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'wallet.admin': {
+            'handlers': ['error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'wallet.tasks': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
     'root': {
         'handlers': ['console'],
@@ -279,6 +301,30 @@ SECURE_UPLOAD_ROOT.mkdir(exist_ok=True)
 
 TEMP_UPLOAD_ROOT = Path(BASE_DIR).parent / 'temp_uploads'
 TEMP_UPLOAD_ROOT.mkdir(exist_ok=True)
+
+WALLET_SECURITY = {
+    'WITHDRAWAL_RATE_LIMIT': 5,  # Max withdrawal attempts per hour
+    'CONVERSION_RATE_LIMIT': 20,  # Max conversions per hour
+    'LOGIN_RATE_LIMIT': 10,  # Max login attempts per hour
+    
+    'DEFAULT_DAILY_WITHDRAWAL_LIMIT_BTC': '1.0',
+    'DEFAULT_DAILY_WITHDRAWAL_LIMIT_XMR': '100.0',
+    
+    'RISK_SCORE_LOW': 20,
+    'RISK_SCORE_MEDIUM': 40,
+    'RISK_SCORE_HIGH': 60,
+    'RISK_SCORE_MANUAL_REVIEW': 40,
+    
+    'REQUIRE_IP_MATCH': False,  # Disabled for Tor compatibility
+    'SESSION_TIMEOUT_MINUTES': 30,  # Auto logout after inactivity
+    
+    '2FA_VALIDITY_WINDOW': 1,  # TOTP window (30 second intervals)
+    '2FA_ISSUER_NAME': 'Secure Marketplace',
+    
+    'AUDIT_LOG_RETENTION_DAYS': 365,
+    
+    'RECONCILIATION_SCHEDULE': '0 */6 * * *',  # Every 6 hours
+}
 
 try:
     from config.admin_config import ADMIN_PANEL_CONFIG, ADMIN_PGP_CONFIG

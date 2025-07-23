@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Wallet - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Wallet Dashboard</h1>
+    
+    <!-- Balances -->
+    <div class="grid">
+        <div class="card">
+            <h2>Bitcoin (BTC)</h2>
+            <table>
+                <tr>
+                    <td>Total Balance:</td>
+                    <td><strong>{{ wallet.balance_btc|floatformat:8 }} BTC</strong></td>
+                </tr>
+                <tr>
+                    <td>In Escrow:</td>
+                    <td>{{ wallet.escrow_btc|floatformat:8 }} BTC</td>
+                </tr>
+                <tr>
+                    <td>Available:</td>
+                    <td><strong>{{ btc_available|floatformat:8 }} BTC</strong></td>
+                </tr>
+            </table>
+            <div class="actions">
+                <a href="{% url 'wallets:withdraw' %}?currency=btc" class="btn">Withdraw BTC</a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Monero (XMR)</h2>
+            <table>
+                <tr>
+                    <td>Total Balance:</td>
+                    <td><strong>{{ wallet.balance_xmr|floatformat:12 }} XMR</strong></td>
+                </tr>
+                <tr>
+                    <td>In Escrow:</td>
+                    <td>{{ wallet.escrow_xmr|floatformat:12 }} XMR</td>
+                </tr>
+                <tr>
+                    <td>Available:</td>
+                    <td><strong>{{ xmr_available|floatformat:12 }} XMR</strong></td>
+                </tr>
+            </table>
+            <div class="actions">
+                <a href="{% url 'wallets:withdraw' %}?currency=xmr" class="btn">Withdraw XMR</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="actions-bar">
+        <a href="{% url 'wallets:convert' %}" class="btn btn-secondary">Convert Currency</a>
+        <a href="{% url 'wallets:transactions' %}" class="btn btn-secondary">Transaction History</a>
+    </div>
+    
+    <!-- Pending Withdrawals -->
+    {% if pending_withdrawals %}
+    <div class="card">
+        <h2>Pending Withdrawals</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Amount</th>
+                    <th>Currency</th>
+                    <th>Address</th>
+                    <th>Status</th>
+                    <th>Requested</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for wr in pending_withdrawals %}
+                <tr>
+                    <td>{{ wr.amount|floatformat:8 }}</td>
+                    <td>{{ wr.currency|upper }}</td>
+                    <td class="address">{{ wr.address|slice:":10" }}...{{ wr.address|slice:"-6:" }}</td>
+                    <td><span class="status-pending">Pending</span></td>
+                    <td>{{ wr.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p class="notice">Withdrawals are processed manually within 24-48 hours.</p>
+    </div>
+    {% endif %}
+    
+    <!-- Recent Transactions -->
+    {% if recent_transactions %}
+    <div class="card">
+        <h2>Recent Transactions</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Currency</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in recent_transactions %}
+                <tr>
+                    <td>
+                        <span class="tx-type tx-{{ tx.type }}">{{ tx.get_type_display }}</span>
+                    </td>
+                    <td>{{ tx.amount|floatformat:8 }}</td>
+                    <td>{{ tx.currency|upper }}</td>
+                    <td>{{ tx.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
