@@ -30,6 +30,9 @@ from django.conf import settings
 def admin_login(request):
     """Enhanced admin login with triple authentication"""
     if request.method == 'POST':
+        if 'pgp_challenge_response' in request.POST:
+            return handle_triple_auth(request)
+        
         form = AdminLoginForm(request, data=request.POST)
         if form.is_valid():
             username = form.cleaned_data['username']
@@ -47,34 +50,144 @@ def admin_login(request):
                 request.session.pop(f'admin_failed_attempts_{username}', None)
                 request.session.pop(f'admin_lockout_time_{username}', None)
                 
-                request.session['admin_pending_user_id'] = str(user.id)
-                request.session['admin_login_timestamp'] = timezone.now().timestamp()
-                
-                AdminLog.objects.create(
-                    admin_user=user,
-                    action_type='LOGIN',
-                    target_model='User',
-                    target_id=str(user.id),
-                    description=f'First authentication step completed for {username}',
-                    ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1')
-                )
-                
-                return redirect('adminpanel:secondary_auth')
+                return initiate_triple_auth(request, user)
             else:
                 failed_attempts = request.session.get(f'admin_failed_attempts_{username}', 0) + 1
                 request.session[f'admin_failed_attempts_{username}'] = failed_attempts
                 
-                if failed_attempts >= settings.ADMIN_PANEL_CONFIG['MAX_FAILED_ATTEMPTS']:
-                    lockout_time = timezone.now().timestamp() + settings.ADMIN_PANEL_CONFIG['LOCKOUT_DURATION']
+                if failed_attempts >= 3:  # Max failed attempts
+                    lockout_time = timezone.now().timestamp() + 900  # 15 minutes
                     request.session[f'admin_lockout_time_{username}'] = lockout_time
                     messages.error(request, 'Too many failed attempts. Account locked.')
                     return render(request, 'adminpanel/locked.html')
                 
                 messages.error(request, 'Invalid credentials or insufficient permissions.')
+        else:
+            messages.error(request, 'Invalid form submission.')
     else:
         form = AdminLoginForm()
     
     return render(request, 'adminpanel/login.html', {'form': form})
+
+
+def initiate_triple_auth(request, user):
+    """Initiate triple authentication process"""
+    from .security import TripleAuthenticator
+    
+    authenticator = TripleAuthenticator()
+    
+    # Generate PGP challenge
+    challenge_data = authenticator.generate_pgp_challenge(user)
+    
+    if not challenge_data['success']:
+        messages.error(request, 'PGP challenge generation failed. Please contact support.')
+        return redirect('adminpanel:login')
+    
+    request.session['admin_triple_auth'] = {
+        'user_id': user.id,
+        'challenge_id': challenge_data['challenge_id'],
+        'challenge_text': challenge_data['challenge_text'],
+        'encrypted_challenge': challenge_data['encrypted_challenge'],
+        'timestamp': time.time(),
+    }
+    
+    form = AdminTripleAuthForm(
+        initial={
+            'username': user.username,
+            'challenge_id': challenge_data['challenge_id'],
+        },
+        expected_challenge=challenge_data['challenge_text'],
+        challenge_id=challenge_data['challenge_id']
+    )
+    
+    context = {
+        'form': form,
+        'encrypted_challenge': challenge_data['encrypted_challenge'],
+        'challenge_id': challenge_data['challenge_id'],
+        'user': user,
+    }
+    
+    return render(request, 'adminpanel/triple_auth_form.html', context)
+
+
+def handle_triple_auth(request):
+    """Handle complete triple authentication submission"""
+    from .security import TripleAuthenticator
+    
+    auth_data = request.session.get('admin_triple_auth')
+    if not auth_data:
+        messages.error(request, 'Authentication session expired. Please try again.')
+        return redirect('adminpanel:login')
+    
+    if time.time() - auth_data['timestamp'] > 300:
+        request.session.pop('admin_triple_auth', None)
+        messages.error(request, 'Authentication timeout. Please try again.')
+        return redirect('adminpanel:login')
+    
+    try:
+        user = User.objects.get(id=auth_data['user_id'])
+    except User.DoesNotExist:
+        messages.error(request, 'Invalid user. Please try again.')
+        return redirect('adminpanel:login')
+    
+    form = AdminTripleAuthForm(
+        request.POST,
+        expected_challenge=auth_data['challenge_text'],
+        challenge_id=auth_data['challenge_id']
+    )
+    
+    if form.is_valid():
+        authenticator = TripleAuthenticator()
+        
+        secondary_password = form.cleaned_data['secondary_password']
+        if not authenticator.verify_secondary_password(secondary_password):
+            messages.error(request, 'Invalid secondary password.')
+            return render(request, 'adminpanel/triple_auth_form.html', {
+                'form': form,
+                'encrypted_challenge': auth_data['encrypted_challenge'],
+                'challenge_id': auth_data['challenge_id'],
+                'user': user,
+            })
+        
+        pgp_response = form.cleaned_data['pgp_challenge_response']
+        if pgp_response != auth_data['challenge_text']:
+            messages.error(request, 'Invalid PGP challenge response.')
+            return render(request, 'adminpanel/triple_auth_form.html', {
+                'form': form,
+                'encrypted_challenge': auth_data['encrypted_challenge'],
+                'challenge_id': auth_data['challenge_id'],
+                'user': user,
+            })
+        
+        login(request, user)
+        request.session['admin_authenticated'] = True
+        request.session['admin_auth_time'] = time.time()
+        request.session.pop('admin_triple_auth', None)
+        
+        from wallets.models import AuditLog
+        AuditLog.objects.create(
+            user=user,
+            action='admin_action',
+            ip_address=request.META.get('REMOTE_ADDR', '127.0.0.1'),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            details={
+                'action': 'triple_auth_login',
+                'success': True,
+                'timestamp': timezone.now().isoformat()
+            }
+        )
+        
+        messages.success(request, 'Successfully authenticated with triple authentication.')
+        return redirect('adminpanel:dashboard')
+    
+    context = {
+        'form': form,
+        'encrypted_challenge': auth_data['encrypted_challenge'],
+        'challenge_id': auth_data['challenge_id'],
+        'user': user,
+    }
+    
+    return render(request, 'adminpanel/triple_auth_form.html', context)
 
 
 def secondary_auth(request):
