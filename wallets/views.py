@@ -25,6 +25,7 @@ from .utils import (
     check_rate_limit, send_withdrawal_notification,
     validate_crypto_address, get_client_ip
 )
+from adminpanel.models import SecurityAlert
 
 logger = logging.getLogger('wallet.views')
 
@@ -73,6 +74,15 @@ def dashboard(request):
         'recent_transactions': recent_transactions,
         'show_balance_warning': show_balance_warning,
     }
+    
+    security_alerts = SecurityAlert.objects.filter(
+        user=request.user,
+        is_resolved=False
+    ).order_by('-created_at')[:5]
+    
+    context.update({
+        'security_alerts': security_alerts,
+    })
     
     return render(request, 'wallets/dashboard.html', context)
 
@@ -415,3 +425,53 @@ def transaction_history(request):
     }
     
     return render(request, 'wallets/transactions.html', context)
+
+
+@login_required
+def withdrawal_status(request):
+    """View withdrawal request status"""
+    withdrawal_requests = WithdrawalRequest.objects.filter(
+        user=request.user
+    ).order_by('-created_at')
+    
+    return render(request, 'wallets/withdrawal_status.html', {
+        'withdrawal_requests': withdrawal_requests
+    })
+
+
+@login_required
+def withdrawal_detail(request, request_id):
+    """Detailed view of withdrawal request"""
+    withdrawal_request = get_object_or_404(
+        WithdrawalRequest,
+        id=request_id,
+        user=request.user
+    )
+    
+    return render(request, 'wallets/withdrawal_detail.html', {
+        'withdrawal_request': withdrawal_request
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def cancel_withdrawal(request, request_id):
+    """Cancel pending withdrawal request"""
+    withdrawal_request = get_object_or_404(
+        WithdrawalRequest,
+        id=request_id,
+        user=request.user,
+        status='pending'
+    )
+    
+    withdrawal_request.status = 'cancelled'
+    withdrawal_request.save()
+    
+    log_user_action(request, 'withdrawal_cancelled', {
+        'withdrawal_id': withdrawal_request.id,
+        'amount': str(withdrawal_request.amount),
+        'currency': withdrawal_request.currency
+    })
+    
+    messages.success(request, 'Withdrawal request cancelled successfully.')
+    return redirect('wallets:withdrawal_status')

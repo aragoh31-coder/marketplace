@@ -158,8 +158,14 @@ class NoJSCaptchaMixin:
         if captcha_time and time.time() - captcha_time > 600:  # 10 minutes
             raise ValidationError('Challenge expired')
         
-        if str(answer).strip() != str(expected_answer).strip():
-            raise ValidationError('Incorrect answer')
+        try:
+            user_answer = int(str(answer).strip())
+            expected_int = int(str(expected_answer).strip())
+            
+            if user_answer != expected_int:
+                raise ValidationError('Incorrect answer')
+        except (ValueError, TypeError):
+            raise ValidationError('Please enter a valid number')
         
         if 'math_answer' in self.request.session:
             del self.request.session['math_answer']
