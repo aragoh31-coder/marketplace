@@ -47,8 +47,7 @@ MIDDLEWARE = [
     'apps.security.middleware.SecurityMiddleware',
     'apps.security.middleware.WalletSecurityMiddleware',
     'apps.security.middleware.RateLimitMiddleware',
-    'apps.security.bot_detection.BotDetectionMiddleware',
-    'apps.security.bot_detection.SecurityHeadersMiddleware',
+    'apps.security.middleware.EnhancedSecurityMiddleware',
 ]
 
 ROOT_URLCONF = 'marketplace.urls'
@@ -359,18 +358,31 @@ SECURITY_SETTINGS = {
 
 ADMIN_EMAIL = env('ADMIN_EMAIL', default='admin@marketplace.local')
 
+ADMIN_SECURITY = {
+    'REQUIRE_TRIPLE_AUTH': True,
+    'SECONDARY_PASSWORD': 'admin_secure_2024!',
+    'PGP_REQUIRED': True,
+    'SESSION_TIMEOUT_MINUTES': 30,
+    'MAX_FAILED_ATTEMPTS': 3,
+    'LOCKOUT_DURATION_MINUTES': 15,
+    'CHALLENGE_TIMEOUT_MINUTES': 5,
+    'LOG_ALL_ACTIONS': True,
+    'REQUIRE_IP_CONSISTENCY': True,
+}
+
 try:
     from config.admin_config import ADMIN_PANEL_CONFIG, ADMIN_PGP_CONFIG
 except ImportError:
     ADMIN_PANEL_CONFIG = {
-        'SECONDARY_PASSWORD': 'DefaultSecondaryPass123!',
-        'REQUIRE_PGP_AFTER_AUTH': False,
+        'SECONDARY_PASSWORD': 'admin_secure_2024!',
+        'REQUIRE_PGP_AFTER_AUTH': True,
         'MAX_FAILED_ATTEMPTS': 3,
-        'LOCKOUT_DURATION': 3600,
-        'SESSION_TIMEOUT': 7200,
+        'LOCKOUT_DURATION': 900,  # 15 minutes
+        'SESSION_TIMEOUT': 1800,  # 30 minutes
     }
     ADMIN_PGP_CONFIG = {
-        'ENFORCE_PGP': False,
-        'CHALLENGE_TIMEOUT': 300,
-        'ADMIN_PUBLIC_KEY': '',
+        'ENFORCE_PGP': True,
+        'CHALLENGE_TIMEOUT': 300,  # 5 minutes
+        'ADMIN_PUBLIC_KEY': '''-----BEGIN PGP PUBLIC KEY BLOCK-----
+-----END PGP PUBLIC KEY BLOCK-----''',
     }
