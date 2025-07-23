@@ -68,6 +68,24 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             username = form.cleaned_data.get('username')
+            
+            from wallets.models import Wallet
+            Wallet.objects.get_or_create(user=user)
+            
+            from wallets.models import AuditLog
+            AuditLog.objects.create(
+                user=user,
+                action='registration',
+                ip_address='privacy_protected',  # No IP logging for privacy
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
+                details={
+                    'registration_method': 'standard',
+                    'username': username,
+                    'email_provided': bool(user.email)
+                },
+                risk_score=0
+            )
+            
             messages.success(request, f'Account created for {username}!')
             return redirect('accounts:login')
     else:
@@ -77,14 +95,33 @@ def register_view(request):
 
 def register(request):
     if request.method == 'POST':
-        form = SecureRegistrationForm(request, request.POST)
+        form = SecureRegistrationForm(request.POST, request=request)
         if form.is_valid():
             user = form.save()
+            
+            from wallets.models import Wallet
+            Wallet.objects.get_or_create(user=user)
+            
             login(request, user)
+            
+            from wallets.models import AuditLog
+            AuditLog.objects.create(
+                user=user,
+                action='registration',
+                ip_address='privacy_protected',
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
+                details={
+                    'registration_method': 'auto_login',
+                    'username': user.username,
+                    'email_provided': bool(user.email)
+                },
+                risk_score=0
+            )
+            
             messages.success(request, 'Registration successful!')
-            return redirect('accounts:home')
+            return redirect('/')
     else:
-        form = SecureRegistrationForm(request)
+        form = SecureRegistrationForm(request=request)
     return render(request, 'accounts/register.html', {'form': form})
 
 
@@ -99,6 +136,20 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             
             if user:
+                from wallets.models import AuditLog
+                AuditLog.objects.create(
+                    user=user,
+                    action='login',
+                    ip_address='privacy_protected',  # No IP logging for privacy
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
+                    details={
+                        'login_method': 'pgp_2fa' if (user.pgp_login_enabled and user.pgp_public_key) else 'standard',
+                        'username': username,
+                        'pgp_enabled': bool(user.pgp_public_key)
+                    },
+                    risk_score=0
+                )
+                
                 if user.pgp_login_enabled and user.pgp_public_key:
                     pgp_service = PGPService()
                     
@@ -135,10 +186,13 @@ def login_view(request):
                 else:
                     login(request, user)
                     
+                    from wallets.models import Wallet
+                    Wallet.objects.get_or_create(user=user)
+                    
                     LoginHistory.objects.create(
                         user=user,
                         ip_hash=hashlib.sha256(
-                            request.META.get('REMOTE_ADDR', '').encode()
+                            'privacy_protected'.encode()  # No real IP logging
                         ).hexdigest(),
                         user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
                         success=True
@@ -146,6 +200,24 @@ def login_view(request):
                     
                     messages.success(request, 'Logged in successfully!')
                     return redirect('/')
+            else:
+                from wallets.models import AuditLog
+                try:
+                    failed_user = User.objects.get(username=username)
+                    AuditLog.objects.create(
+                        user=failed_user,
+                        action='login_failed',
+                        ip_address='privacy_protected',
+                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
+                        details={
+                            'reason': 'invalid_credentials',
+                            'username': username
+                        },
+                        risk_score=20,
+                        flagged=True
+                    )
+                except User.DoesNotExist:
+                    pass  # Don't log for non-existent users
     else:
         form = SecureLoginForm()
     

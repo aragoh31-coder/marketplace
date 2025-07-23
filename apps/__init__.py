@@ -1,8 +1,7 @@
 
-
 try:
     from .security.forms import SecureLoginForm, SecureRegistrationForm, NoJSCaptchaMixin
-    from .security.middleware import EnhancedSecurityMiddleware, SessionSecurityMiddleware, AdminSecurityMiddleware
+    from .security.middleware import EnhancedSecurityMiddleware, WalletSecurityMiddleware, RateLimitMiddleware
     from .security.bot_detection import BotDetector
     
     __all__ = [
@@ -10,8 +9,8 @@ try:
         'SecureRegistrationForm', 
         'NoJSCaptchaMixin',
         'EnhancedSecurityMiddleware',
-        'SessionSecurityMiddleware',
-        'AdminSecurityMiddleware',
+        'WalletSecurityMiddleware',
+        'RateLimitMiddleware',
         'BotDetector',
     ]
 except ImportError:

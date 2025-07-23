@@ -375,8 +375,8 @@ def send_withdrawal_notification(withdrawal_id):
 
 
 @shared_task
-def update_conversion_rates():
-    """Update cryptocurrency conversion rates"""
+def update_exchange_rates():
+    """Update cryptocurrency exchange rates"""
     from .models import ConversionRate
     
     try:
@@ -418,12 +418,99 @@ def update_conversion_rates():
             }
         )
         
-        logger.info(f"Conversion rates updated: 1 BTC = {btc_to_xmr_rate} XMR, 1 XMR = {xmr_to_btc_rate} BTC")
+        logger.info(f"Exchange rates updated: 1 BTC = {btc_to_xmr_rate} XMR, 1 XMR = {xmr_to_btc_rate} BTC")
         return True
         
     except Exception as e:
-        logger.error(f"Error updating conversion rates: {str(e)}")
+        logger.error(f"Error updating exchange rates: {str(e)}")
         return False
+
+
+@shared_task
+def monitor_wallet_security():
+    """Enhanced security monitoring for wallet operations"""
+    from .models import AuditLog, WithdrawalRequest
+    from django.contrib.auth import get_user_model
+    
+    User = get_user_model()
+    alerts_created = 0
+    
+    high_risk_users = AuditLog.objects.filter(
+        created_at__gte=timezone.now() - timedelta(hours=24),
+        risk_score__gte=40
+    ).values('user').annotate(
+        risk_count=Count('id'),
+        avg_risk=Sum('risk_score') / Count('id')
+    ).filter(risk_count__gte=3)
+    
+    for item in high_risk_users:
+        user = User.objects.get(id=item['user'])
+        AuditLog.objects.create(
+            user=user,
+            action='security_alert',
+            ip_address='privacy_protected',  # Privacy protection
+            user_agent='system',
+            details={
+                'alert_type': 'high_risk_user_pattern',
+                'risk_events_count': item['risk_count'],
+                'average_risk_score': float(item['avg_risk']),
+                'timeframe': '24_hours'
+            },
+            flagged=True,
+            risk_score=70
+        )
+        alerts_created += 1
+    
+    unusual_patterns = WithdrawalRequest.objects.filter(
+        created_at__gte=timezone.now() - timedelta(hours=6)
+    ).values('user').annotate(
+        withdrawal_count=Count('id'),
+        total_amount_btc=Sum('amount', filter=Q(currency='btc')),
+        total_amount_xmr=Sum('amount', filter=Q(currency='xmr'))
+    ).filter(
+        Q(withdrawal_count__gte=10) |
+        Q(total_amount_btc__gte=Decimal('2.0')) |
+        Q(total_amount_xmr__gte=Decimal('200.0'))
+    )
+    
+    for item in unusual_patterns:
+        user = User.objects.get(id=item['user'])
+        AuditLog.objects.create(
+            user=user,
+            action='security_alert',
+            ip_address='privacy_protected',
+            user_agent='system',
+            details={
+                'alert_type': 'unusual_withdrawal_pattern',
+                'withdrawal_count': item['withdrawal_count'],
+                'total_btc': str(item['total_amount_btc'] or 0),
+                'total_xmr': str(item['total_amount_xmr'] or 0),
+                'timeframe': '6_hours'
+            },
+            flagged=True,
+            risk_score=50
+        )
+        alerts_created += 1
+    
+    logger.info(f"Security monitoring completed. Created {alerts_created} alerts")
+    return alerts_created
+
+
+@shared_task
+def cleanup_expired_sessions():
+    """Clean up expired security sessions and cache entries"""
+    from django.core.cache import cache
+    from django.contrib.sessions.models import Session
+    
+    expired_sessions = Session.objects.filter(expire_date__lt=timezone.now())
+    expired_count = expired_sessions.count()
+    expired_sessions.delete()
+    
+    logger.info(f"Cleaned up {expired_count} expired sessions")
+    
+    logger.info("Session cleanup completed")
+    
+    return expired_count
 
 
 def send_discrepancy_alert(wallet, check):
