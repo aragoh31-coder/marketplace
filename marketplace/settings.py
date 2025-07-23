@@ -146,6 +146,22 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'vendors.tasks.refresh_tor_descriptors',
         'schedule': 43200.0,  # Every 12 hours
     },
+    'reconcile-wallet-balances': {
+        'task': 'wallets.tasks.reconcile_wallet_balances',
+        'schedule': 21600.0,  # Every 6 hours
+    },
+    'cleanup-old-audit-logs': {
+        'task': 'wallets.tasks.cleanup_old_audit_logs',
+        'schedule': 86400.0,  # Daily
+    },
+    'check-suspicious-activity': {
+        'task': 'wallets.tasks.check_suspicious_activity',
+        'schedule': 1800.0,  # Every 30 minutes
+    },
+    'update-conversion-rates': {
+        'task': 'wallets.tasks.update_conversion_rates',
+        'schedule': 300.0,  # Every 5 minutes
+    },
 }
 
 BTC_USD_RATE = 118905.27
@@ -325,6 +341,8 @@ WALLET_SECURITY = {
     
     'RECONCILIATION_SCHEDULE': '0 */6 * * *',  # Every 6 hours
 }
+
+ADMIN_EMAIL = env('ADMIN_EMAIL', default='admin@marketplace.local')
 
 try:
     from config.admin_config import ADMIN_PANEL_CONFIG, ADMIN_PGP_CONFIG
