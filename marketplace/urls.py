@@ -32,6 +32,7 @@ urlpatterns = [
     path('support/', include('support.urls')),
     path('adminpanel/', include('adminpanel.urls')),
     path('disputes/', include('disputes.urls')),
+    path('security/', include('apps.security.urls')),
     
     path('secure-images/<path:path>', serve_secure_image, name='secure_image'),
 ]
