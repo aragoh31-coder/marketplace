@@ -2,21 +2,122 @@
 
 {% block title %}Login - Secure Marketplace{% endblock %}
 
+{% block extra_head %}
+<style>
+    .security-notice {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+    }
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .btn {
+        background: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .btn:hover {
+        background: #0056b3;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="card">
-    <h2>Login</h2>
+    <h2>🔐 Secure Login</h2>
+    
+    <div class="security-notice">
+        <h3>🛡️ Enhanced Security</h3>
+        <p>This login form includes advanced security features to protect against automated attacks while maintaining full Tor compatibility.</p>
+    </div>
+    
     <form method="post">
         {% csrf_token %}
+        
+        <!-- Display form errors -->
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <!-- Username field -->
         <div class="form-group">
             <label for="{{ form.username.id_for_label }}">Username:</label>
             {{ form.username }}
+            {% if form.username.errors %}
+                <div class="text-danger">
+                    {% for error in form.username.errors %}
+                        <small>{{ error }}</small>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
+        
+        <!-- Password field -->
         <div class="form-group">
             <label for="{{ form.password.id_for_label }}">Password:</label>
             {{ form.password }}
+            {% if form.password.errors %}
+                <div class="text-danger">
+                    {% for error in form.password.errors %}
+                        <small>{{ error }}</small>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
-        <button type="submit" class="btn">Login</button>
+        
+        <!-- Security CAPTCHA field -->
+        {% if form.math_challenge %}
+        <div class="form-group">
+            <label for="{{ form.math_challenge.id_for_label }}">{{ form.math_challenge.label }}</label>
+            {{ form.math_challenge }}
+            {% if form.math_challenge.help_text %}
+                <small class="form-text text-muted">{{ form.math_challenge.help_text }}</small>
+            {% endif %}
+            {% if form.math_challenge.errors %}
+                <div class="text-danger">
+                    {% for error in form.math_challenge.errors %}
+                        <small>{{ error }}</small>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Hidden security fields -->
+        {% for field in form.hidden_fields %}
+            {{ field }}
+        {% endfor %}
+        
+        <button type="submit" class="btn">🔓 Login</button>
     </form>
+    
     <p><a href="{% url 'accounts:register' %}">Don't have an account? Register here</a></p>
+    
+    <div class="security-notice mt-4">
+        <h3>🌐 Privacy & Security</h3>
+        <ul>
+            <li>No JavaScript required - fully Tor compatible</li>
+            <li>Advanced bot detection and rate limiting</li>
+            <li>No IP address logging for privacy protection</li>
+            <li>Math challenge prevents automated attacks</li>
+        </ul>
+    </div>
 </div>
 {% endblock %}
