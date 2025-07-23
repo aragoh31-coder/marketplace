@@ -1,5 +1,6 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.utils import timezone
 from django.core.cache import cache
 import hashlib
@@ -21,7 +22,7 @@ class SecurityEvent(models.Model):
         ('admin_action', 'Admin Action'),
     ]
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
     
     user_agent = models.TextField(blank=True)
@@ -32,7 +33,7 @@ class SecurityEvent(models.Model):
     
     resolved = models.BooleanField(default=False)
     resolved_by = models.ForeignKey(
-        User, 
+        settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
@@ -151,7 +152,7 @@ class SecurityAuditLog(models.Model):
         ('system_event', 'System Event'),
     ]
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     category = models.CharField(max_length=20, choices=ACTION_CATEGORIES)
     action = models.CharField(max_length=100)
     
@@ -182,7 +183,7 @@ class SecurityAuditLog(models.Model):
 class SessionSecurity(models.Model):
     """Track session security metrics"""
     session_key = models.CharField(max_length=40, unique=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     
     risk_score = models.IntegerField(default=0)
     bot_probability = models.FloatField(default=0.0)

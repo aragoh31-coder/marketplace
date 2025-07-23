@@ -8,7 +8,10 @@ from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from django.core.cache import cache
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+from django.conf import settings
+
+User = get_user_model()
 
 
 class NoJSCaptchaMixin:

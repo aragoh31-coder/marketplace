@@ -237,3 +237,81 @@ def security_settings(request):
         form = SecuritySettingsForm(initial=initial_data, user=request.user)
     
     return render(request, 'security/settings.html', {'form': form})
+
+
+def security_verification(request):
+    """High-risk account verification"""
+    if not request.user.is_authenticated:
+        return redirect('accounts:login')
+    
+    import secrets
+    verification_code = secrets.token_hex(8).upper()
+    request.session['security_verification_code'] = verification_code
+    request.session['security_verification_expires'] = (
+        timezone.now() + timezone.timedelta(minutes=10)
+    ).timestamp()
+    
+    if request.method == 'POST':
+        submitted_code = request.POST.get('verification_code', '').strip().upper()
+        stored_code = request.session.get('security_verification_code')
+        expires = request.session.get('security_verification_expires')
+        
+        if not stored_code or not expires:
+            messages.error(request, "Verification session expired. Please try again.")
+            return redirect('security:security_verification')
+        
+        if timezone.now().timestamp() > expires:
+            messages.error(request, "Verification code expired. Please try again.")
+            return redirect('security:security_verification')
+        
+        if submitted_code == stored_code:
+            request.session['high_risk_verified'] = True
+            request.session['high_risk_verified_time'] = timezone.now().timestamp()
+            
+            request.session.pop('security_verification_code', None)
+            request.session.pop('security_verification_expires', None)
+            
+            messages.success(request, "Security verification successful.")
+            return redirect('wallets:dashboard')
+        else:
+            messages.error(request, "Invalid verification code. Please try again.")
+    
+    context = {
+        'verification_code': verification_code
+    }
+    return render(request, 'security/security_verification.html', context)
+
+
+def security_status_api(request):
+    """API endpoint for security status"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    data = {
+        'security_score': calculate_user_security_score(request.user),
+        'two_fa_enabled': getattr(request.user.wallet, 'two_fa_enabled', False) if hasattr(request.user, 'wallet') else False,
+        'pgp_enabled': bool(request.user.pgp_public_key),
+        'recent_alerts': 0  # Will implement with proper SecurityEvent model
+    }
+    return JsonResponse(data)
+
+
+def calculate_user_security_score(user):
+    """Calculate security score for user"""
+    score = 50  # Base score
+    
+    if hasattr(user, 'wallet') and user.wallet.two_fa_enabled:
+        score += 20
+    
+    if user.pgp_public_key:
+        score += 15
+    
+    account_age = (timezone.now().date() - user.date_joined.date()).days
+    if account_age >= 90:
+        score += 15
+    elif account_age >= 30:
+        score += 10
+    elif account_age >= 7:
+        score += 5
+    
+    return max(0, min(100, score))
