@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'support',
     'adminpanel',
     'core',
+    'apps.security',
 ]
 
 MIDDLEWARE = [
@@ -44,11 +45,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware',
-    'apps.security.middleware.EnhancedSecurityMiddleware',
     'apps.security.middleware.WalletSecurityMiddleware',
     'apps.security.middleware.RateLimitMiddleware',
-    'apps.security.bot_detection.BotDetectionMiddleware',
-    'apps.security.bot_detection.SecurityHeadersMiddleware',
+    'apps.security.middleware.BotDetectionMiddleware',
+    'apps.security.middleware.SecurityHeadersMiddleware',
 ]
 
 ROOT_URLCONF = 'marketplace.urls'

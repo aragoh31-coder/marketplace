@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal
 import secrets
 import json
 import hashlib
@@ -387,33 +388,52 @@ def admin_user_detail(request, username):
         wallet = None
         btc_balance = xmr_balance = btc_escrow = xmr_escrow = 0
     
-    transactions = []
-    total_deposits_btc = total_deposits_xmr = 0
-    total_withdrawals_btc = total_withdrawals_xmr = 0
+    withdrawals = WithdrawalRequest.objects.filter(user=user).order_by('-created_at')[:10]
     
-    if wallet:
-        transactions = wallet.transactions.order_by('-created_at')[:20]
-        
-        deposits_btc = wallet.transactions.filter(
-            transaction_type='DEPOSIT', currency='BTC'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
-        deposits_xmr = wallet.transactions.filter(
-            transaction_type='DEPOSIT', currency='XMR'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
-        withdrawals_btc = wallet.transactions.filter(
-            transaction_type='WITHDRAWAL', currency='BTC'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
-        withdrawals_xmr = wallet.transactions.filter(
-            transaction_type='WITHDRAWAL', currency='XMR'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
-        total_deposits_btc = deposits_btc
-        total_deposits_xmr = deposits_xmr
-        total_withdrawals_btc = withdrawals_btc
-        total_withdrawals_xmr = withdrawals_xmr
+    transactions = Transaction.objects.filter(user=user).order_by('-created_at')[:20]
+    
+    total_deposits_btc = transactions.filter(type='deposit', currency='btc').aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal('0')
+    
+    total_deposits_xmr = transactions.filter(type='deposit', currency='xmr').aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal('0')
+    
+    total_withdrawals_btc = withdrawals.filter(status='completed', currency='btc').aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal('0')
+    
+    total_withdrawals_xmr = withdrawals.filter(status='completed', currency='xmr').aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal('0')
+    
+    risk_factors = []
+    risk_score = 0
+    
+    high_value_txs = transactions.filter(
+        amount__gte=Decimal('1.0'),
+        currency='btc'
+    ).count()
+    if high_value_txs > 5:
+        risk_factors.append(f"High-value transactions: {high_value_txs}")
+        risk_score += 20
+    
+    recent_withdrawals = withdrawals.filter(
+        created_at__gte=timezone.now() - timedelta(days=7)
+    ).count()
+    if recent_withdrawals > 3:
+        risk_factors.append(f"Recent withdrawals: {recent_withdrawals}")
+        risk_score += 15
+    
+    if user.date_joined > timezone.now() - timedelta(days=30):
+        risk_factors.append("New account (< 30 days)")
+        risk_score += 25
+    
+    security_alerts = AuditLog.objects.filter(
+        user=user,
+        flagged=True
+    ).order_by('-created_at')[:10]
     
     orders = user.orders.order_by('-created_at')[:10]
     total_orders = user.orders.count()
@@ -421,58 +441,30 @@ def admin_user_detail(request, username):
     
     buyer_disputes = user.filed_disputes.order_by('-created_at')[:5]
     vendor_disputes = user.received_disputes.order_by('-created_at')[:5]
-    total_disputes = buyer_disputes.count() + vendor_disputes.count()
-    
-    vendor_info = None
-    vendor_stats = {}
-    if hasattr(user, 'vendor'):
-        vendor_info = user.vendor
-        from products.models import Product
-        vendor_products = Product.objects.filter(vendor=vendor_info)
-        vendor_orders = Order.objects.filter(items__product__in=vendor_products).distinct()
-        
-        vendor_stats = {
-            'total_products': vendor_info.products.count(),
-            'active_products': vendor_info.products.filter(is_active=True).count(),
-            'total_sales': vendor_orders.filter(status='COMPLETED').count(),
-            'pending_orders': vendor_orders.filter(status='PENDING').count(),
-            'vendor_rating': vendor_info.rating,
-            'is_approved': vendor_info.is_approved,
-            'vacation_mode': getattr(vendor_info, 'vacation_mode', False),
-        }
-    
-    security_info = {
-        'pgp_enabled': bool(user.pgp_public_key),
-        'pgp_fingerprint': user.pgp_fingerprint,
-        'two_factor_enabled': user.pgp_login_enabled,
-        'last_login': user.last_login,
-        'date_joined': user.date_joined,
-        'is_staff': user.is_staff,
-        'is_superuser': user.is_superuser,
-    }
     
     context = {
-        'user': user,
+        'user_detail': user,
         'wallet': wallet,
         'btc_balance': btc_balance,
         'xmr_balance': xmr_balance,
         'btc_escrow': btc_escrow,
         'xmr_escrow': xmr_escrow,
+        'withdrawals': withdrawals,
         'transactions': transactions,
+        'orders': orders,
+        'total_orders': total_orders,
+        'completed_orders': completed_orders,
         'total_deposits_btc': total_deposits_btc,
         'total_deposits_xmr': total_deposits_xmr,
         'total_withdrawals_btc': total_withdrawals_btc,
         'total_withdrawals_xmr': total_withdrawals_xmr,
-        'orders': orders,
-        'total_orders': total_orders,
-        'completed_orders': completed_orders,
+        'risk_score': risk_score,
+        'risk_factors': risk_factors,
+        'security_alerts': security_alerts,
         'buyer_disputes': buyer_disputes,
         'vendor_disputes': vendor_disputes,
-        'total_disputes': total_disputes,
-        'vendor_info': vendor_info,
-        'vendor_stats': vendor_stats,
-        'security_info': security_info,
     }
+    
     return render(request, 'adminpanel/user_detail.html', context)
 
 
