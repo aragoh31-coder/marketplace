@@ -354,6 +354,66 @@ class SecureRegistrationForm(NoJSCaptchaMixin, UserCreationForm):
         return user
 
 
+class BotChallengeForm(forms.Form):
+    """Form for bot challenge verification"""
+    
+    challenge_answer = forms.IntegerField(
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter the answer'
+        })
+    )
+    
+    challenge_id = forms.CharField(widget=forms.HiddenInput())
+    timestamp = forms.CharField(widget=forms.HiddenInput())
+    form_hash = forms.CharField(widget=forms.HiddenInput())
+    
+    website = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'style': 'display:none !important;',
+            'tabindex': '-1',
+            'autocomplete': 'off'
+        })
+    )
+    
+    email_address = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={
+            'style': 'display:none !important;',
+            'tabindex': '-1',
+            'autocomplete': 'off'
+        })
+    )
+    
+    def __init__(self, *args, **kwargs):
+        self.expected_answer = kwargs.pop('expected_answer', None)
+        super().__init__(*args, **kwargs)
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        if cleaned_data.get('website') or cleaned_data.get('email_address'):
+            raise ValidationError("Bot detected")
+        
+        if self.expected_answer and cleaned_data.get('challenge_answer') != self.expected_answer:
+            raise ValidationError("Incorrect answer")
+        
+        timestamp = cleaned_data.get('timestamp')
+        if timestamp:
+            try:
+                ts = float(timestamp)
+                elapsed = time.time() - ts
+                if elapsed < 2:
+                    raise ValidationError("Challenge completed too quickly")
+                if elapsed > 300:
+                    raise ValidationError("Challenge expired")
+            except (ValueError, TypeError):
+                raise ValidationError("Invalid timestamp")
+        
+        return cleaned_data
+
+
 def captcha_context(request):
     """Context processor for CAPTCHA data"""
     return {
