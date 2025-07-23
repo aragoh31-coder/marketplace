@@ -47,6 +47,8 @@ MIDDLEWARE = [
     'apps.security.middleware.EnhancedSecurityMiddleware',
     'apps.security.middleware.WalletSecurityMiddleware',
     'apps.security.middleware.RateLimitMiddleware',
+    'apps.security.bot_detection.BotDetectionMiddleware',
+    'apps.security.bot_detection.SecurityHeadersMiddleware',
 ]
 
 ROOT_URLCONF = 'marketplace.urls'

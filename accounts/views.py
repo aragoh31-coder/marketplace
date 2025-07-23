@@ -97,7 +97,15 @@ def register(request):
     if request.method == 'POST':
         form = SecureRegistrationForm(request.POST, request=request)
         if form.is_valid():
-            user = form.save()
+            from django.contrib.auth.models import User
+            user = User.objects.create_user(
+                username=form.cleaned_data['username'],
+                email=form.cleaned_data.get('email', ''),
+                password=form.cleaned_data['password1']
+            )
+            
+            from .models import UserProfile
+            UserProfile.objects.get_or_create(user=user)
             
             from wallets.models import Wallet
             Wallet.objects.get_or_create(user=user)
@@ -111,15 +119,19 @@ def register(request):
                 ip_address='privacy_protected',
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:200],
                 details={
-                    'registration_method': 'auto_login',
+                    'registration_method': 'secure_form',
                     'username': user.username,
                     'email_provided': bool(user.email)
                 },
-                risk_score=0
+                risk_score=10  # New accounts have slight risk
             )
             
-            messages.success(request, 'Registration successful!')
+            messages.success(request, f'Account created for {user.username}! Welcome to the marketplace.')
             return redirect('/')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         form = SecureRegistrationForm(request=request)
     return render(request, 'accounts/register.html', {'form': form})
@@ -129,7 +141,7 @@ def login_view(request):
     logger = logging.getLogger(__name__)
     
     if request.method == 'POST':
-        form = SecureLoginForm(request, data=request.POST)
+        form = SecureLoginForm(request=request, data=request.POST)
         if form.is_valid():
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
@@ -219,7 +231,7 @@ def login_view(request):
                 except User.DoesNotExist:
                     pass  # Don't log for non-existent users
     else:
-        form = SecureLoginForm()
+        form = SecureLoginForm(request=request)
     
     return render(request, 'accounts/login.html', {'form': form})
 

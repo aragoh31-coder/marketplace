@@ -83,13 +83,9 @@
         </div>
         
         <!-- Security CAPTCHA field -->
-        {% if form.math_challenge %}
         <div class="form-group">
             <label for="{{ form.math_challenge.id_for_label }}">{{ form.math_challenge.label }}</label>
             {{ form.math_challenge }}
-            {% if form.math_challenge.help_text %}
-                <small class="form-text text-muted">{{ form.math_challenge.help_text }}</small>
-            {% endif %}
             {% if form.math_challenge.errors %}
                 <div class="text-danger">
                     {% for error in form.math_challenge.errors %}
@@ -98,7 +94,6 @@
                 </div>
             {% endif %}
         </div>
-        {% endif %}
         
         <!-- Hidden security fields -->
         {% for field in form.hidden_fields %}

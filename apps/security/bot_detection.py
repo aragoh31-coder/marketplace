@@ -197,3 +197,36 @@ class SecurityHeadersMiddleware:
             del response['Server']
         
         return response
+
+
+class BotDetector:
+    """Standalone bot detection utility class"""
+    
+    def __init__(self):
+        self.bot_patterns = [
+            r'bot', r'crawler', r'spider', r'scraper', r'curl', r'wget',
+            r'python-requests', r'scrapy', r'selenium', r'phantomjs'
+        ]
+    
+    def is_bot(self, user_agent):
+        """Check if user agent indicates a bot"""
+        if not user_agent:
+            return True
+        
+        user_agent = user_agent.lower()
+        
+        for pattern in self.bot_patterns:
+            if re.search(pattern, user_agent):
+                return True
+        
+        return False
+    
+    def check_request_headers(self, request):
+        """Check request headers for bot indicators"""
+        if not request.META.get('HTTP_ACCEPT'):
+            return True
+        
+        if not request.META.get('HTTP_ACCEPT_LANGUAGE'):
+            return True
+        
+        return False
