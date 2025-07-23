@@ -3,7 +3,10 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 import re
+import hashlib
 import logging
+from decimal import Decimal
+from django.utils import timezone
 
 logger = logging.getLogger('wallet.utils')
 
@@ -97,3 +100,109 @@ def format_crypto_amount(amount, currency):
     elif currency == 'xmr':
         return f"{amount:.12f} XMR"
     return f"{amount} {currency.upper()}"
+
+
+def send_discrepancy_alert(wallet, balance_check):
+    """Send balance discrepancy alert to administrators"""
+    try:
+        send_mail(
+            subject=f'Wallet Balance Discrepancy - User {wallet.user.username}',
+            message=f'''
+A balance discrepancy has been detected in wallet {wallet.id}.
+
+User: {wallet.user.username}
+Wallet ID: {wallet.id}
+
+Discrepancy Details:
+{balance_check.discrepancy_details}
+
+Please investigate immediately.
+            '''.strip(),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[settings.ADMIN_EMAIL],
+            fail_silently=True
+        )
+    except Exception as e:
+        logger.error(f"Failed to send discrepancy alert: {str(e)}")
+
+
+def anonymize_ip_address(ip_address):
+    """Anonymize IP address for privacy protection"""
+    if not ip_address:
+        return 'unknown'
+    
+    return hashlib.sha256(ip_address.encode()).hexdigest()[:16]
+
+
+def check_withdrawal_velocity(user):
+    """Check for suspicious withdrawal velocity patterns"""
+    from .models import WithdrawalRequest
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    recent_withdrawals = WithdrawalRequest.objects.filter(
+        user=user,
+        created_at__gte=timezone.now() - timedelta(hours=1)
+    ).count()
+    
+    daily_withdrawals = WithdrawalRequest.objects.filter(
+        user=user,
+        created_at__gte=timezone.now() - timedelta(hours=24)
+    ).count()
+    
+    if recent_withdrawals >= 5:  # More than 5 in an hour
+        return True, "Too many withdrawals in the last hour"
+    
+    if daily_withdrawals >= 20:  # More than 20 in a day
+        return True, "Too many withdrawals in the last 24 hours"
+    
+    return False, "Normal velocity"
+
+
+def validate_withdrawal_security(user, amount, currency, address):
+    """Comprehensive withdrawal security validation"""
+    errors = []
+    risk_factors = []
+    risk_score = 0
+    
+    if not validate_crypto_address(address, currency):
+        errors.append(f"Invalid {currency.upper()} address format")
+        risk_score += 30
+    
+    velocity_check, velocity_reason = check_withdrawal_velocity(user)
+    if velocity_check:
+        errors.append(velocity_reason)
+        risk_factors.append("High withdrawal velocity")
+        risk_score += 25
+    
+    large_amount_thresholds = {
+        'btc': Decimal('0.1'),
+        'xmr': Decimal('10.0')
+    }
+    
+    if amount > large_amount_thresholds.get(currency, Decimal('0')):
+        risk_factors.append(f"Large {currency.upper()} amount")
+        risk_score += 20
+    
+    from .models import WithdrawalRequest
+    previous_use = WithdrawalRequest.objects.filter(
+        user=user,
+        address=address,
+        status='completed'
+    ).exists()
+    
+    if not previous_use:
+        risk_factors.append("New withdrawal address")
+        risk_score += 15
+    
+    if user.date_joined > timezone.now() - timezone.timedelta(days=7):
+        risk_factors.append("New account")
+        risk_score += 30
+    
+    return {
+        'valid': len(errors) == 0,
+        'errors': errors,
+        'risk_factors': risk_factors,
+        'risk_score': risk_score,
+        'manual_review_required': risk_score >= 40
+    }
