@@ -45,6 +45,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware',
+    'apps.security.middleware.EnhancedSecurityMiddleware',
     'apps.security.middleware.WalletSecurityMiddleware',
     'apps.security.middleware.RateLimitMiddleware',
 ]

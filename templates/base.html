@@ -371,9 +371,9 @@
         
         /* Premium Cards */
         .card {
-            background: var(--bg-card);
+            background: rgba(10, 15, 27, 0.8);
             backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
+            border: 1px solid rgba(148, 163, 184, 0.1);
             border-radius: 1rem;
             padding: 2rem;
             margin-bottom: 2rem;
@@ -401,14 +401,14 @@
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
+            background: linear-gradient(90deg, #00ff88, #06b6d4);
             transform: translateX(-100%);
             transition: transform 0.6s ease;
         }
         
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: var(--shadow);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             border-color: rgba(0, 255, 136, 0.3);
         }
         
@@ -452,9 +452,9 @@
             width: 100%;
             padding: 0.75rem 1rem;
             background: rgba(148, 163, 184, 0.05);
-            border: 1px solid var(--border);
+            border: 1px solid rgba(148, 163, 184, 0.1);
             border-radius: 0.5rem;
-            color: var(--text-primary);
+            color: #f1f5f9;
             font-size: 1rem;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             min-height: 44px;
@@ -462,7 +462,7 @@
         
         .form-input:focus {
             outline: none;
-            border-color: var(--primary);
+            border-color: #00ff88;
             background: rgba(0, 255, 136, 0.05);
             box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
         }
@@ -483,18 +483,18 @@
             gap: 0.5rem;
             padding: 0.75rem 1rem;
             background: rgba(148, 163, 184, 0.1);
-            border: 1px solid var(--border);
+            border: 1px solid rgba(148, 163, 184, 0.1);
             border-radius: 0.5rem;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            color: var(--text-primary);
+            color: #f1f5f9;
             text-decoration: none;
             min-height: 44px;
         }
         
         .dropdown-label:hover {
             background: rgba(148, 163, 184, 0.2);
-            border-color: var(--primary);
+            border-color: #00ff88;
         }
         
         .dropdown-menu {
@@ -502,16 +502,16 @@
             top: 100%;
             left: 0;
             margin-top: 0.5rem;
-            background: var(--bg-card);
+            background: rgba(10, 15, 27, 0.8);
             backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
+            border: 1px solid rgba(148, 163, 184, 0.1);
             border-radius: 0.5rem;
             opacity: 0;
             visibility: hidden;
             transform: translateY(-10px);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             min-width: 200px;
-            box-shadow: var(--shadow);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             z-index: 1000;
         }
         
@@ -545,7 +545,7 @@
             min-width: 20px;
             height: 20px;
             padding: 0 6px;
-            background: var(--danger);
+            background: #ef4444;
             color: white;
             font-size: 0.75rem;
             font-weight: bold;
@@ -564,11 +564,11 @@
         .table {
             width: 100%;
             border-collapse: collapse;
-            background: var(--bg-card);
+            background: rgba(10, 15, 27, 0.8);
             backdrop-filter: blur(10px);
             border-radius: 1rem;
             overflow: hidden;
-            box-shadow: var(--shadow);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             margin-bottom: 2rem;
         }
         
@@ -617,33 +617,33 @@
         .alert-success {
             background: rgba(0, 255, 136, 0.1);
             color: #00ff88;
-            border-color: var(--primary);
+            border-color: #00ff88;
         }
         
         .alert-error {
             background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-            border-color: var(--danger);
+            color: #ef4444;
+            border-color: #ef4444;
         }
         
         .alert-warning {
             background: rgba(245, 158, 11, 0.1);
-            color: var(--warning);
-            border-color: var(--warning);
+            color: #f59e0b;
+            border-color: #f59e0b;
         }
         
         .alert-info {
             background: rgba(6, 182, 212, 0.1);
-            color: var(--accent);
-            border-color: var(--accent);
+            color: #06b6d4;
+            border-color: #06b6d4;
         }
         
         /* Utility Classes */
         .text-center { text-align: center; }
-        .text-success { color: var(--primary); }
-        .text-danger { color: var(--danger); }
-        .text-warning { color: var(--warning); }
-        .text-info { color: var(--accent); }
+        .text-success { color: #00ff88; }
+        .text-danger { color: #ef4444; }
+        .text-warning { color: #f59e0b; }
+        .text-info { color: #06b6d4; }
         
         .mb-1 { margin-bottom: 0.5rem; }
         .mb-2 { margin-bottom: 1rem; }
@@ -690,7 +690,7 @@
                 right: 0;
                 background: rgba(10, 15, 27, 0.9);
                 backdrop-filter: blur(20px);
-                border-top: 1px solid var(--border);
+                border-top: 1px solid rgba(148, 163, 184, 0.1);
                 z-index: 1000;
                 padding: 0.5rem 0;
                 animation: bottomNavSlide 0.5s ease-out;
@@ -713,7 +713,7 @@
             .bottom-nav-link {
                 flex: 1;
                 text-align: center;
-                color: var(--text-dim);
+                color: #64748b;
                 text-decoration: none;
                 padding: 0.75rem 0.25rem;
                 font-size: 0.75rem;
@@ -764,7 +764,7 @@
         .mobile-nav-link:focus,
         .dropdown-label:focus,
         .form-input:focus {
-            outline: 2px solid var(--primary);
+            outline: 2px solid #00ff88;
             outline-offset: 2px;
         }
     </style>
@@ -884,7 +884,7 @@
         <div class="container">
             {% if messages %}
                 {% for message in messages %}
-                    <div class="card" style="animation: slideDown 0.5s ease-out; background: {% if message.tags == 'error' %}rgba(239, 68, 68, 0.1){% elif message.tags == 'success' %}rgba(0, 255, 136, 0.1){% else %}var(--bg-card){% endif %}; border-color: {% if message.tags == 'error' %}var(--danger){% elif message.tags == 'success' %}var(--primary){% else %}var(--border){% endif %};">
+                    <div class="card" style="animation: slideDown 0.5s ease-out; background: {% if message.tags == 'error' %}rgba(239, 68, 68, 0.1){% elif message.tags == 'success' %}rgba(0, 255, 136, 0.1){% else %}rgba(10, 15, 27, 0.8){% endif %}; border-color: {% if message.tags == 'error' %}#ef4444{% elif message.tags == 'success' %}#00ff88{% else %}rgba(148, 163, 184, 0.1){% endif %};">
                         {{ message }}
                     </div>
                 {% endfor %}

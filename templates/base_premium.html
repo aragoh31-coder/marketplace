@@ -371,9 +371,9 @@
         
         /* Premium Cards */
         .card {
-            background: var(--bg-card);
+            background: rgba(10, 15, 27, 0.8);
             backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
+            border: 1px solid rgba(148, 163, 184, 0.1);
             border-radius: 1rem;
             padding: 2rem;
             margin-bottom: 2rem;
@@ -408,7 +408,7 @@
         
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: var(--shadow);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             border-color: rgba(0, 255, 136, 0.3);
         }
         
@@ -462,7 +462,7 @@
         
         .form-input:focus {
             outline: none;
-            border-color: var(--primary);
+            border-color: #00ff88;
             background: rgba(0, 255, 136, 0.05);
             box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
         }
@@ -483,18 +483,18 @@
             gap: 0.5rem;
             padding: 0.75rem 1rem;
             background: rgba(148, 163, 184, 0.1);
-            border: 1px solid var(--border);
+            border: 1px solid rgba(148, 163, 184, 0.1);
             border-radius: 0.5rem;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            color: var(--text-primary);
+            color: #f1f5f9;
             text-decoration: none;
             min-height: 44px;
         }
         
         .dropdown-label:hover {
             background: rgba(148, 163, 184, 0.2);
-            border-color: var(--primary);
+            border-color: #00ff88;
         }
         
         .dropdown-menu {
@@ -502,16 +502,16 @@
             top: 100%;
             left: 0;
             margin-top: 0.5rem;
-            background: var(--bg-card);
+            background: rgba(10, 15, 27, 0.8);
             backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
+            border: 1px solid rgba(148, 163, 184, 0.1);
             border-radius: 0.5rem;
             opacity: 0;
             visibility: hidden;
             transform: translateY(-10px);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             min-width: 200px;
-            box-shadow: var(--shadow);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             z-index: 1000;
         }
         
@@ -543,9 +543,9 @@
             top: 1rem;
             right: 1rem;
             z-index: 1001;
-            background: var(--bg-card);
+            background: rgba(10, 15, 27, 0.8);
             backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
+            border: 1px solid rgba(148, 163, 184, 0.1);
             border-radius: 0.5rem;
             padding: 0.5rem;
             animation: slideIn 0.5s ease-out;
@@ -565,7 +565,7 @@
         .theme-switcher select {
             background: transparent;
             border: none;
-            color: var(--text-primary);
+            color: #f1f5f9;
             font-size: 0.875rem;
             cursor: pointer;
             padding: 0.25rem;
@@ -602,7 +602,7 @@
             right: 0;
             background: rgba(10, 15, 27, 0.95);
             backdrop-filter: blur(20px);
-            border-top: 1px solid var(--border);
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
             display: none;
             z-index: 1000;
             animation: slideUp 0.5s ease-out;
@@ -711,7 +711,7 @@
         .mobile-nav-link:focus,
         .dropdown-label:focus,
         .form-input:focus {
-            outline: 2px solid var(--primary);
+            outline: 2px solid #00ff88;
             outline-offset: 2px;
         }
     </style>
@@ -832,7 +832,7 @@
         <div class="container">
             {% if messages %}
                 {% for message in messages %}
-                    <div class="card" style="animation: slideDown 0.5s ease-out; background: {% if message.tags == 'error' %}rgba(239, 68, 68, 0.1){% elif message.tags == 'success' %}rgba(0, 255, 136, 0.1){% else %}var(--bg-card){% endif %}; border-color: {% if message.tags == 'error' %}var(--danger){% elif message.tags == 'success' %}var(--primary){% else %}var(--border){% endif %};">
+                    <div class="card" style="animation: slideDown 0.5s ease-out; background: {% if message.tags == 'error' %}rgba(239, 68, 68, 0.1){% elif message.tags == 'success' %}rgba(0, 255, 136, 0.1){% else %}rgba(10, 15, 27, 0.8){% endif %}; border-color: {% if message.tags == 'error' %}#ef4444{% elif message.tags == 'success' %}#00ff88{% else %}rgba(148, 163, 184, 0.1){% endif %};">
                         {{ message }}
                     </div>
                 {% endfor %}

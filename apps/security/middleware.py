@@ -169,7 +169,7 @@ class WalletSecurityMiddleware(MiddlewareMixin):
             'X-Frame-Options': 'DENY',
             'X-XSS-Protection': '1; mode=block',
             'Referrer-Policy': 'strict-origin-when-cross-origin',
-            'Content-Security-Policy': "default-src 'self'; script-src 'none'; object-src 'none';",
+            'Content-Security-Policy': "default-src 'self'; script-src 'none'; object-src 'none'; style-src 'self' 'unsafe-inline';",
             'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
             'Permissions-Policy': 'geolocation=(), microphone=(), camera=()'
         }
