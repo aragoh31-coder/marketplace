@@ -244,8 +244,8 @@
     gap: 2rem;
     margin-bottom: 3rem;
     padding: 2rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
+    background: rgba(10, 15, 27, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.1);
     border-radius: 1rem;
     backdrop-filter: blur(20px);
     animation: slideInUp 0.8s ease-out;
@@ -259,13 +259,13 @@
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    background: linear-gradient(135deg, #00ff88, #7c3aed);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 2rem;
     font-weight: 700;
-    color: var(--bg-primary);
+    color: #0a0f1b;
     box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
 }
 
@@ -275,8 +275,8 @@
     right: 5px;
     width: 20px;
     height: 20px;
-    background: var(--primary);
-    border: 3px solid var(--bg-card);
+    background: #00ff88;
+    border: 3px solid rgba(10, 15, 27, 0.8);
     border-radius: 50%;
     animation: pulse 2s infinite;
 }
@@ -289,7 +289,7 @@
     font-size: 2.5rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, var(--text-primary), var(--primary));
+    background: linear-gradient(135deg, #f1f5f9, #00ff88);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -311,14 +311,14 @@
 }
 
 .trust-legendary { background: linear-gradient(135deg, #ffd700, #ffed4e); color: #1a1a1a; }
-.trust-trusted { background: linear-gradient(135deg, var(--primary), #10b981); color: var(--bg-primary); }
+.trust-trusted { background: linear-gradient(135deg, #00ff88, #10b981); color: #0a0f1b; }
 .trust-established { background: linear-gradient(135deg, #3b82f6, #06b6d4); color: white; }
 .trust-regular { background: linear-gradient(135deg, #8b5cf6, #a855f7); color: white; }
 .trust-beginner { background: linear-gradient(135deg, #6b7280, #9ca3af); color: white; }
 .trust-new { background: linear-gradient(135deg, #374151, #4b5563); color: white; }
 
 .trust-score {
-    color: var(--text-secondary);
+    color: #94a3b8;
     font-size: 0.875rem;
 }
 
@@ -335,12 +335,12 @@
     display: block;
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--primary);
+    color: #00ff88;
 }
 
 .stat-label {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: #94a3b8;
 }
 
 .premium-tabs {
@@ -353,8 +353,8 @@
 
 .tab-labels {
     display: flex;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
+    background: rgba(10, 15, 27, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.1);
     border-radius: 0.75rem;
     padding: 0.5rem;
     margin-bottom: 2rem;
@@ -371,11 +371,11 @@
     border-radius: 0.5rem;
     cursor: pointer;
     transition: all 0.3s ease;
-    color: var(--text-secondary);
+    color: #94a3b8;
 }
 
 .tab-label:hover {
-    color: var(--text-primary);
+    color: #f1f5f9;
     background: rgba(255, 255, 255, 0.05);
 }
 
@@ -383,8 +383,8 @@
 #tab-security:checked ~ .tab-labels .tab-label:nth-child(2),
 #tab-wallet:checked ~ .tab-labels .tab-label:nth-child(3),
 #tab-orders:checked ~ .tab-labels .tab-label:nth-child(4) {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    color: var(--bg-primary);
+    background: linear-gradient(135deg, #00ff88, #7c3aed);
+    color: #0a0f1b;
     box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
 }
 
@@ -407,8 +407,8 @@
 }
 
 .premium-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
+    background: rgba(10, 15, 27, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.1);
     border-radius: 1rem;
     overflow: hidden;
     backdrop-filter: blur(20px);
@@ -418,7 +418,7 @@
 .premium-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 15px 35px rgba(0, 255, 136, 0.1);
-    border-color: var(--primary);
+    border-color: #00ff88;
 }
 
 .card-header {
@@ -426,13 +426,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 .card-header h3 {
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: #f1f5f9;
 }
 
 .card-icon {
@@ -446,7 +446,7 @@
 
 .card-actions {
     padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
     display: flex;
     gap: 1rem;
 }
@@ -464,12 +464,12 @@
 }
 
 .setting-label {
-    color: var(--text-secondary);
+    color: #94a3b8;
     font-size: 0.875rem;
 }
 
 .setting-value {
-    color: var(--text-primary);
+    color: #f1f5f9;
     font-weight: 500;
 }
 
@@ -498,12 +498,12 @@
 }
 
 .activity-text {
-    color: var(--text-primary);
+    color: #f1f5f9;
     font-weight: 500;
 }
 
 .activity-time {
-    color: var(--text-secondary);
+    color: #94a3b8;
     font-size: 0.875rem;
 }
 
@@ -520,14 +520,14 @@
     border-radius: 50%;
 }
 
-.status-good { background: var(--primary); }
+.status-good { background: #00ff88; }
 .status-warning { background: #f59e0b; }
 .status-error { background: #ef4444; }
 
 .pgp-fingerprint {
     font-family: monospace;
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: #94a3b8;
     word-break: break-all;
 }
 
@@ -545,12 +545,12 @@
 .balance-amount {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--primary);
+    color: #00ff88;
 }
 
 .balance-currency {
     font-size: 1rem;
-    color: var(--text-secondary);
+    color: #94a3b8;
 }
 
 .orders-summary {
@@ -568,7 +568,7 @@
 
 .summary-label {
     display: block;
-    color: var(--text-secondary);
+    color: #94a3b8;
     font-size: 0.875rem;
     margin-bottom: 0.5rem;
 }
@@ -577,7 +577,7 @@
     display: block;
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--primary);
+    color: #00ff88;
 }
 
 .premium-btn {
@@ -595,13 +595,13 @@
 }
 
 .premium-btn-primary {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    color: var(--bg-primary);
+    background: linear-gradient(135deg, #00ff88, #7c3aed);
+    color: #0a0f1b;
 }
 
 .premium-btn-secondary {
     background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
+    color: #f1f5f9;
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
