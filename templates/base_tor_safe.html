@@ -435,11 +435,11 @@
             <!-- Desktop Navigation -->
             <nav class="nav">
                 <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">🏠 Home</a>
-                <a href="{% url 'products:product_list' %}" class="{% if 'products' in request.resolver_match.namespace %}active{% endif %}">📦 Products</a>
-                <a href="{% url 'vendors:vendor_list' %}" class="{% if 'vendors' in request.resolver_match.namespace %}active{% endif %}">🏪 Vendors</a>
+                <a href="{% url 'products:list' %}" class="{% if 'products' in request.resolver_match.namespace %}active{% endif %}">📦 Products</a>
+                <a href="{% url 'vendors:list' %}" class="{% if 'vendors' in request.resolver_match.namespace %}active{% endif %}">🏪 Vendors</a>
                 {% if user.is_authenticated %}
-                    <a href="{% url 'orders:order_list' %}" class="{% if 'orders' in request.resolver_match.namespace %}active{% endif %}">📋 Orders</a>
-                    <a href="{% url 'wallets:wallet_detail' %}" class="{% if 'wallets' in request.resolver_match.namespace %}active{% endif %}">💰 Wallet</a>
+                    <a href="{% url 'orders:list' %}" class="{% if 'orders' in request.resolver_match.namespace %}active{% endif %}">📋 Orders</a>
+                    <a href="{% url 'wallets:dashboard' %}" class="{% if 'wallets' in request.resolver_match.namespace %}active{% endif %}">💰 Wallet</a>
                     <a href="{% url 'accounts:profile' %}" class="{% if 'accounts' in request.resolver_match.namespace %}active{% endif %}">👤 Profile</a>
                     <a href="{% url 'accounts:logout' %}">🚪 Logout</a>
                 {% else %}

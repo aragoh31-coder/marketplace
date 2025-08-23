@@ -75,7 +75,7 @@ def tor_safe_home(request):
 
 def tor_safe_product_list(request):
     """Tor-safe product list view."""
-    products = Product.objects.all()
+    products = Product.objects.all().order_by('-created_at')
     categories = Category.objects.all()
     
     # Handle search

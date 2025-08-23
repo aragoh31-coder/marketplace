@@ -5,7 +5,7 @@ from .models import Category, Product
 
 
 def product_list(request):
-    products = Product.objects.filter(is_available=True).select_related("vendor", "category")
+    products = Product.objects.filter(is_available=True).select_related("vendor", "category").order_by('-created_at')
     categories = Category.objects.all()
 
     category_filter = request.GET.get("category")
@@ -30,7 +30,7 @@ def product_detail(request, pk):
 
 def products_by_category(request, category_id):
     category = get_object_or_404(Category, id=category_id)
-    products = Product.objects.filter(category=category, is_available=True)
+    products = Product.objects.filter(category=category, is_available=True).order_by('-created_at')
 
     paginator = Paginator(products, 12)
     page_number = request.GET.get("page")
