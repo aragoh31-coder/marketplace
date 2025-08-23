@@ -20,17 +20,20 @@ from adminpanel.models import SecurityAlert
 
 from .forms import ConversionForm, SecuritySettingsForm, TwoFactorForm, WithdrawalForm, WithdrawalPinForm
 from .models import AuditLog, ConversionRate, Transaction, Wallet, WithdrawalRequest
-from .utils import check_rate_limit, get_client_ip, send_withdrawal_notification, validate_crypto_address
+from .utils import check_rate_limit, send_withdrawal_notification, validate_crypto_address
 
 logger = logging.getLogger("wallet.views")
 
 
 def log_user_action(request, action, details=None):
     """Log user actions for audit trail"""
+    # Get session ID instead of IP for Tor compatibility
+    session_id = request.session.session_key if hasattr(request, 'session') else 'no-session'
+    
     AuditLog.objects.create(
         user=request.user,
         action=action,
-        ip_address=get_client_ip(request),
+        ip_address=session_id,  # Using session ID instead of IP
         user_agent=request.META.get("HTTP_USER_AGENT", ""),
         details=details or {},
     )
