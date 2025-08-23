@@ -1,0 +1,391 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Design System Management{% endblock %}
+
+{% block extrahead %}
+<style>
+    .design-system-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .theme-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .theme-header h1 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 300;
+    }
+    
+    .theme-header p {
+        margin: 10px 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .theme-section {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .theme-section h2 {
+        color: #333;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e1e5e9;
+    }
+    
+    .color-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .color-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .color-preview {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: 2px solid #e1e5e9;
+    }
+    
+    .color-input {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-family: monospace;
+    }
+    
+    .spacing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .spacing-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .spacing-label {
+        font-weight: 600;
+        color: #555;
+        font-size: 0.9rem;
+    }
+    
+    .spacing-input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-family: monospace;
+    }
+    
+    .typography-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .typography-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .typography-label {
+        font-weight: 600;
+        color: #555;
+        font-size: 0.9rem;
+    }
+    
+    .typography-input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-family: monospace;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid #e1e5e9;
+    }
+    
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+        transform: translateY(-2px);
+    }
+    
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background: #1e7e34;
+        transform: translateY(-2px);
+    }
+    
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-warning:hover {
+        background: #e0a800;
+        transform: translateY(-2px);
+    }
+    
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background: #c82333;
+        transform: translateY(-2px);
+    }
+    
+    .import-export {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-bottom: 30px;
+    }
+    
+    .file-input {
+        display: none;
+    }
+    
+    .file-label {
+        padding: 12px 24px;
+        background: #6c757d;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .file-label:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+    }
+    
+    .component-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .component-item {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #e1e5e9;
+    }
+    
+    .component-item h4 {
+        margin: 0 0 10px 0;
+        color: #495057;
+    }
+    
+    .component-settings {
+        display: grid;
+        gap: 10px;
+    }
+    
+    .setting-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .setting-label {
+        font-weight: 500;
+        color: #6c757d;
+    }
+    
+    .setting-input {
+        width: 120px;
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="design-system-container">
+    <!-- Theme Header -->
+    <div class="theme-header">
+        <h1>{{ theme_info.name|title }} Design System</h1>
+        <p>{{ theme_info.description }}</p>
+        <p><strong>Version:</strong> {{ theme_info.version }} | <strong>Colors:</strong> {{ theme_info.color_count }} | <strong>Components:</strong> {{ theme_info.component_count }}</p>
+    </div>
+
+    <!-- Import/Export Section -->
+    <div class="theme-section">
+        <h2>Import/Export Theme</h2>
+        <div class="import-export">
+            <form method="post" enctype="multipart/form-data" action="import-theme/" style="display: inline;">
+                {% csrf_token %}
+                <input type="file" name="theme_file" id="theme_file" class="file-input" accept=".json">
+                <label for="theme_file" class="file-label">📁 Import Theme</label>
+            </form>
+            
+            <a href="export-theme/" class="btn btn-success">📤 Export Theme</a>
+        </div>
+    </div>
+
+    <!-- Colors Section -->
+    <div class="theme-section">
+        <h2>🎨 Color Palette</h2>
+        <form method="post" action="update-theme/">
+            {% csrf_token %}
+            <div class="color-grid">
+                {% for name, value in colors.items %}
+                <div class="color-item">
+                    <div class="color-preview" style="background-color: {{ value }};"></div>
+                    <input type="text" name="color_{{ name }}" value="{{ value }}" class="color-input" placeholder="{{ name }}">
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align: center;">
+                <button type="submit" class="btn btn-primary">Update Colors</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Spacing Section -->
+    <div class="theme-section">
+        <h2>📏 Spacing System</h2>
+        <form method="post" action="update-theme/">
+            {% csrf_token %}
+            <div class="spacing-grid">
+                {% for name, value in spacing.items %}
+                <div class="spacing-item">
+                    <label class="spacing-label">{{ name|upper }}</label>
+                    <input type="text" name="spacing_{{ name }}" value="{{ value }}" class="spacing-input" placeholder="{{ value }}">
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align: center;">
+                <button type="submit" class="btn btn-primary">Update Spacing</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Typography Section -->
+    <div class="theme-section">
+        <h2>🔤 Typography</h2>
+        <form method="post" action="update-theme/">
+            {% csrf_token %}
+            <div class="typography-grid">
+                {% for name, value in typography.items %}
+                <div class="typography-item">
+                    <label class="typography-label">{{ name|title|replace:"_":" " }}</label>
+                    <input type="text" name="typography_{{ name }}" value="{{ value }}" class="typography-input" placeholder="{{ value }}">
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align: center;">
+                <button type="submit" class="btn btn-primary">Update Typography</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Components Section -->
+    <div class="theme-section">
+        <h2>🧩 Component Settings</h2>
+        <form method="post" action="update-theme/">
+            {% csrf_token %}
+            <div class="component-grid">
+                {% for component_name, settings in components.items %}
+                <div class="component-item">
+                    <h4>{{ component_name|title }}</h4>
+                    <div class="component-settings">
+                        {% for setting_name, setting_value in settings.items %}
+                        <div class="setting-item">
+                            <span class="setting-label">{{ setting_name|title|replace:"_":" " }}</span>
+                            <input type="text" name="component_{{ component_name }}_{{ setting_name }}" value="{{ setting_value }}" class="setting-input">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align: center;">
+                <button type="submit" class="btn btn-primary">Update Components</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="reset-theme/" class="btn btn-danger" onclick="return confirm('Are you sure you want to reset to default theme? This action cannot be undone.')">🔄 Reset to Default</a>
+        <a href="{% url 'admin:index' %}" class="btn btn-warning">← Back to Admin</a>
+    </div>
+</div>
+
+<script>
+// Auto-submit file upload when file is selected
+document.getElementById('theme_file').addEventListener('change', function() {
+    if (this.files.length > 0) {
+        this.form.submit();
+    }
+});
+
+// Add color preview update on input change
+document.querySelectorAll('.color-input').forEach(input => {
+    input.addEventListener('input', function() {
+        const preview = this.previousElementSibling;
+        preview.style.backgroundColor = this.value;
+    });
+});
+</script>
+{% endblock %}

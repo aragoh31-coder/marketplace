@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Secure Marketplace{% endblock %}</title>
+    
+    <!-- Load the design system CSS -->
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
+    
+    <!-- Generate CSS variables from the design system -->
+    {% load design_system %}
+    <style>
+        {% design_css_variables %}
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="animated-background"></div>
+    
+    <!-- Header with Design System Classes -->
+    <header class="navbar glass-strong">
+        <div class="container">
+            <nav class="d-flex justify-between align-center">
+                <a href="/" class="navbar-brand text-gradient-primary">
+                    {% design_system_name %}
+                </a>
+                
+                <ul class="navbar-nav d-none d-lg-flex">
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="/products/" class="nav-link">Products</a></li>
+                    <li><a href="/vendors/" class="nav-link">Vendors</a></li>
+                    <li><a href="/support/" class="nav-link">Support</a></li>
+                    {% if user.is_authenticated %}
+                        <li><a href="/dashboard/" class="nav-link">Dashboard</a></li>
+                        <li><a href="/logout/" class="btn btn-outline">Logout</a></li>
+                    {% else %}
+                        <li><a href="/login/" class="btn btn-primary">Login</a></li>
+                    {% endif %}
+                </ul>
+                
+                <!-- Mobile Menu Toggle -->
+                <button class="mobile-menu-toggle d-lg-none">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer glass">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 col-md-4">
+                    <h3 class="text-gradient-primary">{% design_system_name %}</h3>
+                    <p class="text-secondary">{% design_system_description %}</p>
+                    <p class="text-dim">Version: {% design_system_version %}</p>
+                </div>
+                <div class="col-12 col-md-4">
+                    <h4 class="text-primary">Quick Links</h4>
+                    <ul class="footer-links">
+                        <li><a href="/about/" class="text-secondary">About</a></li>
+                        <li><a href="/privacy/" class="text-secondary">Privacy</a></li>
+                        <li><a href="/terms/" class="text-secondary">Terms</a></li>
+                    </ul>
+                </div>
+                <div class="col-12 col-md-4">
+                    <h4 class="text-primary">Contact</h4>
+                    <p class="text-secondary">support@marketplace.com</p>
+                    <div class="social-links">
+                        <a href="#" class="btn btn-outline btn-sm">Twitter</a>
+                        <a href="#" class="btn btn-outline btn-sm">Discord</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu d-lg-none">
+        <div class="mobile-menu-header">
+            <h3 class="text-gradient-primary">Menu</h3>
+            <button class="mobile-menu-close">&times;</button>
+        </div>
+        <nav class="mobile-menu-nav">
+            <a href="/" class="mobile-menu-link">Home</a>
+            <a href="/products/" class="mobile-menu-link">Products</a>
+            <a href="/vendors/" class="mobile-menu-link">Vendors</a>
+            <a href="/support/" class="mobile-menu-link">Support</a>
+            {% if user.is_authenticated %}
+                <a href="/dashboard/" class="mobile-menu-link">Dashboard</a>
+                <a href="/logout/" class="mobile-menu-link">Logout</a>
+            {% else %}
+                <a href="/login/" class="mobile-menu-link">Login</a>
+            {% endif %}
+        </nav>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Mobile menu functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileToggle = document.querySelector('.mobile-menu-toggle');
+            const mobileMenu = document.querySelector('.mobile-menu');
+            const mobileClose = document.querySelector('.mobile-menu-close');
+            
+            mobileToggle.addEventListener('click', function() {
+                mobileMenu.classList.add('active');
+            });
+            
+            mobileClose.addEventListener('click', function() {
+                mobileMenu.classList.remove('active');
+            });
+            
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!mobileMenu.contains(e.target) && !mobileToggle.contains(e.target)) {
+                    mobileMenu.classList.remove('active');
+                }
+            });
+        });
+        
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,120 @@
+{
+  "name": "light_modern",
+  "version": "1.0.0",
+  "description": "Modern light theme with clean aesthetics",
+  
+  "colors": {
+    "primary": "#3b82f6",
+    "primary_dim": "#2563eb",
+    "secondary": "#8b5cf6",
+    "accent": "#06b6d4",
+    "danger": "#ef4444",
+    "warning": "#f59e0b",
+    "success": "#10b981",
+    "info": "#3b82f6",
+    
+    "bg_primary": "#ffffff",
+    "bg_secondary": "#f8fafc",
+    "bg_tertiary": "#f1f5f9",
+    "bg_card": "rgba(255, 255, 255, 0.8)",
+    "bg_overlay": "rgba(255, 255, 255, 0.9)",
+    
+    "text_primary": "#0f172a",
+    "text_secondary": "#475569",
+    "text_dim": "#64748b",
+    "text_muted": "#94a3b8",
+    
+    "border": "rgba(148, 163, 184, 0.2)",
+    "border_strong": "rgba(148, 163, 184, 0.3)",
+    "shadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+    "glow": "0 0 40px rgba(59, 130, 246, 0.2)",
+    "glow_strong": "0 0 60px rgba(59, 130, 246, 0.3)"
+  },
+  
+  "typography": {
+    "font_family": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+    "font_size_base": "16px",
+    "font_size_small": "14px",
+    "font_size_large": "18px",
+    "font_size_h1": "2.5rem",
+    "font_size_h2": "2rem",
+    "font_size_h3": "1.5rem",
+    "font_size_h4": "1.25rem",
+    "font_weight_normal": "400",
+    "font_weight_medium": "500",
+    "font_weight_semibold": "600",
+    "font_weight_bold": "700",
+    "font_weight_black": "900",
+    "line_height": "1.6",
+    "letter_spacing": "0.025em"
+  },
+  
+  "spacing": {
+    "xs": "0.25rem",
+    "sm": "0.5rem",
+    "md": "1rem",
+    "lg": "1.5rem",
+    "xl": "2rem",
+    "2xl": "3rem",
+    "3xl": "4rem",
+    "4xl": "6rem"
+  },
+  
+  "border_radius": {
+    "none": "0",
+    "sm": "0.25rem",
+    "md": "0.5rem",
+    "lg": "0.75rem",
+    "xl": "1rem",
+    "2xl": "1.5rem",
+    "full": "9999px"
+  },
+  
+  "transitions": {
+    "fast": "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
+    "normal": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    "slow": "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+    "bounce": "cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+    "ease_in": "cubic-bezier(0.4, 0, 0.2, 1)",
+    "ease_out": "cubic-bezier(0.4, 0, 0.2, 1)"
+  },
+  
+  "components": {
+    "header": {
+      "height": "70px",
+      "backdrop_blur": "15px",
+      "border_bottom": "1px solid rgba(148, 163, 184, 0.2)"
+    },
+    "card": {
+      "padding": "1.5rem",
+      "backdrop_blur": "8px",
+      "border": "1px solid rgba(148, 163, 184, 0.2)"
+    },
+    "button": {
+      "padding": "0.75rem 1.5rem",
+      "border_radius": "0.5rem",
+      "font_weight": "500"
+    },
+    "input": {
+      "padding": "0.75rem 1rem",
+      "border_radius": "0.5rem",
+      "border": "1px solid rgba(148, 163, 184, 0.3)"
+    }
+  },
+  
+  "layout": {
+    "max_width": "1200px",
+    "container_padding": "1.5rem",
+    "grid_gap": "1.5rem",
+    "sidebar_width": "260px"
+  },
+  
+  "breakpoints": {
+    "xs": "480px",
+    "sm": "640px",
+    "md": "768px",
+    "lg": "1024px",
+    "xl": "1280px",
+    "2xl": "1536px"
+  }
+}
