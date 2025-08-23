@@ -186,8 +186,17 @@ TEMPLATES[0]['OPTIONS']['context_processors'].append(
 # Add Tor security middleware
 MIDDLEWARE.append('core.security.middleware.TorSecurityMiddleware')
 
-# Tor-specific apps (remove any external dependencies)
+# Tor-specific apps (keep essential Django apps for functionality)
 TOR_SAFE_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.sites',
+    'django_ratelimit',
+    'django_redis',
     'core',
     'accounts',
     'wallets',
@@ -198,9 +207,10 @@ TOR_SAFE_APPS = [
     'messaging',
     'support',
     'adminpanel',
+    'apps.security',
 ]
 
-# Override installed apps for Tor safety
+# Override installed apps for Tor safety (keep essential Django functionality)
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app in TOR_SAFE_APPS]
 
 # Disable Django Debug Toolbar for production
