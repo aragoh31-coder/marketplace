@@ -30,3 +30,6 @@ django-extensions>=3.2.0
 # Mock and test utilities
 responses>=0.23.0
 freezegun>=1.2.0
+
+# Performance monitoring
+psutil>=5.9.0

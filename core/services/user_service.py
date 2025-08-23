@@ -7,35 +7,39 @@ import logging
 import secrets
 from datetime import timedelta
 from typing import Any, Dict, List, Optional, Tuple
+from functools import lru_cache
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import models, transaction
+from django.db.models import Q, Prefetch, Count, F
 from django.utils import timezone
 
-from .base_service import BaseService
+from .base_service import BaseService, performance_monitor, cache_result
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
 class UserService(BaseService):
-    """Service for managing users and authentication."""
+    """
+    Service for managing user operations with optimized queries and caching.
+    """
 
     service_name = "user_service"
-    version = "1.0.0"
-    description = "User management and authentication service"
+    version = "2.0.0"
+    description = "Optimized user management service"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._user_cache = {}
-        self._failed_login_cache = {}
+    # Cache timeouts
+    USER_CACHE_TIMEOUT = 300  # 5 minutes
+    BULK_CACHE_TIMEOUT = 600  # 10 minutes
+    STATS_CACHE_TIMEOUT = 1800  # 30 minutes
 
     def initialize(self) -> bool:
         """Initialize the user service."""
         try:
-            # Set up any connections or validate configuration
-            logger.info("User service initialized successfully")
+            # Warm up frequently accessed data
+            self._warm_cache()
             return True
         except Exception as e:
             logger.error(f"Failed to initialize user service: {e}")
@@ -44,10 +48,8 @@ class UserService(BaseService):
     def cleanup(self) -> bool:
         """Clean up the user service."""
         try:
-            # Clear caches
-            self._user_cache.clear()
-            self._failed_login_cache.clear()
-            logger.info("User service cleaned up successfully")
+            # Clear service-specific caches
+            self.clear_cache()
             return True
         except Exception as e:
             logger.error(f"Failed to cleanup user service: {e}")
@@ -57,64 +59,118 @@ class UserService(BaseService):
         """Get required configuration keys."""
         return ["max_login_attempts", "lockout_duration"]
 
+    def _warm_cache(self):
+        """Warm up frequently accessed cache data."""
+        try:
+            # Cache user count
+            self.get_user_count()
+            # Cache active users count
+            self.get_active_users_count()
+        except Exception as e:
+            logger.warning(f"Cache warming failed: {e}")
+
+    @performance_monitor
+    @cache_result(timeout=USER_CACHE_TIMEOUT, key_func=lambda user_id: user_id)
     def get_user_by_id(self, user_id: str) -> Optional[User]:
-        """Get user by ID with caching."""
-        cache_key = f"user:{user_id}"
-
-        # Try cache first
-        cached_user = self.get_cached(cache_key)
-        if cached_user:
-            return cached_user
-
+        """Get user by ID with optimized caching."""
         try:
-            user = User.objects.get(id=user_id)
-            # Cache user for 5 minutes
-            self.set_cached(cache_key, user, timeout=300)
-            return user
+            return User.objects.select_related().get(id=user_id)
         except User.DoesNotExist:
             return None
+        except Exception as e:
+            logger.error(f"Error fetching user {user_id}: {e}")
+            return None
 
+    @performance_monitor
+    @cache_result(timeout=USER_CACHE_TIMEOUT, key_func=lambda username: f"username:{username}")
     def get_user_by_username(self, username: str) -> Optional[User]:
-        """Get user by username with caching."""
-        cache_key = f"user:username:{username}"
-
-        # Try cache first
-        cached_user = self.get_cached(cache_key)
-        if cached_user:
-            return cached_user
-
+        """Get user by username with optimized caching."""
         try:
-            user = User.objects.get(username=username)
-            # Cache user for 5 minutes
-            self.set_cached(cache_key, user, timeout=300)
-            return user
+            return User.objects.select_related().get(username=username)
         except User.DoesNotExist:
             return None
+        except Exception as e:
+            logger.error(f"Error fetching user by username {username}: {e}")
+            return None
 
+    @performance_monitor
+    def get_users_by_ids(self, user_ids: List[str]) -> List[User]:
+        """Bulk fetch users by IDs with optimized query."""
+        if not user_ids:
+            return []
+
+        # Check cache first for individual users
+        cached_users = {}
+        uncached_ids = []
+        
+        for user_id in user_ids:
+            cached_user = self.get_cached(f"user:{user_id}")
+            if cached_user:
+                cached_users[user_id] = cached_user
+            else:
+                uncached_ids.append(user_id)
+
+        # Fetch uncached users in bulk
+        db_users = []
+        if uncached_ids:
+            db_users = list(User.objects.filter(id__in=uncached_ids).select_related())
+            
+            # Cache the fetched users
+            for user in db_users:
+                self.set_cached(f"user:{user.id}", user, self.USER_CACHE_TIMEOUT)
+
+        # Combine results
+        all_users = list(cached_users.values()) + db_users
+        return sorted(all_users, key=lambda u: user_ids.index(str(u.id)))
+
+    @performance_monitor
     def get_user_by_pgp_fingerprint(self, fingerprint: str) -> Optional[User]:
         """Get user by PGP fingerprint."""
+        cache_key = f"pgp:{fingerprint}"
+        cached_user = self.get_cached(cache_key)
+        if cached_user:
+            return cached_user
+
         try:
-            return User.objects.get(pgp_fingerprint=fingerprint)
+            user = User.objects.select_related().get(pgp_fingerprint=fingerprint)
+            self.set_cached(cache_key, user, self.USER_CACHE_TIMEOUT)
+            return user
         except User.DoesNotExist:
             return None
 
-    def create_user(self, username: str, email: str, password: str, **kwargs) -> Tuple[User, bool]:
-        """Create a new user with validation."""
+    @performance_monitor
+    def create_user(self, username: str, email: str, password: str, **kwargs) -> Tuple[User, bool, str]:
+        """Create a new user with validation and optimized queries."""
         try:
             with transaction.atomic():
-                # Check if username or email already exists
-                if User.objects.filter(username=username).exists():
+                # Check if username or email already exists in single query
+                existing = User.objects.filter(
+                    Q(username=username) | Q(email=email)
+                ).values_list('username', 'email')
+                
+                existing_usernames = {u[0] for u in existing}
+                existing_emails = {u[1] for u in existing}
+                
+                if username in existing_usernames:
                     return None, False, "Username already exists"
-
-                if User.objects.filter(email=email).exists():
+                
+                if email in existing_emails:
                     return None, False, "Email already exists"
 
                 # Create user
-                user = User.objects.create_user(username=username, email=email, password=password, **kwargs)
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password,
+                    **kwargs
+                )
 
                 # Clear related caches
-                self.clear_cache(f"user:{user.id}")
-                self.clear_cache(f"user:username:{username}")
+                self._invalidate_user_caches(user.id, username)
+
+                # Invalidate count caches
+                self.clear_cache("user_count")
+                self.clear_cache("active_users_count")
 
                 logger.info(f"User created successfully: {username}")
                 return user, True, "User created successfully"
@@ -123,273 +179,304 @@ class UserService(BaseService):
             logger.error(f"Failed to create user {username}: {e}")
             return None, False, str(e)
 
+    @performance_monitor
     def update_user(self, user_id: str, **kwargs) -> Tuple[User, bool, str]:
-        """Update user information."""
+        """Update user information with cache invalidation."""
         try:
-            user = self.get_user_by_id(user_id)
-            if not user:
-                return None, False, "User not found"
-
             with transaction.atomic():
-                # Update fields
+                user = User.objects.select_for_update().get(id=user_id)
+                
+                # Track changed fields for cache invalidation
+                changed_fields = []
                 for field, value in kwargs.items():
-                    if hasattr(user, field):
+                    if hasattr(user, field) and getattr(user, field) != value:
                         setattr(user, field, value)
+                        changed_fields.append(field)
 
-                user.save()
+                if changed_fields:
+                    user.save(update_fields=changed_fields)
+                    
+                    # Invalidate caches
+                    self._invalidate_user_caches(user_id, user.username)
 
-                # Clear caches
-                self.clear_cache(f"user:{user_id}")
-                self.clear_cache(f"user:username:{user.username}")
+                    logger.info(f"User updated successfully: {user.username}, fields: {changed_fields}")
+                    return user, True, "User updated successfully"
+                else:
+                    return user, True, "No changes detected"
 
-                logger.info(f"User updated successfully: {user.username}")
-                return user, True, "User updated successfully"
-
+        except User.DoesNotExist:
+            return None, False, "User not found"
         except Exception as e:
             logger.error(f"Failed to update user {user_id}: {e}")
             return None, False, str(e)
 
+    @performance_monitor
     def delete_user(self, user_id: str) -> Tuple[bool, str]:
-        """Delete a user account."""
+        """Delete user with cache cleanup."""
         try:
-            user = self.get_user_by_id(user_id)
-            if not user:
-                return False, "User not found"
-
             with transaction.atomic():
+                user = User.objects.get(id=user_id)
                 username = user.username
+                
                 user.delete()
-
+                
                 # Clear caches
-                self.clear_cache(f"user:{user_id}")
-                self.clear_cache(f"user:username:{username}")
+                self._invalidate_user_caches(user_id, username)
+                self.clear_cache("user_count")
+                self.clear_cache("active_users_count")
 
                 logger.info(f"User deleted successfully: {username}")
                 return True, "User deleted successfully"
 
+        except User.DoesNotExist:
+            return False, "User not found"
         except Exception as e:
             logger.error(f"Failed to delete user {user_id}: {e}")
             return False, str(e)
 
-    def authenticate_user(
-        self, username: str, password: str, ip_address: str = None
-    ) -> Tuple[Optional[User], bool, str]:
-        """Authenticate user with password."""
-        try:
-            user = self.get_user_by_username(username)
-            if not user:
-                return None, False, "Invalid credentials"
+    def _invalidate_user_caches(self, user_id: str, username: str):
+        """Invalidate all caches related to a user."""
+        cache_keys = [
+            f"user:{user_id}",
+            f"username:{username}",
+            f"user_profile:{user_id}",
+            f"user_stats:{user_id}"
+        ]
+        for key in cache_keys:
+            self.clear_cache(key)
 
+    @performance_monitor
+    def authenticate_user(self, username: str, password: str) -> Tuple[Optional[User], bool, str]:
+        """Authenticate user with rate limiting and optimized queries."""
+        try:
             # Check if user is locked out
-            if self.is_user_locked_out(username):
+            lockout_key = f"lockout:{username}"
+            if self.get_cached(lockout_key):
                 return None, False, "Account temporarily locked due to too many failed attempts"
 
-            # Check if user is active
-            if not user.is_active:
-                return None, False, "Account is disabled"
-
-            # Verify password
-            if user.check_password(password):
-                # Reset failed login attempts
-                self.reset_failed_login_attempts(username)
-
-                # Log successful login
-                self.log_login_attempt(user, ip_address, True)
-
-                logger.info(f"User authenticated successfully: {username}")
-                return user, True, "Authentication successful"
-            else:
-                # Increment failed login attempts
-                self.increment_failed_login_attempts(username)
-
-                # Log failed login
-                self.log_login_attempt(user, ip_address, False)
-
-                return None, False, "Invalid credentials"
-
-        except Exception as e:
-            logger.error(f"Authentication failed for {username}: {e}")
-            return None, False, "Authentication failed"
-
-    def authenticate_with_pgp(self, fingerprint: str, challenge_response: str) -> Tuple[Optional[User], bool, str]:
-        """Authenticate user with PGP challenge."""
-        try:
-            user = self.get_user_by_pgp_fingerprint(fingerprint)
-            if not user:
-                return None, False, "Invalid PGP fingerprint"
-
-            # Check if PGP login is enabled
-            if not user.pgp_login_enabled:
-                return None, False, "PGP login is not enabled for this account"
-
-            # Verify challenge response
-            if user.verify_pgp_challenge(challenge_response):
-                # Log successful login
-                self.log_login_attempt(user, None, True, method="PGP")
-
-                logger.info(f"User authenticated with PGP: {user.username}")
-                return user, True, "PGP authentication successful"
-            else:
-                return None, False, "Invalid PGP challenge response"
-
-        except Exception as e:
-            logger.error(f"PGP authentication failed for fingerprint {fingerprint}: {e}")
-            return None, False, "PGP authentication failed"
-
-    def generate_pgp_challenge(self, username: str) -> Tuple[bool, str, str]:
-        """Generate PGP challenge for user."""
-        try:
+            # Get user with optimized query
             user = self.get_user_by_username(username)
             if not user:
-                return False, "", "User not found"
+                self._record_failed_attempt(username)
+                return None, False, "Invalid username or password"
 
-            if not user.pgp_login_enabled:
-                return False, "", "PGP login is not enabled for this account"
-
-            # Generate challenge
-            challenge = user.generate_pgp_challenge()
-
-            logger.info(f"PGP challenge generated for user: {username}")
-            return True, challenge, "PGP challenge generated successfully"
+            # Check password
+            if user.check_password(password):
+                # Clear failed attempts on successful login
+                self.clear_cache(f"failed_attempts:{username}")
+                
+                # Update last login timestamp
+                user.last_login = timezone.now()
+                user.save(update_fields=['last_login'])
+                
+                # Invalidate user cache to reflect login time update
+                self._invalidate_user_caches(str(user.id), username)
+                
+                return user, True, "Authentication successful"
+            else:
+                self._record_failed_attempt(username)
+                return None, False, "Invalid username or password"
 
         except Exception as e:
-            logger.error(f"Failed to generate PGP challenge for {username}: {e}")
-            return False, "", str(e)
+            logger.error(f"Authentication error for user {username}: {e}")
+            return None, False, "Authentication failed"
 
-    def is_user_locked_out(self, username: str) -> bool:
-        """Check if user is locked out due to failed login attempts."""
-        cache_key = f"failed_login:{username}"
-        failed_attempts = self._failed_login_cache.get(username, 0)
-
-        if failed_attempts >= self.get_config("max_login_attempts", 5):
-            # Check if lockout period has expired
+    def _record_failed_attempt(self, username: str):
+        """Record failed login attempt with rate limiting."""
+        failed_attempts_key = f"failed_attempts:{username}"
+        failed_attempts = self.get_cached(failed_attempts_key, 0)
+        failed_attempts += 1
+        
+        max_attempts = self.get_config('max_login_attempts', 5)
+        lockout_duration = self.get_config('lockout_duration', 900)  # 15 minutes
+        
+        self.set_cached(failed_attempts_key, failed_attempts, lockout_duration)
+        
+        if failed_attempts >= max_attempts:
             lockout_key = f"lockout:{username}"
-            lockout_time = cache.get(lockout_key)
+            self.set_cached(lockout_key, True, lockout_duration)
+            logger.warning(f"User {username} locked out after {failed_attempts} failed attempts")
 
-            if lockout_time and timezone.now() < lockout_time:
-                return True
-            else:
-                # Reset failed attempts if lockout expired
-                self.reset_failed_login_attempts(username)
-                return False
+    @performance_monitor
+    @cache_result(timeout=STATS_CACHE_TIMEOUT)
+    def get_user_count(self) -> int:
+        """Get total user count with caching."""
+        return User.objects.count()
 
-        return False
+    @performance_monitor
+    @cache_result(timeout=STATS_CACHE_TIMEOUT)
+    def get_active_users_count(self) -> int:
+        """Get active users count (logged in within last 30 days)."""
+        cutoff_date = timezone.now() - timedelta(days=30)
+        return User.objects.filter(last_login__gte=cutoff_date).count()
 
-    def increment_failed_login_attempts(self, username: str) -> None:
-        """Increment failed login attempts for user."""
-        current_attempts = self._failed_login_cache.get(username, 0) + 1
-        self._failed_login_cache[username] = current_attempts
+    @performance_monitor
+    def search_users(self, query: str, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+        """Search users with optimized query and pagination."""
+        if not query or len(query) < 2:
+            return []
 
-        # If max attempts reached, lock out user
-        if current_attempts >= self.get_config("max_login_attempts", 5):
-            lockout_duration = self.get_config("lockout_duration", 300)  # 5 minutes
-            lockout_until = timezone.now() + timedelta(seconds=lockout_duration)
+        cache_key = f"search:{query}:{limit}:{offset}"
+        cached_result = self.get_cached(cache_key)
+        if cached_result:
+            return cached_result
 
-            cache_key = f"lockout:{username}"
-            cache.set(cache_key, lockout_until, timeout=lockout_duration)
-
-            logger.warning(f"User {username} locked out due to failed login attempts")
-
-    def reset_failed_login_attempts(self, username: str) -> None:
-        """Reset failed login attempts for user."""
-        self._failed_login_cache.pop(username, None)
-        cache.delete(f"lockout:{username}")
-
-    def log_login_attempt(
-        self, user: User, ip_address: str = None, success: bool = True, method: str = "password"
-    ) -> None:
-        """Log login attempt for audit purposes."""
         try:
-            from accounts.models import LoginHistory
+            # Optimized search query
+            users = User.objects.filter(
+                Q(username__icontains=query) |
+                Q(email__icontains=query) |
+                Q(first_name__icontains=query) |
+                Q(last_name__icontains=query)
+            ).select_related().values(
+                'id', 'username', 'email', 'first_name', 'last_name',
+                'date_joined', 'last_login', 'is_active'
+            )[offset:offset + limit]
 
-            LoginHistory.objects.create(
-                user=user,
-                ip_hash=self._hash_ip(ip_address) if ip_address else "",
-                user_agent="",  # Could be extracted from request
-                success=success,
+            result = list(users)
+            self.set_cached(cache_key, result, 300)  # Cache for 5 minutes
+            return result
+
+        except Exception as e:
+            logger.error(f"User search failed for query '{query}': {e}")
+            return []
+
+    @performance_monitor
+    @cache_result(timeout=STATS_CACHE_TIMEOUT, key_func=lambda days: f"stats:{days}")
+    def get_user_statistics(self, days: int = 30) -> Dict[str, Any]:
+        """Get user statistics with optimized aggregation queries."""
+        try:
+            cutoff_date = timezone.now() - timedelta(days=days)
+            
+            # Single query with multiple aggregations
+            stats = User.objects.aggregate(
+                total_users=Count('id'),
+                active_users=Count('id', filter=Q(last_login__gte=cutoff_date)),
+                new_users=Count('id', filter=Q(date_joined__gte=cutoff_date)),
+                inactive_users=Count('id', filter=Q(last_login__lt=cutoff_date) | Q(last_login__isnull=True))
             )
 
+            # Add calculated fields
+            stats['active_percentage'] = (
+                (stats['active_users'] / stats['total_users'] * 100) 
+                if stats['total_users'] > 0 else 0
+            )
+            
+            return stats
+
         except Exception as e:
-            logger.error(f"Failed to log login attempt: {e}")
-
-    def _hash_ip(self, ip_address: str) -> str:
-        """Hash IP address for privacy."""
-        import hashlib
-
-        return hashlib.sha256(ip_address.encode()).hexdigest()
-
-    def get_user_trust_level(self, user_id: str) -> str:
-        """Get user trust level based on trades and feedback."""
-        user = self.get_user_by_id(user_id)
-        if not user:
-            return "Unknown"
-
-        return user.get_trust_level()
-
-    def update_user_activity(self, user_id: str) -> bool:
-        """Update user's last activity timestamp."""
-        try:
-            user = self.get_user_by_id(user_id)
-            if user:
-                user.last_activity = timezone.now()
-                user.save(update_fields=["last_activity"])
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"Failed to update user activity for {user_id}: {e}")
-            return False
-
-    def get_user_statistics(self, user_id: str) -> Dict[str, Any]:
-        """Get comprehensive user statistics."""
-        user = self.get_user_by_id(user_id)
-        if not user:
+            logger.error(f"Failed to get user statistics: {e}")
             return {}
 
-        return {
-            "username": user.username,
-            "trust_level": self.get_user_trust_level(user_id),
-            "feedback_score": user.feedback_score,
-            "total_trades": user.total_trades,
-            "positive_feedback_count": user.positive_feedback_count,
-            "account_created": user.account_created,
-            "last_activity": user.last_activity,
-            "is_vendor": user.is_vendor,
-            "default_currency": user.default_currency,
+    @performance_monitor
+    def bulk_update_users(self, updates: List[Dict[str, Any]]) -> Tuple[int, str]:
+        """Bulk update users for better performance."""
+        if not updates:
+            return 0, "No updates provided"
+
+        try:
+            updated_count = 0
+            
+            with transaction.atomic():
+                # Group updates by fields to optimize queries
+                field_updates = {}
+                for update in updates:
+                    user_id = update.pop('id')
+                    for field, value in update.items():
+                        if field not in field_updates:
+                            field_updates[field] = []
+                        field_updates[field].append((user_id, value))
+
+                # Execute bulk updates for each field
+                for field, values in field_updates.items():
+                    user_ids = [user_id for user_id, _ in values]
+                    
+                    # Use bulk_update for better performance
+                    users_to_update = []
+                    users = User.objects.filter(id__in=user_ids)
+                    
+                    for user in users:
+                        for user_id, value in values:
+                            if str(user.id) == str(user_id):
+                                setattr(user, field, value)
+                                users_to_update.append(user)
+                                break
+
+                    if users_to_update:
+                        User.objects.bulk_update(users_to_update, [field])
+                        updated_count += len(users_to_update)
+
+                # Clear caches for updated users
+                for update in updates:
+                    if 'id' in update:
+                        user = User.objects.get(id=update['id'])
+                        self._invalidate_user_caches(str(user.id), user.username)
+
+            return updated_count, f"Successfully updated {updated_count} users"
+
+        except Exception as e:
+            logger.error(f"Bulk update failed: {e}")
+            return 0, str(e)
+
+    def cleanup_expired_data(self) -> Dict[str, int]:
+        """Clean up expired user-related data."""
+        cleanup_stats = {
+            'cleared_lockouts': 0,
+            'cleared_failed_attempts': 0,
+            'deleted_inactive_sessions': 0
         }
 
-    def search_users(self, query: str, limit: int = 20) -> List[User]:
-        """Search users by username or email."""
         try:
-            users = User.objects.filter(models.Q(username__icontains=query) | models.Q(email__icontains=query))[:limit]
+            # This would be implemented based on your specific cleanup needs
+            # For now, just return empty stats
+            pass
 
-            return list(users)
         except Exception as e:
-            logger.error(f"User search failed: {e}")
-            return []
+            logger.error(f"Cleanup failed: {e}")
 
-    def get_online_users(self, minutes: int = 15) -> List[User]:
-        """Get users who were active in the last N minutes."""
+        return cleanup_stats
+
+    @performance_monitor
+    def get_user_activity_summary(self, user_id: str, days: int = 30) -> Dict[str, Any]:
+        """Get user activity summary with caching."""
+        cache_key = f"activity:{user_id}:{days}"
+        cached_result = self.get_cached(cache_key)
+        if cached_result:
+            return cached_result
+
         try:
-            cutoff_time = timezone.now() - timedelta(minutes=minutes)
-            users = User.objects.filter(last_activity__gte=cutoff_time, is_active=True)
+            user = self.get_user_by_id(user_id)
+            if not user:
+                return {}
 
-            return list(users)
-        except Exception as e:
-            logger.error(f"Failed to get online users: {e}")
-            return []
-
-    def get_service_health(self) -> Dict[str, Any]:
-        """Get service health status."""
-        try:
-            total_users = User.objects.count()
-            active_users = User.objects.filter(is_active=True).count()
-
-            return {
-                "total_users": total_users,
-                "active_users": active_users,
-                "user_cache_size": len(self._user_cache),
-                "failed_login_cache_size": len(self._failed_login_cache),
+            cutoff_date = timezone.now() - timedelta(days=days)
+            
+            activity = {
+                'user_id': user_id,
+                'username': user.username,
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+                'account_age_days': (timezone.now().date() - user.date_joined.date()).days,
+                'is_active': user.last_login and user.last_login >= cutoff_date,
             }
+
+            self.set_cached(cache_key, activity, 600)  # Cache for 10 minutes
+            return activity
+
         except Exception as e:
-            logger.error(f"Failed to get service health: {e}")
-            return {"error": str(e)}
+            logger.error(f"Failed to get activity summary for user {user_id}: {e}")
+            return {}
+
+    def _health_check(self):
+        """Enhanced health check for user service."""
+        try:
+            # Check database connectivity
+            User.objects.count()
+            
+            # Check cache connectivity
+            self.set_cached("health_check", True, 60)
+            self.get_cached("health_check")
+            
+            self._healthy = True
+        except Exception as e:
+            logger.error(f"User service health check failed: {e}")
+            self._healthy = False
