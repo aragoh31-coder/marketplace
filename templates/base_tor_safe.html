@@ -18,24 +18,24 @@
     <style>
         /* Additional Tor-Safe Inline CSS - Overrides for maximum compatibility */
         :root {
-            --primary: #00ff88;
-            --primary-dim: #00cc6a;
-            --secondary: #7c3aed;
-            --accent: #06b6d4;
+            --primary: #a855f7;  /* Purple */
+            --primary-dim: #9333ea;  /* Darker purple */
+            --secondary: #e879f9;  /* Pink-purple */
+            --accent: #f0abfc;  /* Light pink-purple */
             --danger: #ef4444;
             --warning: #f59e0b;
             
-            --bg-primary: #0a0f1b;
-            --bg-secondary: #0f172a;
-            --bg-tertiary: #1e293b;
-            --bg-card: rgba(15, 23, 42, 0.9);
+            --bg-primary: #0a0a0a;  /* Very dark */
+            --bg-secondary: #1a0f1f;  /* Dark with purple tint */
+            --bg-tertiary: #2e1065;  /* Dark purple */
+            --bg-card: rgba(46, 16, 101, 0.9);
             
             --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-dim: #64748b;
+            --text-secondary: #e9d5ff;  /* Light purple */
+            --text-dim: #c084fc;  /* Medium purple */
             
-            --border: rgba(148, 163, 184, 0.2);
-            --shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            --border: rgba(168, 85, 247, 0.3);  /* Purple border */
+            --shadow: 0 2px 4px rgba(168, 85, 247, 0.2);
         }
         
         /* Reset and Base Styles */
@@ -69,9 +69,9 @@
             width: 100%;
             height: 100%;
             background: 
-                radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 40% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
+                radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(232, 121, 249, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(147, 51, 234, 0.08) 0%, transparent 50%);
             z-index: -1;
         }
         
@@ -200,7 +200,7 @@
         .form-input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.2);
+            box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
         }
         
         .form-textarea {
@@ -277,7 +277,7 @@
         }
         
         .alert-success {
-            background: rgba(0, 255, 136, 0.1);
+            background: rgba(168, 85, 247, 0.1);
             border-color: var(--primary);
             color: var(--primary);
         }
@@ -457,7 +457,7 @@
     <!-- Header with Smooth Toolbar -->
     <header class="header toolbar">
         <div class="header-content toolbar-inner container" style="position: relative;">
-            <a href="{% url 'home' %}" class="logo">🔒 SecureMarket</a>
+            <a href="{% url 'home' %}" class="logo">💜 SecureMarket</a>
             
             <!-- Mobile Navigation Toggle (CSS-only) -->
             <input type="checkbox" id="mobile-menu-toggle" class="mobile-menu-toggle">
