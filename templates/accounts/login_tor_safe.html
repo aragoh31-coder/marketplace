@@ -1,0 +1,176 @@
+{% extends 'base_tor_safe.html' %}
+
+{% block title %}Login - Tor Safe Marketplace{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h1 class="card-title">🔑 Secure Login</h1>
+        <p>Access your account with maximum privacy and security</p>
+    </div>
+    
+    <!-- Tor Browser Detection -->
+    {% if tor_browser_detected %}
+    <div class="card" style="background: rgba(0, 255, 136, 0.1); border-color: var(--primary);">
+        <h3>🕵️ Tor Browser Detected</h3>
+        <p>Welcome! You're using Tor Browser for maximum privacy and security.</p>
+        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+            <li>✅ JavaScript disabled (recommended)</li>
+            <li>✅ No tracking or analytics</li>
+            <li>✅ Maximum anonymity protection</li>
+        </ul>
+    </div>
+    {% endif %}
+    
+    <!-- Login Form -->
+    <div class="card">
+        <form method="post" action="{% url 'accounts:login' %}">
+            {% csrf_token %}
+            
+            <!-- Username Field -->
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" name="username" id="username" class="form-input" 
+                       value="{{ form.username.value|default:'' }}" required 
+                       placeholder="Enter your username">
+                {% if form.username.errors %}
+                    <div class="alert alert-error">
+                        {% for error in form.username.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Password Field -->
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" name="password" id="password" class="form-input" 
+                       required placeholder="Enter your password">
+                {% if form.password.errors %}
+                    <div class="alert alert-error">
+                        {% for error in form.password.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Remember Me Checkbox -->
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="remember_me" value="1" 
+                           {% if form.remember_me.value %}checked{% endif %}>
+                    <span>Remember me for 30 days</span>
+                </label>
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary btn-large">🔑 Login</button>
+            </div>
+            
+            <!-- Form Errors -->
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <!-- Hidden Fields for Security -->
+            <input type="hidden" name="next" value="{{ next }}">
+            <input type="hidden" name="tor_session" value="true">
+        </form>
+    </div>
+    
+    <!-- Additional Options -->
+    <div class="card">
+        <h3>🔐 Account Options</h3>
+        
+        <div class="grid grid-2">
+            <div>
+                <h4>New User?</h4>
+                <p>Create a secure account to start trading</p>
+                <a href="{% url 'accounts:register' %}" class="btn btn-secondary">📝 Register</a>
+            </div>
+            
+            <div>
+                <h4>Forgot Password?</h4>
+                <p>Reset your password securely</p>
+                <a href="{% url 'accounts:password_reset' %}" class="btn btn-warning">🔓 Reset Password</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Security Features -->
+    <div class="card">
+        <h3>🛡️ Security Features</h3>
+        
+        <div class="grid grid-2">
+            <div>
+                <h4>Privacy Protection</h4>
+                <ul style="margin-left: 1.5rem;">
+                    <li>No JavaScript tracking</li>
+                    <li>No external requests</li>
+                    <li>No cookies for tracking</li>
+                    <li>No local storage</li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>Account Security</h4>
+                <ul style="margin-left: 1.5rem;">
+                    <li>PGP encryption support</li>
+                    <li>Two-factor authentication</li>
+                    <li>Session management</li>
+                    <li>Login attempt monitoring</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tor Browser Instructions -->
+    <div class="card" style="background: rgba(6, 182, 212, 0.1); border-color: var(--accent);">
+        <h3>📱 Tor Browser Instructions</h3>
+        <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
+            <li>Set security level to "Safest" (recommended)</li>
+            <li>Ensure JavaScript is disabled</li>
+            <li>Use HTTPS connections only</li>
+            <li>Clear cookies and cache regularly</li>
+            <li>Never use the same identity for multiple sites</li>
+        </ol>
+        
+        <p class="mt-2"><strong>Note:</strong> This login form works perfectly without JavaScript and provides maximum security for Tor users.</p>
+    </div>
+</div>
+
+<!-- Additional CSS for this template -->
+<style>
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+    
+    .checkbox-label input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+    }
+    
+    .checkbox-label span {
+        user-select: none;
+    }
+    
+    .current-page {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        margin: 0 0.5rem;
+    }
+</style>
+{% endblock %}

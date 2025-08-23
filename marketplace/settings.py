@@ -142,6 +142,83 @@ SECURE_SSL_REDIRECT = False
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
+# Tor Security Settings - Add these at the end of the file
+# ======================================================
+
+# Security Headers for Tor
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'no-referrer'
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Content Security Policy - STRICT for Tor
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
+CSP_SCRIPT_SRC = ("'none'",)  # NO JavaScript allowed
+CSP_IMG_SRC = ("'self'", "data:")
+CSP_FONT_SRC = ("'self'",)
+CSP_CONNECT_SRC = ("'self'",)
+CSP_FRAME_SRC = ("'none'",)
+CSP_OBJECT_SRC = ("'none'",)
+CSP_BASE_URI = ("'self'",)
+CSP_FORM_ACTION = ("'self'",)
+
+# Disable external services for Tor
+CELERY_BROKER_URL = None
+CELERY_RESULT_BACKEND = None
+
+# Disable analytics and tracking
+GOOGLE_ANALYTICS = None
+GOOGLE_TAG_MANAGER = None
+FACEBOOK_PIXEL = None
+
+# Disable social authentication
+SOCIAL_AUTH_DISABLED = True
+
+# Tor-specific context processor
+TEMPLATES[0]['OPTIONS']['context_processors'].append(
+    'core.context_processors.tor_safe_context'
+)
+
+# Add Tor security middleware
+MIDDLEWARE.append('core.security.middleware.TorSecurityMiddleware')
+
+# Tor-specific apps (remove any external dependencies)
+TOR_SAFE_APPS = [
+    'core',
+    'accounts',
+    'wallets',
+    'vendors',
+    'products',
+    'orders',
+    'disputes',
+    'messaging',
+    'support',
+    'adminpanel',
+]
+
+# Override installed apps for Tor safety
+INSTALLED_APPS = [app for app in INSTALLED_APPS if app in TOR_SAFE_APPS]
+
+# Disable Django Debug Toolbar for production
+if 'debug_toolbar' in INSTALLED_APPS:
+    INSTALLED_APPS.remove('debug_toolbar')
+
+# Disable Django Extensions for production
+if 'django_extensions' in INSTALLED_APPS:
+    INSTALLED_APPS.remove('django_extensions')
+
+# Tor-specific context
+TOR_SAFE_CONTEXT = {
+    'tor_enabled': True,
+    'javascript_disabled': True,
+    'external_cdns_disabled': True,
+    'analytics_disabled': True,
+}
+
 CELERY_BROKER_URL = env("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND")
 CELERY_ACCEPT_CONTENT = ["application/json"]

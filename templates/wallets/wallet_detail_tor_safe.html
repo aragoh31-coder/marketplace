@@ -1,0 +1,249 @@
+{% extends 'base_tor_safe.html' %}
+
+{% block title %}Wallet - Tor Safe Marketplace{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h1 class="card-title">💰 Secure Wallet</h1>
+        <p>Manage your cryptocurrency balances and transactions</p>
+    </div>
+    
+    <!-- Tor Security Notice -->
+    {% if tor_browser_detected %}
+    <div class="card" style="background: rgba(0, 255, 136, 0.1); border-color: var(--primary);">
+        <h3>🕵️ Tor Browser Security Active</h3>
+        <p>Your wallet operations are protected with maximum privacy and security.</p>
+    </div>
+    {% endif %}
+    
+    <!-- Wallet Overview -->
+    <div class="card">
+        <h3>💳 Balance Overview</h3>
+        
+        <div class="grid grid-3">
+            <div class="balance-card">
+                <h4>Bitcoin (BTC)</h4>
+                <div class="balance-amount">{{ wallet.balance_btc|floatformat:8 }} BTC</div>
+                <div class="balance-escrow">Escrow: {{ wallet.escrow_btc|floatformat:8 }} BTC</div>
+                <div class="balance-available">Available: {{ available_btc|floatformat:8 }} BTC</div>
+            </div>
+            
+            <div class="balance-card">
+                <h4>Monero (XMR)</h4>
+                <div class="balance-amount">{{ wallet.balance_xmr|floatformat:12 }} XMR</div>
+                <div class="balance-escrow">Escrow: {{ wallet.escrow_xmr|floatformat:12 }} XMR</div>
+                <div class="balance-available">Available: {{ available_xmr|floatformat:12 }} XMR</div>
+            </div>
+            
+            <div class="balance-card">
+                <h4>Account Status</h4>
+                <div class="status-active">✅ Active</div>
+                <div class="status-verified">✅ Verified</div>
+                <div class="status-secure">✅ Secure</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="card">
+        <h3>⚡ Quick Actions</h3>
+        
+        <div class="grid grid-2">
+            <div class="action-section">
+                <h4>Deposit Funds</h4>
+                <p>Add funds to your wallet securely</p>
+                <a href="{% url 'wallets:deposit' %}" class="btn btn-primary">💸 Deposit</a>
+            </div>
+            
+            <div class="action-section">
+                <h4>Withdraw Funds</h4>
+                <p>Withdraw funds to external addresses</p>
+                <a href="{% url 'wallets:withdraw' %}" class="btn btn-secondary">💳 Withdraw</a>
+            </div>
+        </div>
+        
+        <div class="grid grid-2 mt-3">
+            <div class="action-section">
+                <h4>Transaction History</h4>
+                <p>View your transaction history</p>
+                <a href="{% url 'wallets:transaction_history' %}" class="btn btn-accent">📊 History</a>
+            </div>
+            
+            <div class="action-section">
+                <h4>Security Settings</h4>
+                <p>Manage wallet security</p>
+                <a href="{% url 'wallets:security_settings' %}" class="btn btn-warning">🔒 Security</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Transactions -->
+    <div class="card">
+        <h3>📋 Recent Transactions</h3>
+        
+        {% if recent_transactions %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Currency</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in recent_transactions %}
+                        <tr>
+                            <td>{{ tx.timestamp|date:"M d, Y H:i" }}</td>
+                            <td>
+                                {% if tx.transaction_type == 'credit' %}
+                                    <span class="tx-credit">📥 Credit</span>
+                                {% elif tx.transaction_type == 'debit' %}
+                                    <span class="tx-debit">📤 Debit</span>
+                                {% elif tx.transaction_type == 'escrow' %}
+                                    <span class="tx-escrow">🔒 Escrow</span>
+                                {% else %}
+                                    <span class="tx-other">{{ tx.transaction_type|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ tx.currency }}</td>
+                            <td>{{ tx.amount|floatformat:8 }}</td>
+                            <td>
+                                {% if tx.status == 'completed' %}
+                                    <span class="status-completed">✅ Completed</span>
+                                {% elif tx.status == 'pending' %}
+                                    <span class="status-pending">⏳ Pending</span>
+                                {% else %}
+                                    <span class="status-failed">❌ Failed</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ tx.description|truncatechars:30 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="text-center mt-3">
+                <a href="{% url 'wallets:transaction_history' %}" class="btn btn-secondary">📊 View All Transactions</a>
+            </div>
+        {% else %}
+            <div class="text-center">
+                <p>No transactions yet.</p>
+                <p>Start trading to see your transaction history!</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Security Information -->
+    <div class="card">
+        <h3>🛡️ Wallet Security</h3>
+        
+        <div class="grid grid-2">
+            <div>
+                <h4>Privacy Features</h4>
+                <ul style="margin-left: 1.5rem;">
+                    <li>No JavaScript tracking</li>
+                    <li>No external API calls</li>
+                    <li>Local transaction processing</li>
+                    <li>Encrypted data storage</li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>Security Measures</h4>
+                <ul style="margin-left: 1.5rem;">
+                    <li>PGP encryption support</li>
+                    <li>Two-factor authentication</li>
+                    <li>Session management</li>
+                    <li>Fraud detection</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tor Browser Instructions -->
+    <div class="card" style="background: rgba(6, 182, 212, 0.1); border-color: var(--accent);">
+        <h3>📱 Tor Browser Wallet Security</h3>
+        <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
+            <li>Always use Tor Browser for wallet access</li>
+            <li>Set security level to "Safest"</li>
+            <li>Never share your private keys</li>
+            <li>Use PGP encryption for sensitive data</li>
+            <li>Regularly clear browser data</li>
+        </ol>
+        
+        <p class="mt-2"><strong>Note:</strong> All wallet operations work perfectly without JavaScript and provide maximum security for Tor users.</p>
+    </div>
+</div>
+
+<!-- Additional CSS for wallet template -->
+<style>
+    .balance-card {
+        text-align: center;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-secondary);
+    }
+    
+    .balance-amount {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--primary);
+        margin: 0.5rem 0;
+    }
+    
+    .balance-escrow {
+        color: var(--warning);
+        font-size: 0.9rem;
+        margin: 0.25rem 0;
+    }
+    
+    .balance-available {
+        color: var(--text-primary);
+        font-weight: 500;
+        margin: 0.25rem 0;
+    }
+    
+    .status-active, .status-verified, .status-secure {
+        color: var(--primary);
+        margin: 0.25rem 0;
+    }
+    
+    .action-section {
+        text-align: center;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-secondary);
+    }
+    
+    .action-section h4 {
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+    
+    .action-section p {
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+    }
+    
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    .tx-credit { color: var(--primary); }
+    .tx-debit { color: var(--danger); }
+    .tx-escrow { color: var(--warning); }
+    .tx-other { color: var(--text-secondary); }
+    
+    .status-completed { color: var(--primary); }
+    .status-pending { color: var(--warning); }
+    .status-failed { color: var(--danger); }
+</style>
+{% endblock %}

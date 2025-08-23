@@ -1,0 +1,124 @@
+{% extends 'base_tor_safe.html' %}
+
+{% block title %}Products - Tor Safe Marketplace{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h1 class="card-title">📦 Available Products</h1>
+        <p>Browse digital goods from verified vendors</p>
+    </div>
+    
+    <!-- Search Form - No JavaScript -->
+    <div class="card mb-3">
+        <form method="get" action="{% url 'products:product_list' %}">
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label for="search" class="form-label">Search Products</label>
+                    <input type="text" name="search" id="search" class="form-input" 
+                           value="{{ request.GET.search }}" placeholder="Product name or description">
+                </div>
+                <div class="form-group">
+                    <label for="category" class="form-label">Category</label>
+                    <select name="category" id="category" class="form-input">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">🔍 Search</button>
+                <a href="{% url 'products:product_list' %}" class="btn btn-secondary">🔄 Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Products Grid -->
+    {% if products %}
+        <div class="grid grid-3">
+            {% for product in products %}
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{{ product.name }}</h3>
+                    <p class="text-dim">{{ product.category.name }}</p>
+                </div>
+                
+                <div class="product-info">
+                    <p><strong>Price:</strong> {{ product.price }} {{ product.currency }}</p>
+                    <p><strong>Vendor:</strong> {{ product.vendor.vendor_name }}</p>
+                    <p><strong>Rating:</strong> 
+                        {% if product.vendor.average_rating %}
+                            ⭐ {{ product.vendor.average_rating|floatformat:1 }}/5.0
+                        {% else %}
+                            No ratings yet
+                        {% endif %}
+                    </p>
+                    
+                    {% if product.description %}
+                        <p class="text-secondary">{{ product.description|truncatewords:20 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="product-actions">
+                    <a href="{% url 'products:product_detail' product.id %}" class="btn btn-primary">👁️ View Details</a>
+                    
+                    {% if user.is_authenticated %}
+                        {% if product.in_stock %}
+                            <a href="{% url 'orders:create_order' product.id %}" class="btn btn-secondary">🛒 Buy Now</a>
+                        {% else %}
+                            <span class="btn btn-warning" style="cursor: not-allowed;">📦 Out of Stock</span>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'accounts:login' %}" class="btn btn-secondary">🔑 Login to Buy</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination - No JavaScript -->
+        {% if is_paginated %}
+        <div class="card text-center">
+            <div class="pagination">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="btn btn-small">⏮️ First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="btn btn-small">◀️ Previous</a>
+                {% endif %}
+                
+                <span class="current-page">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="btn btn-small">▶️ Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="btn btn-small">⏭️ Last</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+    {% else %}
+        <div class="card text-center">
+            <h3>📭 No Products Found</h3>
+            <p>No products match your search criteria.</p>
+            <a href="{% url 'products:product_list' %}" class="btn btn-primary">🔄 View All Products</a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Tor Safety Notice -->
+<div class="card mt-4" style="background: rgba(0, 255, 136, 0.1); border-color: var(--primary);">
+    <h3>🕵️ Tor Browser Compatibility</h3>
+    <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+        <li>✅ All product browsing works without JavaScript</li>
+        <li>✅ Search and filtering work with form submissions</li>
+        <li>✅ Pagination works with standard links</li>
+        <li>✅ No external requests or CDNs</li>
+        <li>✅ Maximum privacy and security</li>
+    </ul>
+</div>
+{% endblock %}
