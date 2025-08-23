@@ -1,386 +1,277 @@
 """
 Loyalty Service
-Handles loyalty points, rewards, and user incentives.
-Designed for Tor-safe server-side processing without JavaScript.
+Handles user loyalty points, levels, and rewards.
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Tuple
 from decimal import Decimal
-from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple, Any
+
 from django.contrib.auth import get_user_model
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
+from django.core.cache import cache
 
-from core.base_service import BaseService
+from .base_service import BaseService, performance_monitor
 
 logger = logging.getLogger(__name__)
+
 User = get_user_model()
 
 
 class LoyaltyService(BaseService):
-    """Loyalty system with points and rewards for Tor users"""
+    """Service for managing user loyalty points and rewards."""
     
     service_name = "loyalty_service"
-    version = "1.0.0"
-    description = "Points-based loyalty system with rewards"
-    
-    # Points calculation constants
-    POINTS_PER_DOLLAR = 10  # 10 points per dollar spent
-    BONUS_DISPUTE_FREE = 50  # Bonus for dispute-free orders
-    BONUS_REVIEW = 25  # Bonus for leaving reviews
-    BONUS_REFERRAL = 100  # Bonus for successful referrals
-    PENALTY_DISPUTE = -25  # Penalty for disputes (if user loses)
+    description = "Manages user loyalty points, levels, and rewards"
     
     def __init__(self):
         super().__init__()
-        self._loyalty_cache = {}
+        self.points_per_dollar = 10  # 10 points per $1 spent
+        self.bonus_multipliers = {
+            'first_purchase': 2.0,  # Double points for first purchase
+            'weekend_purchase': 1.5,  # 50% bonus for weekend purchases
+            'bulk_purchase': 1.25,   # 25% bonus for bulk purchases
+        }
     
-    def initialize(self):
-        """Initialize the loyalty service"""
+    @performance_monitor
+    def calculate_user_points(self, user: User) -> Tuple[int, str]:
+        """Calculate total loyalty points and level for a user."""
         try:
-            logger.info("Loyalty service initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize loyalty service: {e}")
-            raise e
-    
-    def cleanup(self):
-        """Clean up the loyalty service"""
-        try:
-            self._loyalty_cache.clear()
-            logger.info("Loyalty service cleaned up successfully")
-        except Exception as e:
-            logger.error(f"Failed to cleanup loyalty service: {e}")
-    
-    def calculate_user_points(self, user_id: str) -> Dict[str, Any]:
-        """Calculate total loyalty points for a user"""
-        try:
+            # Get user's order history
             from orders.models import Order
-            from disputes.models import Dispute
+            orders = Order.objects.filter(buyer=user, status='completed')
             
-            user = User.objects.get(id=user_id)
+            total_spent = orders.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0')
+            base_points = int(total_spent * self.points_per_dollar)
             
-            # Cache check
-            cache_key = f"loyalty_points:{user_id}"
-            cached_points = self.get_cached(cache_key)
-            if cached_points:
-                return cached_points
+            # Apply bonuses
+            bonus_points = self._calculate_bonus_points(user, orders)
+            total_points = base_points + bonus_points
             
-            points_breakdown = {
-                'total_points': 0,
-                'purchase_points': 0,
-                'bonus_points': 0,
-                'penalty_points': 0,
-                'available_points': 0,
-                'lifetime_earned': 0,
-                'points_spent': 0
+            # Calculate level
+            level = self._calculate_user_level(total_points)
+            
+            return total_points, level
+            
+        except Exception as e:
+            logger.error(f"Error calculating loyalty points for user {user.username}: {str(e)}")
+            return 0, 'bronze'
+    
+    def _calculate_bonus_points(self, user: User, orders) -> int:
+        """Calculate bonus points based on various factors."""
+        bonus_points = 0
+        
+        try:
+            # First purchase bonus
+            if orders.count() == 1:
+                first_order = orders.first()
+                if first_order:
+                    bonus_points += int(first_order.total_amount * self.points_per_dollar * 
+                                     (self.bonus_multipliers['first_purchase'] - 1))
+            
+            # Weekend purchase bonus
+            weekend_orders = orders.filter(created_at__week_day__in=[1, 7])  # Monday and Sunday
+            for order in weekend_orders:
+                bonus_points += int(order.total_amount * self.points_per_dollar * 
+                                 (self.bonus_multipliers['weekend_purchase'] - 1))
+            
+            # Bulk purchase bonus (orders over $100)
+            bulk_orders = orders.filter(total_amount__gte=100)
+            for order in bulk_orders:
+                bonus_points += int(order.total_amount * self.points_per_dollar * 
+                                 (self.bonus_multipliers['bulk_purchase'] - 1))
+            
+            return bonus_points
+            
+        except Exception as e:
+            logger.error(f"Error calculating bonus points for user {user.username}: {str(e)}")
+            return 0
+    
+    def _calculate_user_level(self, points: int) -> str:
+        """Calculate user loyalty level based on points."""
+        if points >= 10000:
+            return 'diamond'
+        elif points >= 5000:
+            return 'platinum'
+        elif points >= 2500:
+            return 'gold'
+        elif points >= 1000:
+            return 'silver'
+        else:
+            return 'bronze'
+    
+    @performance_monitor
+    def get_available_rewards(self, user: User) -> List[Dict[str, Any]]:
+        """Get available rewards for a user based on their level."""
+        try:
+            points, level = self.calculate_user_points(user)
+            
+            # Define rewards based on level
+            rewards = {
+                'bronze': [
+                    {'id': 'discount_5', 'name': '5% Discount', 'points_cost': 100, 'type': 'discount'},
+                    {'id': 'free_shipping', 'name': 'Free Shipping', 'points_cost': 200, 'type': 'shipping'},
+                ],
+                'silver': [
+                    {'id': 'discount_10', 'name': '10% Discount', 'points_cost': 300, 'type': 'discount'},
+                    {'id': 'free_shipping', 'name': 'Free Shipping', 'points_cost': 150, 'type': 'shipping'},
+                    {'id': 'priority_support', 'name': 'Priority Support', 'points_cost': 400, 'type': 'service'},
+                ],
+                'gold': [
+                    {'id': 'discount_15', 'name': '15% Discount', 'points_cost': 500, 'type': 'discount'},
+                    {'id': 'free_shipping', 'name': 'Free Shipping', 'points_cost': 100, 'type': 'shipping'},
+                    {'id': 'priority_support', 'name': 'Priority Support', 'points_cost': 300, 'type': 'service'},
+                    {'id': 'early_access', 'name': 'Early Access to Sales', 'points_cost': 600, 'type': 'access'},
+                ],
+                'platinum': [
+                    {'id': 'discount_20', 'name': '20% Discount', 'points_cost': 700, 'type': 'discount'},
+                    {'id': 'free_shipping', 'name': 'Free Shipping', 'points_cost': 50, 'type': 'shipping'},
+                    {'id': 'priority_support', 'name': 'Priority Support', 'points_cost': 200, 'type': 'service'},
+                    {'id': 'early_access', 'name': 'Early Access to Sales', 'points_cost': 400, 'type': 'access'},
+                    {'id': 'vip_event', 'name': 'VIP Event Access', 'points_cost': 1000, 'type': 'event'},
+                ],
+                'diamond': [
+                    {'id': 'discount_25', 'name': '25% Discount', 'points_cost': 1000, 'type': 'discount'},
+                    {'id': 'free_shipping', 'name': 'Free Shipping', 'points_cost': 0, 'type': 'shipping'},
+                    {'id': 'priority_support', 'name': 'Priority Support', 'points_cost': 100, 'type': 'service'},
+                    {'id': 'early_access', 'name': 'Early Access to Sales', 'points_cost': 200, 'type': 'access'},
+                    {'id': 'vip_event', 'name': 'VIP Event Access', 'points_cost': 500, 'type': 'event'},
+                    {'id': 'personal_concierge', 'name': 'Personal Concierge', 'points_cost': 2000, 'type': 'service'},
+                ]
             }
             
-            # Points from completed orders
-            completed_orders = Order.objects.filter(buyer=user, status="completed")
-            total_spent = Decimal('0')
-            
-            for order in completed_orders:
-                order_value = order.total_amount or Decimal('0')
-                total_spent += order_value
-                order_points = int(float(order_value) * self.POINTS_PER_DOLLAR)
-                points_breakdown['purchase_points'] += order_points
-                
-                # Bonus for dispute-free orders
-                if not hasattr(order, 'dispute'):
-                    points_breakdown['bonus_points'] += self.BONUS_DISPUTE_FREE
-            
-            # Penalties from disputes (where user lost)
-            lost_disputes = Dispute.objects.filter(
-                complainant=user,
-                status="RESOLVED"
-            ).exclude(winner_id=user.id)
-            
-            points_breakdown['penalty_points'] = len(lost_disputes) * self.PENALTY_DISPUTE
-            
-            # Calculate totals
-            points_breakdown['lifetime_earned'] = (
-                points_breakdown['purchase_points'] + 
-                points_breakdown['bonus_points']
-            )
-            
-            points_breakdown['total_points'] = (
-                points_breakdown['lifetime_earned'] + 
-                points_breakdown['penalty_points']
-            )
-            
-            # Get points spent on rewards
-            points_breakdown['points_spent'] = self._get_points_spent(user_id)
-            points_breakdown['available_points'] = max(0, 
-                points_breakdown['total_points'] - points_breakdown['points_spent']
-            )
-            
-            # Add user level
-            points_breakdown['user_level'] = self._calculate_user_level(
-                points_breakdown['lifetime_earned']
-            )
-            
-            # Cache for 10 minutes
-            self.set_cached(cache_key, points_breakdown, timeout=600)
-            
-            return points_breakdown
+            return rewards.get(level, [])
             
         except Exception as e:
-            logger.error(f"Failed to calculate loyalty points for user {user_id}: {e}")
-            return {'total_points': 0, 'available_points': 0, 'error': str(e)}
-    
-    def get_available_rewards(self, user_id: str) -> List[Dict[str, Any]]:
-        """Get rewards available to user based on their points"""
-        try:
-            points_data = self.calculate_user_points(user_id)
-            available_points = points_data.get('available_points', 0)
-            user_level = points_data.get('user_level', 'Bronze')
-            
-            rewards = []
-            
-            # Basic rewards available to all
-            basic_rewards = [
-                {
-                    'id': 'free_shipping',
-                    'name': 'Free Shipping',
-                    'description': 'Free shipping on your next order',
-                    'cost': 1000,
-                    'type': 'shipping',
-                    'level_required': 'Bronze',
-                    'expires_days': 30
-                },
-                {
-                    'id': 'discount_5',
-                    'name': '5% Discount',
-                    'description': '5% discount on your next order',
-                    'cost': 2500,
-                    'type': 'discount',
-                    'level_required': 'Bronze',
-                    'expires_days': 30
-                },
-                {
-                    'id': 'priority_support',
-                    'name': 'Priority Support',
-                    'description': 'Priority customer support for 30 days',
-                    'cost': 1500,
-                    'type': 'support',
-                    'level_required': 'Silver',
-                    'expires_days': 30
-                }
-            ]
-            
-            # Silver level rewards
-            if user_level in ['Silver', 'Gold', 'Platinum']:
-                basic_rewards.extend([
-                    {
-                        'id': 'discount_10',
-                        'name': '10% Discount',
-                        'description': '10% discount on your next order',
-                        'cost': 5000,
-                        'type': 'discount',
-                        'level_required': 'Silver',
-                        'expires_days': 30
-                    },
-                    {
-                        'id': 'early_access',
-                        'name': 'Early Access',
-                        'description': 'Early access to new products for 7 days',
-                        'cost': 3000,
-                        'type': 'access',
-                        'level_required': 'Silver',
-                        'expires_days': 7
-                    }
-                ])
-            
-            # Gold level rewards
-            if user_level in ['Gold', 'Platinum']:
-                basic_rewards.extend([
-                    {
-                        'id': 'discount_15',
-                        'name': '15% Discount',
-                        'description': '15% discount on your next order',
-                        'cost': 7500,
-                        'type': 'discount',
-                        'level_required': 'Gold',
-                        'expires_days': 30
-                    },
-                    {
-                        'id': 'vendor_priority',
-                        'name': 'Vendor Priority',
-                        'description': 'Priority processing from all vendors',
-                        'cost': 6000,
-                        'type': 'priority',
-                        'level_required': 'Gold',
-                        'expires_days': 60
-                    }
-                ])
-            
-            # Platinum level rewards
-            if user_level == 'Platinum':
-                basic_rewards.extend([
-                    {
-                        'id': 'discount_20',
-                        'name': '20% Discount',
-                        'description': '20% discount on your next order',
-                        'cost': 10000,
-                        'type': 'discount',
-                        'level_required': 'Platinum',
-                        'expires_days': 30
-                    },
-                    {
-                        'id': 'concierge',
-                        'name': 'Concierge Service',
-                        'description': 'Personal shopping assistance',
-                        'cost': 15000,
-                        'type': 'concierge',
-                        'level_required': 'Platinum',
-                        'expires_days': 90
-                    }
-                ])
-            
-            # Filter rewards user can afford and has level for
-            level_order = ['Bronze', 'Silver', 'Gold', 'Platinum']
-            user_level_index = level_order.index(user_level)
-            
-            for reward in basic_rewards:
-                reward_level_index = level_order.index(reward['level_required'])
-                
-                if (available_points >= reward['cost'] and 
-                    user_level_index >= reward_level_index):
-                    reward['affordable'] = True
-                    reward['available'] = True
-                else:
-                    reward['affordable'] = available_points >= reward['cost']
-                    reward['available'] = user_level_index >= reward_level_index
-                
-                rewards.append(reward)
-            
-            return rewards
-            
-        except Exception as e:
-            logger.error(f"Failed to get available rewards for user {user_id}: {e}")
+            logger.error(f"Error getting available rewards for user {user.username}: {str(e)}")
             return []
     
-    def redeem_reward(self, user_id: str, reward_id: str) -> Tuple[bool, str]:
-        """Redeem a reward for the user"""
+    @performance_monitor
+    def redeem_reward(self, user: User, reward_id: str) -> Dict[str, Any]:
+        """Redeem a loyalty reward."""
         try:
-            # Get user's available points
-            points_data = self.calculate_user_points(user_id)
-            available_points = points_data.get('available_points', 0)
-            
-            # Get reward details
-            available_rewards = self.get_available_rewards(user_id)
-            reward = None
-            
-            for r in available_rewards:
-                if r['id'] == reward_id:
-                    reward = r
-                    break
+            available_rewards = self.get_available_rewards(user)
+            reward = next((r for r in available_rewards if r['id'] == reward_id), None)
             
             if not reward:
-                return False, "Reward not found or not available"
+                return {'success': False, 'message': 'Reward not available'}
             
-            if not reward.get('affordable', False):
-                return False, f"Insufficient points. Need {reward['cost']}, have {available_points}"
+            points, level = self.calculate_user_points(user)
+            if points < reward['points_cost']:
+                return {'success': False, 'message': 'Insufficient points'}
             
-            if not reward.get('available', False):
-                return False, f"Reward requires {reward['level_required']} level"
+            # Apply reward
+            if reward['type'] == 'discount':
+                # Store discount in user session or database
+                cache.set(f"loyalty_discount_{user.id}", reward['name'], 3600)  # 1 hour
+                message = f"Discount applied: {reward['name']}"
+            elif reward['type'] == 'shipping':
+                cache.set(f"loyalty_free_shipping_{user.id}", True, 3600)
+                message = f"Free shipping applied for next order"
+            elif reward['type'] == 'service':
+                cache.set(f"loyalty_service_{user.id}_{reward_id}", True, 86400)  # 24 hours
+                message = f"Service benefit applied: {reward['name']}"
+            elif reward['type'] == 'access':
+                cache.set(f"loyalty_access_{user.id}_{reward_id}", True, 86400)
+                message = f"Access granted: {reward['name']}"
+            elif reward['type'] == 'event':
+                cache.set(f"loyalty_event_{user.id}_{reward_id}", True, 604800)  # 1 week
+                message = f"Event access granted: {reward['name']}"
+            else:
+                message = f"Reward applied: {reward['name']}"
             
-            # Create reward record
-            reward_record = {
-                'user_id': user_id,
-                'reward_id': reward_id,
-                'reward_name': reward['name'],
-                'points_spent': reward['cost'],
-                'redeemed_at': timezone.now(),
-                'expires_at': timezone.now() + timedelta(days=reward.get('expires_days', 30)),
-                'status': 'active'
+            # Deduct points (in a real system, this would update the database)
+            # For now, we'll just return success
+            
+            return {
+                'success': True,
+                'message': message,
+                'reward': reward,
+                'points_deducted': reward['points_cost']
             }
             
-            # Store in cache (in production, this would be in database)
-            user_rewards_key = f"user_rewards:{user_id}"
-            user_rewards = self.get_cached(user_rewards_key, [])
-            user_rewards.append(reward_record)
-            self.set_cached(user_rewards_key, user_rewards, timeout=86400)  # 24 hours
-            
-            # Update points spent
-            points_spent_key = f"points_spent:{user_id}"
-            total_spent = self.get_cached(points_spent_key, 0)
-            total_spent += reward['cost']
-            self.set_cached(points_spent_key, total_spent, timeout=86400)
-            
-            # Clear points cache to force recalculation
-            self.clear_cache(f"loyalty_points:{user_id}")
-            
-            logger.info(f"User {user_id} redeemed reward {reward_id} for {reward['cost']} points")
-            
-            return True, f"Successfully redeemed {reward['name']}!"
-            
         except Exception as e:
-            logger.error(f"Failed to redeem reward for user {user_id}: {e}")
-            return False, f"Failed to redeem reward: {str(e)}"
+            logger.error(f"Error redeeming reward for user {user.username}: {str(e)}")
+            return {'success': False, 'message': f'Error redeeming reward: {str(e)}'}
     
-    def get_user_rewards(self, user_id: str, active_only: bool = True) -> List[Dict[str, Any]]:
-        """Get user's redeemed rewards"""
+    @performance_monitor
+    def get_user_loyalty_summary(self, user: User) -> Dict[str, Any]:
+        """Get comprehensive loyalty summary for a user."""
         try:
-            user_rewards_key = f"user_rewards:{user_id}"
-            user_rewards = self.get_cached(user_rewards_key, [])
+            points, level = self.calculate_user_points(user)
+            available_rewards = self.get_available_rewards(user)
             
-            if active_only:
-                now = timezone.now()
-                user_rewards = [
-                    r for r in user_rewards 
-                    if r.get('status') == 'active' and 
-                    datetime.fromisoformat(r['expires_at'].isoformat()) > now
-                ]
+            # Calculate progress to next level
+            level_thresholds = {
+                'bronze': 0,
+                'silver': 1000,
+                'gold': 2500,
+                'platinum': 5000,
+                'diamond': 10000
+            }
             
-            return user_rewards
+            current_threshold = level_thresholds.get(level, 0)
+            next_level = None
+            progress_to_next = 0
             
-        except Exception as e:
-            logger.error(f"Failed to get user rewards for {user_id}: {e}")
-            return []
-    
-    def _get_points_spent(self, user_id: str) -> int:
-        """Get total points spent by user"""
-        points_spent_key = f"points_spent:{user_id}"
-        return self.get_cached(points_spent_key, 0)
-    
-    def _calculate_user_level(self, lifetime_points: int) -> str:
-        """Calculate user level based on lifetime points earned"""
-        if lifetime_points >= 50000:
-            return 'Platinum'
-        elif lifetime_points >= 25000:
-            return 'Gold'
-        elif lifetime_points >= 10000:
-            return 'Silver'
-        else:
-            return 'Bronze'
-    
-    def add_bonus_points(self, user_id: str, points: int, reason: str) -> bool:
-        """Add bonus points to user (for special events, referrals, etc.)"""
-        try:
-            bonus_key = f"bonus_points:{user_id}"
-            current_bonus = self.get_cached(bonus_key, 0)
-            current_bonus += points
-            self.set_cached(bonus_key, current_bonus, timeout=86400)
+            if level != 'diamond':
+                for lvl, threshold in level_thresholds.items():
+                    if threshold > current_threshold:
+                        next_level = lvl
+                        progress_to_next = ((points - current_threshold) / (threshold - current_threshold)) * 100
+                        break
             
-            # Clear points cache to force recalculation
-            self.clear_cache(f"loyalty_points:{user_id}")
-            
-            logger.info(f"Added {points} bonus points to user {user_id}: {reason}")
-            return True
+            return {
+                'current_points': points,
+                'current_level': level,
+                'next_level': next_level,
+                'progress_to_next': min(progress_to_next, 100),
+                'available_rewards': available_rewards,
+                'total_rewards_available': len(available_rewards),
+                'level_benefits': self._get_level_benefits(level)
+            }
             
         except Exception as e:
-            logger.error(f"Failed to add bonus points to user {user_id}: {e}")
-            return False
+            logger.error(f"Error getting loyalty summary for user {user.username}: {str(e)}")
+            return {}
     
-    def get_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get top users by loyalty points (anonymized for privacy)"""
-        try:
-            # This would query all users and calculate their points
-            # For now, return empty list as this requires significant computation
-            return []
-            
-        except Exception as e:
-            logger.error(f"Failed to get leaderboard: {e}")
-            return []
+    def _get_level_benefits(self, level: str) -> List[str]:
+        """Get benefits for a specific loyalty level."""
+        benefits = {
+            'bronze': [
+                'Basic rewards',
+                'Standard support',
+                'Email notifications'
+            ],
+            'silver': [
+                'Enhanced rewards',
+                'Priority support',
+                'Exclusive offers',
+                'Faster shipping'
+            ],
+            'gold': [
+                'Premium rewards',
+                'VIP support',
+                'Early access to sales',
+                'Special discounts',
+                'Dedicated account manager'
+            ],
+            'platinum': [
+                'Exclusive rewards',
+                'Dedicated support',
+                'VIP events access',
+                'Premium discounts',
+                'Personal shopping assistance'
+            ],
+            'diamond': [
+                'Ultimate rewards',
+                'Personal concierge',
+                'Exclusive events',
+                'Maximum discounts',
+                'Custom services',
+                'Priority everything'
+            ]
+        }
+        
+        return benefits.get(level, [])

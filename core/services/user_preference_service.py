@@ -14,7 +14,7 @@ from django.db.models import Count, Avg, Sum, Q, F, Max, Min
 from django.utils import timezone
 import statistics
 
-from core.base_service import BaseService
+from .base_service import BaseService
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

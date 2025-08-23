@@ -1,547 +1,496 @@
 """
-Recommendation Service
-Provides intelligent product recommendations using collaborative filtering and content-based approaches.
-Designed for Tor-safe server-side processing without JavaScript.
+Product Recommendation Service
+Provides intelligent product recommendations based on user behavior.
 """
 
 import logging
 from typing import Dict, List, Optional, Any, Tuple
-from collections import defaultdict, Counter
 from decimal import Decimal
-from datetime import datetime, timedelta
-from django.contrib.auth import get_user_model
-from django.db.models import Count, Avg, Sum, Q, F
-from django.utils import timezone
+import math
 
-from core.base_service import BaseService
+from django.contrib.auth import get_user_model
+from django.db.models import Q, Count, Avg, Sum, F
+from django.utils import timezone
+from django.core.cache import cache
+
+from .base_service import BaseService, performance_monitor
 
 logger = logging.getLogger(__name__)
+
 User = get_user_model()
 
 
 class RecommendationService(BaseService):
-    """Intelligent product recommendation service for Tor users"""
+    """Service for providing intelligent product recommendations."""
     
     service_name = "recommendation_service"
-    version = "1.0.0"
-    description = "AI-powered product recommendations with collaborative and content-based filtering"
+    description = "Intelligent product recommendations based on user behavior"
     
     def __init__(self):
         super().__init__()
-        self._recommendation_cache = {}
-        self._similarity_cache = {}
+        self.cache_timeout = 1800  # 30 minutes cache for recommendations
     
-    def initialize(self):
-        """Initialize the recommendation service"""
+    @performance_monitor
+    def get_recommendations_for_user(self, user: User, limit: int = 20) -> List[Dict[str, Any]]:
+        """Get personalized product recommendations for a user."""
         try:
-            logger.info("Recommendation service initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize recommendation service: {e}")
-            raise e
-    
-    def cleanup(self):
-        """Clean up the recommendation service"""
-        try:
-            self._recommendation_cache.clear()
-            self._similarity_cache.clear()
-            logger.info("Recommendation service cleaned up successfully")
-        except Exception as e:
-            logger.error(f"Failed to cleanup recommendation service: {e}")
-    
-    def get_recommendations_for_user(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get personalized product recommendations for a user"""
-        try:
-            cache_key = f"user_recommendations:{user_id}:{limit}"
+            # Check cache first
+            cache_key = f"user_recommendations:{user.id}"
             cached_recommendations = self.get_cached(cache_key)
             if cached_recommendations:
-                return cached_recommendations
+                return cached_recommendations[:limit]
             
-            user = User.objects.get(id=user_id)
+            # Get different types of recommendations
+            collaborative_recs = self._get_collaborative_recommendations(user, limit//3)
+            content_based_recs = self._get_content_based_recommendations(user, limit//3)
+            trending_recs = self._get_trending_recommendations(user, limit//3)
             
-            # Get recommendations from multiple approaches
-            collaborative_recs = self._get_collaborative_recommendations(user, limit // 2)
-            content_based_recs = self._get_content_based_recommendations(user, limit // 2)
-            trending_recs = self._get_trending_recommendations(user, limit // 4)
+            # Combine and rank recommendations
+            all_recommendations = collaborative_recs + content_based_recs + trending_recs
             
-            # Combine and deduplicate recommendations
-            all_recommendations = []
-            seen_products = set()
+            # Remove duplicates and rank by confidence
+            unique_recommendations = self._deduplicate_recommendations(all_recommendations)
+            ranked_recommendations = self._rank_recommendations(unique_recommendations)
             
-            # Priority order: collaborative > content-based > trending
-            for rec_list in [collaborative_recs, content_based_recs, trending_recs]:
-                for rec in rec_list:
-                    if rec['product_id'] not in seen_products:
-                        all_recommendations.append(rec)
-                        seen_products.add(rec['product_id'])
-                        
-                        if len(all_recommendations) >= limit:
-                            break
-                
-                if len(all_recommendations) >= limit:
-                    break
+            # Cache the results
+            self.set_cached(cache_key, ranked_recommendations, self.cache_timeout)
             
-            # If we don't have enough recommendations, add popular products
-            if len(all_recommendations) < limit:
-                popular_recs = self._get_popular_recommendations(
-                    user, limit - len(all_recommendations), exclude_ids=seen_products
-                )
-                all_recommendations.extend(popular_recs)
-            
-            # Add recommendation reasons and metadata
-            final_recommendations = []
-            for rec in all_recommendations[:limit]:
-                enhanced_rec = self._enhance_recommendation(rec, user)
-                final_recommendations.append(enhanced_rec)
-            
-            # Cache for 2 hours
-            self.set_cached(cache_key, final_recommendations, timeout=7200)
-            
-            return final_recommendations
+            return ranked_recommendations[:limit]
             
         except Exception as e:
-            logger.error(f"Failed to get recommendations for user {user_id}: {e}")
+            logger.error(f"Error getting recommendations for user {user.username}: {str(e)}")
             return []
     
-    def get_similar_products(self, product_id: str, limit: int = 6) -> List[Dict[str, Any]]:
-        """Get products similar to the given product"""
+    def _get_collaborative_recommendations(self, user: User, limit: int) -> List[Dict[str, Any]]:
+        """Get recommendations based on similar users' behavior."""
         try:
+            from orders.models import Order
             from products.models import Product
-            
-            cache_key = f"similar_products:{product_id}:{limit}"
-            cached_similar = self.get_cached(cache_key)
-            if cached_similar:
-                return cached_similar
-            
-            product = Product.objects.get(id=product_id, is_available=True)
-            
-            # Content-based similarity
-            similar_products = []
-            
-            # 1. Same category products
-            category_products = Product.objects.filter(
-                category=product.category,
-                is_available=True
-            ).exclude(id=product_id).annotate(
-                popularity=Count('orderitem')
-            ).order_by('-popularity')[:limit * 2]
-            
-            for similar_product in category_products:
-                similarity_score = self._calculate_product_similarity(product, similar_product)
-                similar_products.append({
-                    'product': similar_product,
-                    'similarity_score': similarity_score,
-                    'reason': f"Same category: {product.category.name}"
-                })
-            
-            # 2. Same vendor products
-            vendor_products = Product.objects.filter(
-                vendor=product.vendor,
-                is_available=True
-            ).exclude(id=product_id).annotate(
-                popularity=Count('orderitem')
-            ).order_by('-popularity')[:limit]
-            
-            for vendor_product in vendor_products:
-                # Check if not already included
-                if not any(sp['product'].id == vendor_product.id for sp in similar_products):
-                    similar_products.append({
-                        'product': vendor_product,
-                        'similarity_score': 0.7,  # High similarity for same vendor
-                        'reason': f"Same vendor: {product.vendor.user.username}"
-                    })
-            
-            # 3. Price-based similarity
-            price_range_low = float(product.price_btc) * 0.7
-            price_range_high = float(product.price_btc) * 1.3
-            
-            price_similar = Product.objects.filter(
-                price_btc__range=[price_range_low, price_range_high],
-                is_available=True
-            ).exclude(id=product_id).annotate(
-                popularity=Count('orderitem')
-            ).order_by('-popularity')[:limit]
-            
-            for price_product in price_similar:
-                if not any(sp['product'].id == price_product.id for sp in similar_products):
-                    price_similarity = 1 - abs(float(product.price_btc) - float(price_product.price_btc)) / float(product.price_btc)
-                    similar_products.append({
-                        'product': price_product,
-                        'similarity_score': price_similarity * 0.6,
-                        'reason': "Similar price range"
-                    })
-            
-            # Sort by similarity score and return top results
-            similar_products.sort(key=lambda x: x['similarity_score'], reverse=True)
-            
-            # Convert to response format
-            result = []
-            for item in similar_products[:limit]:
-                product_data = self._product_to_dict(item['product'])
-                product_data['similarity_reason'] = item['reason']
-                product_data['similarity_score'] = round(item['similarity_score'], 2)
-                result.append(product_data)
-            
-            # Cache for 4 hours
-            self.set_cached(cache_key, result, timeout=14400)
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Failed to get similar products for {product_id}: {e}")
-            return []
-    
-    def _get_collaborative_recommendations(self, user, limit: int) -> List[Dict[str, Any]]:
-        """Get recommendations based on similar users' purchases"""
-        try:
-            from orders.models import Order, OrderItem
             
             # Get user's purchase history
-            user_purchases = set(
-                OrderItem.objects.filter(
-                    order__buyer=user,
-                    order__status__in=['completed', 'shipped', 'delivered']
-                ).values_list('product_id', flat=True)
-            )
+            user_orders = Order.objects.filter(buyer=user, status='completed')
+            user_products = set()
+            for order in user_orders:
+                user_products.update(order.products.all())
             
-            if not user_purchases:
+            if not user_products:
                 return []
             
-            # Find users with similar purchase patterns
-            similar_users = defaultdict(int)
+            # Find similar users (users who bought similar products)
+            similar_users = self._find_similar_users(user, user_products)
             
-            for product_id in user_purchases:
-                # Get other users who bought the same products
-                other_buyers = OrderItem.objects.filter(
-                    product_id=product_id,
-                    order__status__in=['completed', 'shipped', 'delivered']
-                ).exclude(
-                    order__buyer=user
-                ).values_list('order__buyer_id', flat=True).distinct()
-                
-                for buyer_id in other_buyers:
-                    similar_users[buyer_id] += 1
+            if not similar_users:
+                return []
             
-            # Sort users by similarity (number of common purchases)
-            similar_users = sorted(similar_users.items(), key=lambda x: x[1], reverse=True)[:20]
-            
-            # Get products bought by similar users that current user hasn't bought
-            recommended_products = defaultdict(float)
-            
-            for similar_user_id, similarity_score in similar_users:
-                similar_user_purchases = set(
-                    OrderItem.objects.filter(
-                        order__buyer_id=similar_user_id,
-                        order__status__in=['completed', 'shipped', 'delivered']
-                    ).values_list('product_id', flat=True)
+            # Get products that similar users bought but current user didn't
+            recommendations = []
+            for similar_user in similar_users:
+                similar_user_orders = Order.objects.filter(
+                    buyer=similar_user,
+                    status='completed'
                 )
                 
-                # Products that similar user bought but current user hasn't
-                new_products = similar_user_purchases - user_purchases
-                
-                for product_id in new_products:
-                    # Weight by similarity and product popularity
-                    weight = similarity_score / len(user_purchases)  # Normalize by user's purchase count
-                    recommended_products[product_id] += weight
+                for order in similar_user_orders:
+                    for product in order.products.all():
+                        if product not in user_products and product.active:
+                            # Calculate similarity score
+                            similarity_score = self._calculate_user_similarity(user, similar_user)
+                            
+                            recommendations.append({
+                                'product': product,
+                                'type': 'collaborative',
+                                'confidence': similarity_score * 0.8,  # Collaborative recommendations get 80% of similarity score
+                                'explanation': f"Users similar to you also bought this product",
+                                'source': 'collaborative_filtering'
+                            })
             
-            # Sort by recommendation score
-            sorted_recommendations = sorted(recommended_products.items(), key=lambda x: x[1], reverse=True)
-            
-            # Convert to product objects
-            recommendations = []
-            for product_id, score in sorted_recommendations[:limit]:
-                try:
-                    from products.models import Product
-                    product = Product.objects.get(id=product_id, is_available=True)
-                    recommendations.append({
-                        'product_id': product_id,
-                        'product': product,
-                        'score': score,
-                        'type': 'collaborative',
-                        'reason': 'Users with similar purchases also bought this'
-                    })
-                except Product.DoesNotExist:
-                    continue
-            
-            return recommendations
+            # Sort by confidence and return top results
+            recommendations.sort(key=lambda x: x['confidence'], reverse=True)
+            return recommendations[:limit]
             
         except Exception as e:
-            logger.error(f"Failed to get collaborative recommendations: {e}")
+            logger.error(f"Error getting collaborative recommendations for user {user.username}: {str(e)}")
             return []
     
-    def _get_content_based_recommendations(self, user, limit: int) -> List[Dict[str, Any]]:
-        """Get recommendations based on user's purchase history content"""
+    def _get_content_based_recommendations(self, user: User, limit: int) -> List[Dict[str, Any]]:
+        """Get recommendations based on user's purchase history and preferences."""
         try:
-            from orders.models import OrderItem
-            from products.models import Product
+            from orders.models import Order
+            from products.models import Product, Category
             
-            # Analyze user's preferences from purchase history
-            user_orders = OrderItem.objects.filter(
-                order__buyer=user,
-                order__status__in=['completed', 'shipped', 'delivered']
-            ).select_related('product')
+            # Get user's purchase history
+            user_orders = Order.objects.filter(buyer=user, status='completed')
             
             if not user_orders.exists():
                 return []
             
             # Analyze user preferences
-            category_preferences = defaultdict(int)
-            vendor_preferences = defaultdict(int)
-            price_preferences = []
+            category_preferences = {}
+            price_range = {'min': float('inf'), 'max': 0}
             
-            for order_item in user_orders:
-                product = order_item.product
-                category_preferences[product.category_id] += order_item.quantity
-                vendor_preferences[product.vendor_id] += order_item.quantity
-                price_preferences.append(float(product.price_btc))
+            for order in user_orders:
+                for product in order.products.all():
+                    # Category preference
+                    category = product.category
+                    if category:
+                        category_preferences[category.name] = category_preferences.get(category.name, 0) + 1
+                    
+                    # Price preference
+                    price = float(product.price_btc or 0)
+                    if price > 0:
+                        price_range['min'] = min(price_range['min'], price)
+                        price_range['max'] = max(price_range['max'], price)
             
-            # Calculate preferred price range
-            if price_preferences:
-                avg_price = sum(price_preferences) / len(price_preferences)
-                price_range_low = avg_price * 0.5
-                price_range_high = avg_price * 2.0
-            else:
-                price_range_low = 0
-                price_range_high = float('inf')
-            
-            # Get preferred categories (top 3)
-            top_categories = sorted(category_preferences.items(), key=lambda x: x[1], reverse=True)[:3]
-            preferred_category_ids = [cat_id for cat_id, _ in top_categories]
-            
-            # Get preferred vendors (top 3)
-            top_vendors = sorted(vendor_preferences.items(), key=lambda x: x[1], reverse=True)[:3]
-            preferred_vendor_ids = [vendor_id for vendor_id, _ in top_vendors]
-            
-            # Find products matching user preferences
-            candidate_products = Product.objects.filter(
-                is_available=True,
-                price_btc__range=[price_range_low, price_range_high]
-            ).exclude(
-                id__in=user_orders.values_list('product_id', flat=True)
-            ).annotate(
-                popularity=Count('orderitem')
-            )
-            
-            # Score products based on preferences
+            # Get recommendations based on preferences
             recommendations = []
-            for product in candidate_products:
-                score = 0.0
-                reasons = []
+            
+            # Category-based recommendations
+            if category_preferences:
+                top_categories = sorted(category_preferences.items(), key=lambda x: x[1], reverse=True)[:3]
                 
-                # Category preference
-                if product.category_id in preferred_category_ids:
-                    category_rank = preferred_category_ids.index(product.category_id)
-                    category_score = (3 - category_rank) / 3  # Higher score for more preferred categories
-                    score += category_score * 0.4
-                    reasons.append(f"Matches your interest in {product.category.name}")
+                for category_name, preference_score in top_categories:
+                    try:
+                        category = Category.objects.get(name=category_name)
+                        category_products = Product.objects.filter(
+                            category=category,
+                            active=True
+                        ).exclude(
+                            id__in=[p.id for p in user_orders.values_list('products', flat=True)]
+                        )[:5]
+                        
+                        for product in category_products:
+                            # Calculate confidence based on category preference
+                            confidence = min(0.9, preference_score / max(category_preferences.values()) * 0.8)
+                            
+                            recommendations.append({
+                                'product': product,
+                                'type': 'content_based',
+                                'confidence': confidence,
+                                'explanation': f"Based on your interest in {category_name}",
+                                'source': 'category_preference'
+                            })
+                    except Category.DoesNotExist:
+                        continue
+            
+            # Price-based recommendations
+            if price_range['min'] != float('inf') and price_range['max'] > 0:
+                avg_price = (price_range['min'] + price_range['max']) / 2
+                price_tolerance = avg_price * 0.3  # 30% tolerance
                 
-                # Vendor preference
-                if product.vendor_id in preferred_vendor_ids:
-                    vendor_rank = preferred_vendor_ids.index(product.vendor_id)
-                    vendor_score = (3 - vendor_rank) / 3
-                    score += vendor_score * 0.3
-                    reasons.append(f"From vendor {product.vendor.user.username} you've bought from")
+                price_based_products = Product.objects.filter(
+                    active=True,
+                    price_btc__range=[avg_price - price_tolerance, avg_price + price_tolerance]
+                ).exclude(
+                    id__in=[p.id for p in user_orders.values_list('products', flat=True)]
+                )[:5]
                 
-                # Price preference
-                price_diff = abs(float(product.price_btc) - avg_price) / avg_price if avg_price > 0 else 0
-                price_score = max(0, 1 - price_diff)
-                score += price_score * 0.2
-                
-                # Popularity boost
-                popularity_score = min(product.popularity / 10, 1.0)  # Normalize to 0-1
-                score += popularity_score * 0.1
-                
-                if score > 0.1:  # Only include products with meaningful score
+                for product in price_based_products:
+                    price_diff = abs(float(product.price_btc or 0) - avg_price)
+                    confidence = max(0.3, 0.8 - (price_diff / avg_price) * 0.5)
+                    
                     recommendations.append({
-                        'product_id': product.id,
                         'product': product,
-                        'score': score,
                         'type': 'content_based',
-                        'reason': '; '.join(reasons) if reasons else 'Matches your preferences'
+                        'confidence': confidence,
+                        'explanation': f"Similar to products in your price range",
+                        'source': 'price_preference'
                     })
             
-            # Sort by score and return top results
-            recommendations.sort(key=lambda x: x['score'], reverse=True)
             return recommendations[:limit]
             
         except Exception as e:
-            logger.error(f"Failed to get content-based recommendations: {e}")
+            logger.error(f"Error getting content-based recommendations for user {user.username}: {str(e)}")
             return []
     
-    def _get_trending_recommendations(self, user, limit: int) -> List[Dict[str, Any]]:
-        """Get trending/popular product recommendations"""
+    def _get_trending_recommendations(self, user: User, limit: int) -> List[Dict[str, Any]]:
+        """Get recommendations based on trending products."""
         try:
             from products.models import Product
-            from orders.models import OrderItem
+            from orders.models import Order
             
-            # Get products that are trending (popular in last 7 days)
-            week_ago = timezone.now() - timedelta(days=7)
+            # Get trending products (most ordered in last 30 days)
+            thirty_days_ago = timezone.now() - timezone.timedelta(days=30)
             
             trending_products = Product.objects.filter(
-                is_available=True
+                active=True,
+                orders__created_at__gte=thirty_days_ago
             ).annotate(
-                recent_sales=Count(
-                    'orderitem',
-                    filter=Q(
-                        orderitem__order__created_at__gte=week_ago,
-                        orderitem__order__status__in=['completed', 'shipped', 'delivered']
-                    )
-                ),
-                total_sales=Count('orderitem')
-            ).filter(
-                recent_sales__gt=0
-            ).order_by('-recent_sales', '-total_sales')[:limit * 2]
+                recent_orders=Count('orders', filter=Q(orders__created_at__gte=thirty_days_ago))
+            ).order_by('-recent_orders')[:limit*2]
             
-            # Exclude products user already bought
-            if user:
-                user_purchases = set(
-                    OrderItem.objects.filter(
-                        order__buyer=user,
-                        order__status__in=['completed', 'shipped', 'delivered']
-                    ).values_list('product_id', flat=True)
-                )
-                trending_products = trending_products.exclude(id__in=user_purchases)
+            # Filter out products user already has
+            user_products = set(Order.objects.filter(
+                buyer=user,
+                status='completed'
+            ).values_list('products', flat=True))
             
-            recommendations = []
-            for product in trending_products[:limit]:
-                recommendations.append({
-                    'product_id': product.id,
-                    'product': product,
-                    'score': product.recent_sales / max(product.total_sales, 1),
-                    'type': 'trending',
-                    'reason': f'Popular this week ({product.recent_sales} recent sales)'
-                })
+            trending_recommendations = []
+            for product in trending_products:
+                if product.id not in user_products:
+                    # Calculate trending confidence based on recent orders
+                    confidence = min(0.9, product.recent_orders / max(p.recent_orders for p in trending_products) * 0.7)
+                    
+                    trending_recommendations.append({
+                        'product': product,
+                        'type': 'trending',
+                        'confidence': confidence,
+                        'explanation': f"Trending product with {product.recent_orders} recent orders",
+                        'source': 'trending_analysis'
+                    })
             
-            return recommendations
+            return trending_recommendations[:limit]
             
         except Exception as e:
-            logger.error(f"Failed to get trending recommendations: {e}")
+            logger.error(f"Error getting trending recommendations for user {user.username}: {str(e)}")
             return []
     
-    def _get_popular_recommendations(self, user, limit: int, exclude_ids: set = None) -> List[Dict[str, Any]]:
-        """Get popular product recommendations as fallback"""
+    def _find_similar_users(self, user: User, user_products: set) -> List[User]:
+        """Find users with similar purchase patterns."""
         try:
-            from products.models import Product
-            from orders.models import OrderItem
+            from orders.models import Order
             
-            exclude_ids = exclude_ids or set()
+            # Get users who bought similar products
+            similar_users = []
+            user_product_ids = [p.id for p in user_products]
             
-            # Get overall popular products
-            popular_products = Product.objects.filter(
-                is_available=True
-            ).exclude(
-                id__in=exclude_ids
-            ).annotate(
-                total_sales=Count('orderitem')
-            ).filter(
-                total_sales__gt=0
-            ).order_by('-total_sales')[:limit]
+            # Find users who bought at least 2 of the same products
+            other_orders = Order.objects.filter(
+                products__id__in=user_product_ids,
+                buyer__isnull=False
+            ).exclude(buyer=user)
             
-            recommendations = []
-            for product in popular_products:
-                recommendations.append({
-                    'product_id': product.id,
-                    'product': product,
-                    'score': product.total_sales / 100,  # Normalize
-                    'type': 'popular',
-                    'reason': f'Popular choice ({product.total_sales} total sales)'
-                })
+            user_product_counts = {}
+            for order in other_orders:
+                buyer = order.buyer
+                if buyer:
+                    if buyer.id not in user_product_counts:
+                        user_product_counts[buyer.id] = 0
+                    user_product_counts[buyer.id] += 1
+            
+            # Get users with at least 2 similar products
+            similar_user_ids = [uid for uid, count in user_product_counts.items() if count >= 2]
+            similar_users = User.objects.filter(id__in=similar_user_ids)[:10]  # Limit to top 10
+            
+            return list(similar_users)
+            
+        except Exception as e:
+            logger.error(f"Error finding similar users for {user.username}: {str(e)}")
+            return []
+    
+    def _calculate_user_similarity(self, user1: User, user2: User) -> float:
+        """Calculate similarity between two users based on purchase patterns."""
+        try:
+            from orders.models import Order
+            
+            # Get products for both users
+            user1_products = set(Order.objects.filter(
+                buyer=user1,
+                status='completed'
+            ).values_list('products', flat=True))
+            
+            user2_products = set(Order.objects.filter(
+                buyer=user2,
+                status='completed'
+            ).values_list('products', flat=True))
+            
+            if not user1_products or not user2_products:
+                return 0.0
+            
+            # Calculate Jaccard similarity
+            intersection = len(user1_products.intersection(user2_products))
+            union = len(user1_products.union(user2_products))
+            
+            similarity = intersection / union if union > 0 else 0.0
+            
+            return min(1.0, similarity)
+            
+        except Exception as e:
+            logger.error(f"Error calculating user similarity: {str(e)}")
+            return 0.0
+    
+    def _deduplicate_recommendations(self, recommendations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Remove duplicate products from recommendations."""
+        seen_products = set()
+        unique_recommendations = []
+        
+        for rec in recommendations:
+            product_id = rec['product'].id
+            if product_id not in seen_products:
+                seen_products.add(product_id)
+                unique_recommendations.append(rec)
+        
+        return unique_recommendations
+    
+    def _rank_recommendations(self, recommendations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Rank recommendations by confidence and other factors."""
+        try:
+            # Sort by confidence first
+            recommendations.sort(key=lambda x: x['confidence'], reverse=True)
+            
+            # Apply additional ranking factors
+            for rec in recommendations:
+                # Boost confidence for products with good ratings
+                if hasattr(rec['product'], 'average_rating'):
+                    rating_boost = min(0.2, (rec['product'].average_rating - 3) * 0.1)
+                    rec['confidence'] = min(1.0, rec['confidence'] + rating_boost)
+                
+                # Boost confidence for products with good stock
+                if hasattr(rec['product'], 'stock_quantity'):
+                    stock_boost = min(0.1, rec['product'].stock_quantity / 100 * 0.1)
+                    rec['confidence'] = min(1.0, rec['confidence'] + stock_boost)
+            
+            # Re-sort by final confidence
+            recommendations.sort(key=lambda x: x['confidence'], reverse=True)
             
             return recommendations
             
         except Exception as e:
-            logger.error(f"Failed to get popular recommendations: {e}")
+            logger.error(f"Error ranking recommendations: {str(e)}")
+            return recommendations
+    
+    @performance_monitor
+    def get_similar_products(self, product, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get products similar to a given product."""
+        try:
+            from products.models import Product
+            
+            # Get products in the same category
+            category_products = Product.objects.filter(
+                category=product.category,
+                active=True
+            ).exclude(id=product.id)[:limit*2]
+            
+            similar_products = []
+            for similar_product in category_products:
+                # Calculate similarity score
+                similarity_score = self._calculate_product_similarity(product, similar_product)
+                
+                if similarity_score > 0.3:  # Only include products with reasonable similarity
+                    similar_products.append({
+                        'product': similar_product,
+                        'similarity_score': similarity_score,
+                        'explanation': f"Similar category and characteristics to {product.name}"
+                    })
+            
+            # Sort by similarity and return top results
+            similar_products.sort(key=lambda x: x['similarity_score'], reverse=True)
+            return similar_products[:limit]
+            
+        except Exception as e:
+            logger.error(f"Error getting similar products for {product.name}: {str(e)}")
             return []
     
     def _calculate_product_similarity(self, product1, product2) -> float:
-        """Calculate similarity score between two products"""
+        """Calculate similarity between two products."""
         try:
-            similarity = 0.0
+            similarity_score = 0.0
             
-            # Category similarity
-            if product1.category_id == product2.category_id:
-                similarity += 0.4
+            # Category similarity (40% weight)
+            if product1.category == product2.category:
+                similarity_score += 0.4
             
-            # Vendor similarity
-            if product1.vendor_id == product2.vendor_id:
-                similarity += 0.3
+            # Price similarity (30% weight)
+            price1 = float(product1.price_btc or 0)
+            price2 = float(product2.price_btc or 0)
             
-            # Price similarity
-            price_diff = abs(float(product1.price_btc) - float(product2.price_btc))
-            max_price = max(float(product1.price_btc), float(product2.price_btc))
-            if max_price > 0:
-                price_similarity = 1 - (price_diff / max_price)
-                similarity += price_similarity * 0.3
+            if price1 > 0 and price2 > 0:
+                price_diff = abs(price1 - price2) / max(price1, price2)
+                price_similarity = max(0, 1 - price_diff)
+                similarity_score += price_similarity * 0.3
             
-            # Name/description similarity (simple keyword matching)
-            product1_words = set(product1.name.lower().split() + product1.description.lower().split())
-            product2_words = set(product2.name.lower().split() + product2.description.lower().split())
+            # Description similarity (20% weight)
+            if product1.description and product2.description:
+                # Simple keyword matching (in a real system, use more sophisticated NLP)
+                desc1_words = set(product1.description.lower().split())
+                desc2_words = set(product2.description.lower().split())
+                
+                if desc1_words and desc2_words:
+                    word_similarity = len(desc1_words.intersection(desc2_words)) / len(desc1_words.union(desc2_words))
+                    similarity_score += word_similarity * 0.2
             
-            if product1_words and product2_words:
-                common_words = product1_words.intersection(product2_words)
-                text_similarity = len(common_words) / max(len(product1_words), len(product2_words))
-                similarity += text_similarity * 0.1
+            # Stock availability similarity (10% weight)
+            if hasattr(product1, 'stock_quantity') and hasattr(product2, 'stock_quantity'):
+                stock1 = product1.stock_quantity or 0
+                stock2 = product2.stock_quantity or 0
+                
+                if stock1 > 0 and stock2 > 0:
+                    stock_similarity = min(stock1, stock2) / max(stock1, stock2)
+                    similarity_score += stock_similarity * 0.1
             
-            return min(similarity, 1.0)
+            return min(1.0, similarity_score)
             
         except Exception as e:
-            logger.error(f"Failed to calculate product similarity: {e}")
+            logger.error(f"Error calculating product similarity: {str(e)}")
             return 0.0
     
-    def _enhance_recommendation(self, recommendation: Dict[str, Any], user) -> Dict[str, Any]:
-        """Add additional metadata to recommendation"""
+    @performance_monitor
+    def get_search_suggestions(self, query: str, limit: int = 5) -> List[str]:
+        """Get search suggestions based on user query."""
         try:
-            product = recommendation['product']
+            from products.models import Product
             
-            enhanced = self._product_to_dict(product)
-            enhanced.update({
-                'recommendation_score': round(recommendation['score'], 3),
-                'recommendation_type': recommendation['type'],
-                'recommendation_reason': recommendation['reason'],
-                'confidence': self._calculate_confidence(recommendation['score'], recommendation['type']),
-                'why_recommended': self._generate_explanation(recommendation, user)
-            })
+            # Simple search suggestions (in a real system, use more sophisticated search)
+            suggestions = []
             
-            return enhanced
+            # Get products that match the query
+            matching_products = Product.objects.filter(
+                Q(name__icontains=query) | Q(description__icontains=query),
+                active=True
+            )[:limit*2]
+            
+            # Extract suggestions from product names
+            for product in matching_products:
+                name_words = product.name.lower().split()
+                for word in name_words:
+                    if word.startswith(query.lower()) and len(word) > len(query):
+                        suggestions.append(word.capitalize())
+            
+            # Get category suggestions
+            from products.models import Category
+            category_suggestions = Category.objects.filter(
+                name__icontains=query
+            ).values_list('name', flat=True)[:limit//2]
+            
+            suggestions.extend(category_suggestions)
+            
+            # Remove duplicates and return top suggestions
+            unique_suggestions = list(dict.fromkeys(suggestions))
+            return unique_suggestions[:limit]
             
         except Exception as e:
-            logger.error(f"Failed to enhance recommendation: {e}")
-            return recommendation
+            logger.error(f"Error getting search suggestions for '{query}': {str(e)}")
+            return []
     
-    def _product_to_dict(self, product) -> Dict[str, Any]:
-        """Convert product to dictionary representation"""
-        return {
-            'id': product.id,
-            'name': product.name,
-            'description': product.description[:200] + '...' if len(product.description) > 200 else product.description,
-            'price_btc': float(product.price_btc),
-            'price_xmr': float(product.price_xmr),
-            'category': product.category.name,
-            'vendor': product.vendor.user.username,
-            'stock_quantity': product.stock_quantity,
-            'image_url': product.image_url(),
-            'thumbnail_url': product.thumbnail_url(),
-        }
+    @performance_monitor
+    def log_search(self, user: Optional[User], query: str, results_count: int, filters: Dict = None):
+        """Log search activity for analytics and personalization."""
+        try:
+            # In a real system, this would log to a database
+            # For now, we'll just log to the logger
+            logger.info(f"Search logged - User: {user.username if user else 'Anonymous'}, "
+                       f"Query: '{query}', Results: {results_count}, Filters: {filters}")
+            
+        except Exception as e:
+            logger.error(f"Error logging search: {str(e)}")
     
-    def _calculate_confidence(self, score: float, rec_type: str) -> str:
-        """Calculate confidence level for recommendation"""
-        if rec_type == 'collaborative' and score > 0.5:
-            return 'high'
-        elif rec_type == 'content_based' and score > 0.7:
-            return 'high'
-        elif score > 0.3:
-            return 'medium'
-        else:
-            return 'low'
-    
-    def _generate_explanation(self, recommendation: Dict[str, Any], user) -> str:
-        """Generate human-readable explanation for recommendation"""
-        rec_type = recommendation['type']
-        
-        explanations = {
-            'collaborative': "Other users with similar purchase history also bought this item",
-            'content_based': "This matches your previous purchases and preferences",
-            'trending': "This item is currently popular among other users",
-            'popular': "This is a well-reviewed and frequently purchased item"
-        }
-        
-        return explanations.get(rec_type, "This item might interest you based on marketplace trends")
+    def get_recommendation_explanation(self, recommendation: Dict[str, Any]) -> str:
+        """Get human-readable explanation for a recommendation."""
+        try:
+            base_explanation = recommendation.get('explanation', 'Recommended for you')
+            
+            # Add confidence level description
+            confidence = recommendation.get('confidence', 0)
+            if confidence >= 0.8:
+                confidence_desc = "Highly recommended"
+            elif confidence >= 0.6:
+                confidence_desc = "Recommended"
+            elif confidence >= 0.4:
+                confidence_desc = "May interest you"
+            else:
+                confidence_desc = "Worth considering"
+            
+            return f"{confidence_desc}: {base_explanation}"
+            
+        except Exception as e:
+            logger.error(f"Error getting recommendation explanation: {str(e)}")
+            return "Recommended for you"

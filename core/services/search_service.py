@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.utils import timezone
 
-from core.base_service import BaseService
+from .base_service import BaseService
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

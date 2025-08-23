@@ -1,0 +1,216 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrastyle %}
+<style>
+    .analytics-dashboard {
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #007cba;
+    }
+    
+    .stat-card h3 {
+        margin: 0 0 10px 0;
+        color: #333;
+        font-size: 16px;
+    }
+    
+    .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007cba;
+        margin-bottom: 5px;
+    }
+    
+    .stat-description {
+        color: #666;
+        font-size: 14px;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .action-btn {
+        background: #007cba;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .action-btn:hover {
+        background: #005a87;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .section-title {
+        font-size: 20px;
+        font-weight: bold;
+        margin: 30px 0 20px 0;
+        color: #333;
+        border-bottom: 2px solid #007cba;
+        padding-bottom: 10px;
+    }
+    
+    .quick-actions {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .quick-actions h3 {
+        margin: 0 0 15px 0;
+        color: #333;
+    }
+    
+    .quick-actions ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .quick-actions li {
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .quick-actions li:last-child {
+        border-bottom: none;
+    }
+    
+    .quick-actions a {
+        color: #007cba;
+        text-decoration: none;
+    }
+    
+    .quick-actions a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-dashboard">
+    <h1>Analytics Dashboard</h1>
+    
+    <div class="action-buttons">
+        <a href="{% url 'admin:refresh-analytics' %}" class="action-btn">Refresh Analytics</a>
+        <a href="{% url 'admin:export-analytics' %}" class="action-btn">Export Data</a>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Loyalty System</h3>
+            <div class="stat-value">{{ loyalty_stats.total_users }}</div>
+            <div class="stat-description">Total Users</div>
+            <div class="stat-value">{{ loyalty_stats.total_points }}</div>
+            <div class="stat-description">Total Points</div>
+            {% if loyalty_stats.top_level %}
+            <div class="stat-value">{{ loyalty_stats.top_level.level|title }}</div>
+            <div class="stat-description">Most Common Level</div>
+            {% endif %}
+        </div>
+        
+        <div class="stat-card">
+            <h3>Search Analytics</h3>
+            <div class="stat-value">{{ search_stats.total_searches }}</div>
+            <div class="stat-description">Total Searches</div>
+            <div class="stat-value">{{ search_stats.today_searches }}</div>
+            <div class="stat-description">Today's Searches</div>
+            <div class="stat-value">{{ search_stats.avg_results|floatformat:1 }}</div>
+            <div class="stat-description">Avg Results</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Recommendations</h3>
+            <div class="stat-value">{{ rec_stats.total_recommendations }}</div>
+            <div class="stat-description">Total Recommendations</div>
+            <div class="stat-value">{{ rec_stats.active_recommendations }}</div>
+            <div class="stat-description">Active Recommendations</div>
+            <div class="stat-value">{{ rec_stats.avg_confidence|floatformat:2 }}</div>
+            <div class="stat-description">Avg Confidence</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Dispute Resolution</h3>
+            <div class="stat-value">{{ dispute_stats.total_arbitrations }}</div>
+            <div class="stat-description">Total Arbitrations</div>
+            <div class="stat-value">{{ dispute_stats.automated_decisions }}</div>
+            <div class="stat-description">Automated Decisions</div>
+            <div class="stat-value">{{ dispute_stats.avg_confidence|floatformat:2 }}</div>
+            <div class="stat-description">Avg Confidence</div>
+        </div>
+    </div>
+    
+    <div class="quick-actions">
+        <h3>Quick Actions</h3>
+        <ul>
+            <li><a href="{% url 'admin:core_loyaltypoints_changelist' %}">Manage Loyalty Points</a></li>
+            <li><a href="{% url 'admin:core_loyaltytransaction_changelist' %}">View Loyalty Transactions</a></li>
+            <li><a href="{% url 'admin:core_vendoranalytics_changelist' %}">Manage Vendor Analytics</a></li>
+            <li><a href="{% url 'admin:core_productrecommendation_changelist' %}">Manage Product Recommendations</a></li>
+            <li><a href="{% url 'admin:core_priceprediction_changelist' %}">View Price Predictions</a></li>
+            <li><a href="{% url 'admin:core_userpreferenceprofile_changelist' %}">Manage User Preferences</a></li>
+            <li><a href="{% url 'admin:core_searchquery_changelist' %}">View Search Analytics</a></li>
+            <li><a href="{% url 'admin:admin:core_disputearbitration_changelist' %}">View Dispute Arbitrations</a></li>
+        </ul>
+    </div>
+    
+    <div class="section-title">System Overview</div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Recent Activity</h3>
+            <div class="stat-description">Last 24 hours</div>
+            <div class="stat-value">{{ search_stats.today_searches }}</div>
+            <div class="stat-description">New Searches</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Performance</h3>
+            <div class="stat-value">{{ rec_stats.avg_confidence|floatformat:2 }}</div>
+            <div class="stat-description">Recommendation Quality</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Efficiency</h3>
+            <div class="stat-value">{{ dispute_stats.automated_decisions }}</div>
+            <div class="stat-description">Automated Resolutions</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Engagement</h3>
+            <div class="stat-value">{{ loyalty_stats.avg_points|floatformat:0 }}</div>
+            <div class="stat-description">Avg Points per User</div>
+        </div>
+    </div>
+</div>
+
+<!-- Original changelist content -->
+{{ block.super }}
+{% endblock %}

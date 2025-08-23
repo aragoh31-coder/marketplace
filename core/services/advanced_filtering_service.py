@@ -12,7 +12,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q, Count, Avg, Sum, Min, Max, F
 from django.utils import timezone
 
-from core.base_service import BaseService
+from .base_service import BaseService
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

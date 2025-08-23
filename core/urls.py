@@ -9,12 +9,24 @@ from . import views
 app_name = 'core'
 
 urlpatterns = [
-    # Tor-safe routes
-    path('tor/', views.tor_safe_home, name='tor_home'),
-    path('tor/products/', views.tor_safe_product_list, name='tor_products'),
-    path('tor/login/', views.tor_safe_login, name='tor_login'),
-    path('tor/wallet/', views.tor_safe_wallet_detail, name='tor_wallet'),
+    # Existing URLs
+    path('', views.home, name='home'),
+    path('tor/', views.tor_safe_home, name='tor_safe_home'),
+    path('tor/products/', views.tor_safe_product_list, name='tor_safe_product_list'),
+                # path('wallet/', views.wallet_redirect, name='wallet_redirect'),  # Removed - view doesn't exist
     
-    # Core functionality
-    path('secure-images/<path:path>', views.serve_secure_image, name='secure_image'),
+    # New advanced feature URLs
+    path('loyalty/', views.loyalty_dashboard, name='loyalty_dashboard'),
+    path('loyalty/rewards/', views.loyalty_rewards, name='loyalty_rewards'),
+    path('analytics/', views.vendor_analytics_dashboard, name='vendor_analytics_dashboard'),
+    path('recommendations/', views.product_recommendations, name='product_recommendations'),
+    path('price-predictions/', views.price_predictions, name='price_predictions'),
+    path('preferences/', views.user_preferences, name='user_preferences'),
+    path('search/', views.advanced_search, name='advanced_search'),
+    path('disputes/', views.dispute_management, name='dispute_management'),
+    path('insights/', views.system_insights, name='system_insights'),
+    
+    # API endpoints
+    path('api/preferences/update/', views.update_user_preferences, name='update_user_preferences'),
+    path('api/recommendations/refresh/', views.refresh_recommendations, name='refresh_recommendations'),
 ]
