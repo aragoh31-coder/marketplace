@@ -75,20 +75,21 @@ class BotDetectionMiddleware:
 
     def get_client_identifier(self, request):
         """Get anonymized client identifier for privacy"""
-        ip = self.get_client_ip(request)
+        session_id = self.get_session_id(request)
         user_agent = request.META.get("HTTP_USER_AGENT", "")
 
-        identifier = hashlib.sha256(f"{ip}:{user_agent}".encode()).hexdigest()[:16]
+        identifier = hashlib.sha256(f"{session_id}:{user_agent}".encode()).hexdigest()[:16]
         return identifier
 
+    def get_session_id(self, request):
+        """Get or create session ID for tracking (Tor-compatible)"""
+        if not hasattr(request, 'session') or not request.session.session_key:
+            request.session.create()
+        return request.session.session_key
+    
     def get_client_ip(self, request):
-        """Get client IP address"""
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0].strip()
-        else:
-            ip = request.META.get("REMOTE_ADDR", "127.0.0.1")
-        return ip
+        """DEPRECATED: Returns generic value for Tor compatibility"""
+        return "tor-user"
 
     def is_blocked(self, client_id):
         """Check if client is blocked"""

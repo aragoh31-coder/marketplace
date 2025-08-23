@@ -86,15 +86,8 @@ class WalletSecurityMiddleware(MiddlewareMixin):
         if not request.user.is_authenticated:
             return True
 
-        current_ip = self._get_client_ip(request)
-        session_ip = request.session.get("login_ip")
-
-        if session_ip and session_ip != current_ip:
-            logger.warning(f"IP change detected for user {request.user.username}")
-            return False
-
-        if not session_ip:
-            request.session["login_ip"] = current_ip
+        # IP consistency check removed for Tor compatibility
+        # Sessions are tracked by session ID instead
 
         return True
 
@@ -123,7 +116,7 @@ class WalletSecurityMiddleware(MiddlewareMixin):
 
     def _check_multi_window_rate_limit(self, request):
         """Multi-window rate limiting with different limits"""
-        ip = self._get_client_ip(request)
+        session_id = self._get_session_id(request)
         current_time = time.time()
 
         limits = [
@@ -133,7 +126,7 @@ class WalletSecurityMiddleware(MiddlewareMixin):
         ]
 
         for window_name, window_size, limit in limits:
-            cache_key = f"rate_limit:{window_name}:{ip}"
+            cache_key = f"rate_limit:{window_name}:{session_id}"
             requests = cache.get(cache_key, [])
 
             requests = [req_time for req_time in requests if current_time - req_time < window_size]
@@ -146,14 +139,16 @@ class WalletSecurityMiddleware(MiddlewareMixin):
 
         return True
 
+    def _get_session_id(self, request):
+        """Get or create session ID for rate limiting (Tor-compatible)"""
+        if not hasattr(request, 'session') or not request.session.session_key:
+            request.session.create()
+        return request.session.session_key
+    
     def _get_client_ip(self, request):
-        """Get client IP with proxy support"""
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0].strip()
-        else:
-            ip = request.META.get("REMOTE_ADDR", "127.0.0.1")
-        return ip
+        """DEPRECATED: Get client IP - Use _get_session_id instead for Tor compatibility"""
+        # Keeping for any legacy code that might still reference this
+        return "tor-user"  # Return generic value since IPs are meaningless in Tor
 
     def _handle_bot_detection(self, request):
         """Handle detected bots"""
@@ -219,25 +214,26 @@ class RateLimitMiddleware:
 
     def check_rate_limit(self, request, action, max_attempts):
         """Check rate limit for specific action"""
-        ip = self.get_client_ip(request)
-        cache_key = f"rate_limit:{action}:{ip}:{request.user.id}"
+        session_id = self.get_session_id(request)
+        cache_key = f"rate_limit:{action}:{session_id}:{request.user.id}"
 
         attempts = cache.get(cache_key, 0)
         if attempts >= max_attempts:
-            logger.warning(f"Rate limit exceeded for {action} by user {request.user.username} " f"from IP {ip}")
+            logger.warning(f"Rate limit exceeded for {action} by user {request.user.username} " f"session {session_id[:8]}")
             return False
 
         cache.set(cache_key, attempts + 1, 3600)
         return True
 
+    def get_session_id(self, request):
+        """Get or create session ID for rate limiting (Tor-compatible)"""
+        if not hasattr(request, 'session') or not request.session.session_key:
+            request.session.create()
+        return request.session.session_key
+    
     def get_client_ip(self, request):
-        """Get client IP address"""
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0]
-        else:
-            ip = request.META.get("REMOTE_ADDR")
-        return ip
+        """DEPRECATED: Get client IP - Use get_session_id instead for Tor compatibility"""
+        return "tor-user"
 
 
 class EnhancedSecurityMiddleware:
@@ -423,11 +419,11 @@ class EnhancedSecurityMiddleware:
 
     def _is_rate_limited(self, request):
         """Check if request is rate limited"""
-        # Get client IP
-        client_ip = self._get_client_ip(request)
+        # Get session ID
+        session_id = self._get_session_id(request)
         
         # Check rate limiting
-        cache_key = f"rate_limit:{client_ip}"
+        cache_key = f"rate_limit:{session_id}"
         request_count = cache.get(cache_key, 0)
         
         if request_count > 100:  # 100 requests per minute
@@ -437,14 +433,15 @@ class EnhancedSecurityMiddleware:
         cache.set(cache_key, request_count + 1, 60)
         return False
 
+    def _get_session_id(self, request):
+        """Get or create session ID for rate limiting (Tor-compatible)"""
+        if not hasattr(request, 'session') or not request.session.session_key:
+            request.session.create()
+        return request.session.session_key
+    
     def _get_client_ip(self, request):
-        """Get client IP address"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
+        """DEPRECATED: Get client IP - Use _get_session_id instead for Tor compatibility"""
+        return "tor-user"
 
     def _add_security_headers(self, response):
         """Add security headers to response"""

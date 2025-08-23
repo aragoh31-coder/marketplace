@@ -2,7 +2,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -10,10 +10,11 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from django.views.generic import FormView
 
-from .forms import SecureLoginForm, SecureRegistrationForm
-from .utils import detect_suspicious_patterns, log_security_event
+from apps.security.forms import SecureLoginForm, SecureRegistrationForm
+from apps.security.models import log_security_event
+from wallets.models import WalletAddress
 
-logger = logging.getLogger("wallet.security")
+logger = logging.getLogger(__name__)
 
 
 @method_decorator([csrf_protect, never_cache], name="dispatch")
@@ -35,12 +36,12 @@ class SecureLoginView(FormView):
 
         user = authenticate(self.request, username=username, password=password)
 
-        if user is not None:
-            suspicious_score = detect_suspicious_patterns(
+        if user:
+            log_security_event(
                 user,
                 "login",
                 {
-                    "ip_address": self.get_client_ip(),
+                    "session_id": self.get_session_id(),
                     "user_agent": self.request.META.get("HTTP_USER_AGENT", ""),
                     "timestamp": timezone.now(),
                 },
@@ -51,49 +52,48 @@ class SecureLoginView(FormView):
                 "login_attempt",
                 {
                     "success": True,
-                    "ip_address": self.get_client_ip(),
+                    "session_id": self.get_session_id(),
                     "user_agent": self.request.META.get("HTTP_USER_AGENT", ""),
-                    "suspicious_score": suspicious_score,
                 },
-                risk_score=suspicious_score,
+                risk_score=0,
             )
 
-            self.request.session["login_ip"] = self.get_client_ip()
+            # Store session info instead of IP
+            self.request.session["login_session_id"] = self.get_session_id()
             self.request.session["login_time"] = timezone.now().timestamp()
 
             login(self.request, user)
 
-            if suspicious_score > 50:
-                messages.warning(
-                    self.request, "Unusual login detected. Additional security verification may be required."
-                )
-                return redirect("security:security_verification")
+            if user.pgp_fingerprint and user.pgp_login_enabled:
+                return redirect("accounts:pgp_verify")
 
             messages.success(self.request, f"Welcome back, {user.username}!")
-            return super().form_valid(form)
+            return redirect(self.get_success_url())
+
         else:
             log_security_event(
                 None,
-                "failed_login",
+                "login_failed",
                 {
                     "username": username,
-                    "ip_address": self.get_client_ip(),
+                    "session_id": self.get_session_id(),
                     "user_agent": self.request.META.get("HTTP_USER_AGENT", ""),
                 },
-                risk_score=30,
+                risk_score=20,
             )
 
             messages.error(self.request, "Invalid username or password.")
             return self.form_invalid(form)
 
+    def get_session_id(self):
+        """Get or create session ID for tracking (Tor-compatible)"""
+        if not hasattr(self.request, 'session') or not self.request.session.session_key:
+            self.request.session.create()
+        return self.request.session.session_key
+    
     def get_client_ip(self):
-        """Get client IP address"""
-        x_forwarded_for = self.request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0].strip()
-        else:
-            ip = self.request.META.get("REMOTE_ADDR", "127.0.0.1")
-        return ip
+        """DEPRECATED: Returns generic value for Tor compatibility"""
+        return "tor-user"
 
 
 @method_decorator([csrf_protect, never_cache], name="dispatch")
@@ -116,7 +116,7 @@ class SecureRegistrationView(FormView):
             user,
             "registration",
             {
-                "ip_address": self.get_client_ip(),
+                "session_id": self.get_session_id(),
                 "user_agent": self.request.META.get("HTTP_USER_AGENT", ""),
                 "email": user.email,
             },
@@ -131,11 +131,12 @@ class SecureRegistrationView(FormView):
 
         return super().form_valid(form)
 
+    def get_session_id(self):
+        """Get or create session ID for tracking (Tor-compatible)"""
+        if not hasattr(self.request, 'session') or not self.request.session.session_key:
+            self.request.session.create()
+        return self.request.session.session_key
+    
     def get_client_ip(self):
-        """Get client IP address"""
-        x_forwarded_for = self.request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0].strip()
-        else:
-            ip = self.request.META.get("REMOTE_ADDR", "127.0.0.1")
-        return ip
+        """DEPRECATED: Returns generic value for Tor compatibility"""
+        return "tor-user"

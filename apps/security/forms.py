@@ -82,17 +82,15 @@ class NoJSCaptchaMixin:
         except:
             return "default_hash"
 
-    def get_client_ip(self, request):
-        """Get client IP address"""
+    def get_session_id(self, request):
+        """Get or create session ID for rate limiting (Tor-compatible)"""
         if not request:
-            return "127.0.0.1"
-
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0]
-        else:
-            ip = request.META.get("REMOTE_ADDR", "127.0.0.1")
-        return ip
+            return "default_session"
+        
+        if not hasattr(request, 'session') or not request.session.session_key:
+            request.session.create()
+        
+        return request.session.session_key
 
     def clean_website(self):
         """Honeypot field should be empty"""
@@ -191,8 +189,8 @@ class NoJSCaptchaMixin:
 
         try:
             current_time = time.time()
-            ip = self.get_client_ip(self.request)
-            cache_key = f"form_submissions:{ip}"
+            session_id = self.get_session_id(self.request)
+            cache_key = f"form_submissions:{session_id}"
 
             submissions = cache.get(cache_key, [])
             submissions = [ts for ts in submissions if current_time - ts < 3600]
@@ -246,14 +244,14 @@ class SecureLoginForm(NoJSCaptchaMixin, AuthenticationForm):
 
         try:
             current_time = time.time()
-            ip = self.get_client_ip(self.request)
+            session_id = self.get_session_id(self.request)
             username = self.cleaned_data.get("username", "")
 
-            ip_key = f"login_attempts_ip:{ip}"
-            ip_attempts = cache.get(ip_key, [])
-            ip_attempts = [ts for ts in ip_attempts if current_time - ts < 3600]
+            session_key = f"login_attempts_session:{session_id}"
+            session_attempts = cache.get(session_key, [])
+            session_attempts = [ts for ts in session_attempts if current_time - ts < 3600]
 
-            if len(ip_attempts) >= 20:  # 20 attempts per hour per IP
+            if len(session_attempts) >= 20:  # 20 attempts per hour per session
                 return False
 
             user_key = f"login_attempts_user:{username}"
@@ -263,9 +261,9 @@ class SecureLoginForm(NoJSCaptchaMixin, AuthenticationForm):
             if len(user_attempts) >= 5:  # 5 attempts per hour per user
                 return False
 
-            ip_attempts.append(current_time)
+            session_attempts.append(current_time)
             user_attempts.append(current_time)
-            cache.set(ip_key, ip_attempts, 3600)
+            cache.set(session_key, session_attempts, 3600)
             cache.set(user_key, user_attempts, 3600)
 
             return True
@@ -315,13 +313,13 @@ class SecureRegistrationForm(NoJSCaptchaMixin, UserCreationForm):
 
         try:
             current_time = time.time()
-            ip = self.get_client_ip(self.request)
+            session_id = self.get_session_id(self.request)
 
-            cache_key = f"registration_attempts:{ip}"
+            cache_key = f"registration_attempts:{session_id}"
             attempts = cache.get(cache_key, [])
             attempts = [ts for ts in attempts if current_time - ts < 3600]
 
-            if len(attempts) >= 3:  # 3 registrations per hour per IP
+            if len(attempts) >= 3:  # 3 registrations per hour per session
                 return False
 
             attempts.append(current_time)

@@ -190,7 +190,7 @@ def security_challenge_completion(request):
             request.session['security_challenge_expires'] = current_time + (24 * 60 * 60)
             
             # Log successful completion
-            # logger.info(f"Security challenge completed successfully for IP: {request.META.get('REMOTE_ADDR')}") # logger is not defined
+            # logger.info(f"Security challenge completed successfully for session: {request.session.session_key[:8]}") # logger is not defined
             
             messages.success(request, "Security verification completed successfully!")
             return redirect('/')
