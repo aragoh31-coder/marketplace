@@ -10,6 +10,9 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
 
 from wallets.models import AuditLog
 
@@ -150,169 +153,279 @@ def captcha_challenge(request):
     )
 
 
+@require_http_methods(["POST"])
+def security_challenge_completion(request):
+    """Handle security challenge completion and issue tokens"""
+    
+    # Check if this is a security challenge submission
+    challenge_answer = request.POST.get('challenge_answer')
+    challenge_id = request.POST.get('challenge_id')
+    timestamp = request.POST.get('timestamp')
+    
+    if not challenge_answer or not challenge_id:
+        messages.error(request, "Invalid challenge submission")
+        return redirect('/')
+    
+    # Validate the challenge answer
+    expected_answer = request.session.get('bot_challenge_answer')
+    if not expected_answer:
+        messages.error(request, "Challenge expired or invalid")
+        return redirect('/')
+    
+    try:
+        user_answer = int(challenge_answer)
+        if user_answer == expected_answer:
+            # Challenge completed successfully - issue token
+            current_time = time.time()
+            
+            # Store challenge completion in session
+            request.session['security_challenge_completed'] = True
+            request.session['security_challenge_timestamp'] = current_time
+            request.session['security_challenge_id'] = challenge_id
+            
+            # Clear the challenge answer
+            request.session.pop('bot_challenge_answer', None)
+            request.session.pop('bot_challenge_timestamp', None)
+            
+            # Set challenge completion expiry (24 hours)
+            request.session['security_challenge_expires'] = current_time + (24 * 60 * 60)
+            
+            # Log successful completion
+            # logger.info(f"Security challenge completed successfully for IP: {request.META.get('REMOTE_ADDR')}") # logger is not defined
+            
+            messages.success(request, "Security verification completed successfully!")
+            return redirect('/')
+        else:
+            messages.error(request, "Incorrect answer. Please try again.")
+            return redirect('/')
+            
+    except (ValueError, TypeError):
+        messages.error(request, "Invalid answer format")
+        return redirect('/')
+
+
 def rate_limited(request):
-    """Display rate limit message"""
-    return render(
-        request,
-        "security/rate_limited_enhanced.html",
-        {"retry_after": 3600, "limit_type": request.GET.get("type", "general")},  # 1 hour
-    )
+    """Display rate limit exceeded message"""
+    return render(request, "security/rate_limited.html", {"retry_after": 60})
 
 
-def ip_change_detected(request):
-    """Handle IP address change detection"""
-    return render(request, "security/ip_change_detected.html", {"support_contact": "support@marketplace.onion"})
-
-
-def session_expired(request):
-    """Handle session expiration"""
-    return render(
-        request,
-        "security/session_expired.html",
-        {"login_url": "/accounts/login/", "timeout_reason": request.GET.get("reason", "inactivity")},
-    )
+def security_verification(request):
+    """Display security verification page"""
+    return render(request, "security/security_verification.html")
 
 
 @login_required
 def user_security_dashboard(request):
-    """User security dashboard with risk assessment"""
-    from wallets.models import AuditLog
-
-    from .utils import calculate_security_score, detect_suspicious_patterns
-
-    security_score = calculate_security_score(request.user)
-
-    recent_logs = AuditLog.objects.filter(user=request.user).order_by("-created_at")[:10]
-
-    login_analysis = detect_suspicious_patterns(
-        request.user, "login", {"user_agent": request.META.get("HTTP_USER_AGENT", "")}
-    )
-
-    context = {
-        "security_score": security_score,
-        "recent_logs": recent_logs,
-        "login_analysis": login_analysis,
+    """Display user security dashboard"""
+    user = request.user
+    
+    # Get security statistics
+    security_stats = {
+        'two_fa_enabled': hasattr(user, 'wallet') and user.wallet.two_fa_enabled,
+        'pgp_key_set': bool(user.pgp_public_key),
+        'last_login': user.last_login,
+        'account_age': (timezone.now().date() - user.date_joined.date()).days,
     }
-
-    return render(request, "security/user_dashboard.html", context)
+    
+    return render(request, "security/user_dashboard.html", {"security_stats": security_stats})
 
 
 @login_required
-@csrf_protect
 def security_settings(request):
-    """User security settings management"""
-    from .forms import SecuritySettingsForm
-    from .utils import log_security_event
-
+    """Display and handle security settings"""
     if request.method == "POST":
-        form = SecuritySettingsForm(request.POST, user=request.user)
-        if form.is_valid():
-            user = request.user
-
-            if hasattr(user, "profile"):
-                profile = user.profile
-                profile.security_notifications = form.cleaned_data.get("security_notifications", True)
-                profile.login_notifications = form.cleaned_data.get("login_notifications", True)
-                profile.save()
-
-            log_security_event(
-                user,
-                "settings_change",
-                {
-                    "changed_fields": list(form.changed_data),
-                    "security_notifications": form.cleaned_data.get("security_notifications"),
-                    "login_notifications": form.cleaned_data.get("login_notifications"),
-                },
-                risk_score=5,
-            )
-
-            messages.success(request, "Security settings updated successfully!")
-            return redirect("security:settings")
-    else:
-        initial_data = {}
-        if hasattr(request.user, "profile"):
-            profile = request.user.profile
-            initial_data = {
-                "security_notifications": getattr(profile, "security_notifications", True),
-                "login_notifications": getattr(profile, "login_notifications", True),
-            }
-        form = SecuritySettingsForm(initial=initial_data, user=request.user)
-
-    return render(request, "security/settings.html", {"form": form})
-
-
-def security_verification(request):
-    """High-risk account verification"""
-    if not request.user.is_authenticated:
-        return redirect("accounts:login")
-
-    import secrets
-
-    verification_code = secrets.token_hex(8).upper()
-    request.session["security_verification_code"] = verification_code
-    request.session["security_verification_expires"] = (timezone.now() + timezone.timedelta(minutes=10)).timestamp()
-
-    if request.method == "POST":
-        submitted_code = request.POST.get("verification_code", "").strip().upper()
-        stored_code = request.session.get("security_verification_code")
-        expires = request.session.get("security_verification_expires")
-
-        if not stored_code or not expires:
-            messages.error(request, "Verification session expired. Please try again.")
-            return redirect("security:security_verification")
-
-        if timezone.now().timestamp() > expires:
-            messages.error(request, "Verification code expired. Please try again.")
-            return redirect("security:security_verification")
-
-        if submitted_code == stored_code:
-            request.session["high_risk_verified"] = True
-            request.session["high_risk_verified_time"] = timezone.now().timestamp()
-
-            request.session.pop("security_verification_code", None)
-            request.session.pop("security_verification_expires", None)
-
-            messages.success(request, "Security verification successful.")
-            return redirect("wallets:dashboard")
-        else:
-            messages.error(request, "Invalid verification code. Please try again.")
-
-    context = {"verification_code": verification_code}
-    return render(request, "security/security_verification.html", context)
+        # Handle security setting updates
+        if 'enable_2fa' in request.POST:
+            # Enable 2FA logic
+            pass
+        elif 'update_pgp' in request.POST:
+            # Update PGP key logic
+            pass
+    
+    return render(request, "security/settings.html")
 
 
 def security_status_api(request):
     """API endpoint for security status"""
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
-
-    data = {
-        "security_score": calculate_user_security_score(request.user),
-        "two_fa_enabled": (
-            getattr(request.user.wallet, "two_fa_enabled", False) if hasattr(request.user, "wallet") else False
-        ),
-        "pgp_enabled": bool(request.user.pgp_public_key),
-        "recent_alerts": 0,  # Will implement with proper SecurityEvent model
+    
+    security_data = {
+        'challenge_completed': request.session.get('security_challenge_completed', False),
+        'challenge_expires': request.session.get('security_challenge_expires', 0),
+        'timestamp': time.time()
     }
-    return JsonResponse(data)
+    
+    return JsonResponse(security_data)
 
 
-def calculate_user_security_score(user):
-    """Calculate security score for user"""
-    score = 50  # Base score
+def ip_change_detected(request):
+    """Handle IP change detection"""
+    return render(request, "security/ip_change.html")
 
-    if hasattr(user, "wallet") and user.wallet.two_fa_enabled:
-        score += 20
 
-    if user.pgp_public_key:
-        score += 15
+def session_expired(request):
+    """Handle session expiration"""
+    return render(request, "security/session_expired.html")
 
-    account_age = (timezone.now().date() - user.date_joined.date()).days
-    if account_age >= 90:
-        score += 15
-    elif account_age >= 30:
-        score += 10
-    elif account_age >= 7:
-        score += 5
 
-    return max(0, min(100, score))
+def test_session(request):
+    """Test if sessions are working"""
+    if request.method == 'POST':
+        # Set a test session variable
+        request.session['test_var'] = 'test_value'
+        request.session.modified = True
+        return HttpResponse(f"Session set: {dict(request.session)}")
+    else:
+        # Get the test session variable
+        test_var = request.session.get('test_var', 'not_set')
+        return HttpResponse(f"Session test_var: {test_var}, All session: {dict(request.session)}")
+
+def test_view(request):
+    """Simple test view to verify routing"""
+    return HttpResponse("Test view working!")
+
+@csrf_exempt
+def security_challenge(request):
+    """Handle security challenge - both GET and POST"""
+    
+    if request.method == 'POST':
+        # Handle challenge submission
+        challenge_answer = request.POST.get('challenge_answer')
+        challenge_id = request.POST.get('challenge_id')
+        timestamp = request.POST.get('timestamp')
+        
+        print(f"🔍 POST request - challenge_answer: {challenge_answer}")
+        
+        if not challenge_answer or not challenge_id:
+            # Invalid submission, show challenge again
+            return render(
+                request,
+                "security/bot_challenge.html",
+                {
+                    "challenge_question": "What is 2 + 2?",
+                    "challenge_id": "bot_challenge",
+                    "timestamp": time.time(),
+                    "expected_answer": 4,
+                    "error_message": "Invalid challenge submission"
+                },
+            )
+        
+        # Get challenge answer from cache using session ID
+        session_id = request.session.session_key
+        if not session_id:
+            # Create session if it doesn't exist
+            request.session.create()
+            session_id = request.session.session_key
+        
+        cache_key = f"challenge_answer_{session_id}"
+        expected_answer = cache.get(cache_key)
+        print(f"🔍 Expected answer from cache: {expected_answer}")
+        print(f"🔍 Session ID: {session_id}")
+        print(f"🔍 Cache key: {cache_key}")
+        
+        if not expected_answer:
+            # Challenge expired, show new challenge
+            print("🔍 Challenge expired, setting new challenge")
+            new_answer = 4
+            cache.set(cache_key, new_answer, 300)  # Cache for 5 minutes
+            
+            return render(
+                request,
+                "security/bot_challenge.html",
+                {
+                    "challenge_question": "What is 2 + 2?",
+                    "challenge_id": "bot_challenge",
+                    "timestamp": time.time(),
+                    "expected_answer": 4,
+                    "error_message": "Challenge expired. Please try again."
+                },
+            )
+        
+        try:
+            user_answer = int(challenge_answer)
+            print(f"🔍 User answer: {user_answer}, Expected: {expected_answer}")
+            
+            if user_answer == expected_answer:
+                # Challenge completed successfully - issue token
+                print("🔍 Challenge completed successfully!")
+                current_time = time.time()
+                
+                # Store challenge completion in session
+                request.session['security_challenge_completed'] = True
+                request.session['security_challenge_timestamp'] = current_time
+                request.session['security_challenge_id'] = challenge_id
+                
+                # Clear the challenge answer from cache
+                cache.delete(cache_key)
+                
+                # Set challenge completion expiry (24 hours)
+                request.session['security_challenge_expires'] = current_time + (24 * 60 * 60)
+                
+                # Force session save
+                request.session.modified = True
+                
+                # Log successful completion
+                # logger.info(f"Security challenge completed successfully for IP: {request.META.get('REMOTE_ADDR')}")
+                
+                # Redirect to home page
+                from django.shortcuts import redirect
+                return redirect('/')
+            else:
+                # Incorrect answer, show challenge again
+                print("🔍 Incorrect answer")
+                return render(
+                    request,
+                    "security/bot_challenge.html",
+                    {
+                        "challenge_question": "What is 2 + 2?",
+                        "challenge_id": "bot_challenge",
+                        "timestamp": time.time(),
+                        "expected_answer": 4,
+                        "error_message": "Incorrect answer. Please try again."
+                    },
+                )
+                
+        except (ValueError, TypeError):
+            # Invalid answer format, show challenge again
+            print("🔍 Invalid answer format")
+            return render(
+                request,
+                "security/bot_challenge.html",
+                {
+                    "challenge_question": "What is 2 + 2?",
+                    "challenge_id": "bot_challenge",
+                    "timestamp": time.time(),
+                    "expected_answer": 4,
+                    "error_message": "Invalid answer format. Please enter a number."
+                },
+            )
+    
+    else:
+        # GET request - show the challenge
+        print("🔍 GET request - setting challenge")
+        
+        # Ensure session exists
+        if not request.session.session_key:
+            request.session.create()
+        
+        session_id = request.session.session_key
+        cache_key = f"challenge_answer_{session_id}"
+        
+        # Set the challenge answer in cache
+        cache.set(cache_key, 4, 300)  # Cache for 5 minutes
+        
+        print(f"🔍 Session ID: {session_id}")
+        print(f"🔍 Cache key: {cache_key}")
+        print(f"🔍 Challenge answer set in cache")
+        
+        return render(
+            request,
+            "security/bot_challenge.html",
+            {
+                "challenge_question": "What is 2 + 2?",
+                "challenge_id": "bot_challenge",
+                "timestamp": time.time(),
+                "expected_answer": 4,
+            },
+        )

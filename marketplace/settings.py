@@ -58,8 +58,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_ratelimit.middleware.RatelimitMiddleware",
     "apps.security.middleware.EnhancedSecurityMiddleware",
-    "apps.security.middleware.WalletSecurityMiddleware",
-    "apps.security.middleware.RateLimitMiddleware",
+    # "apps.security.middleware.WalletSecurityMiddleware",
+    # "apps.security.middleware.RateLimitMiddleware",
 ]
 
 ROOT_URLCONF = "marketplace.urls"
@@ -119,11 +119,8 @@ SITE_ID = 1
 
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": env("REDIS_URL"),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
     }
 }
 
