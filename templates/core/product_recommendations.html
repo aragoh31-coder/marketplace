@@ -1,0 +1,414 @@
+{% extends "base_tor_safe.html" %}
+{% load static %}
+
+{% block title %}Product Recommendations - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="recommendations-page">
+    <h1>Product Recommendations</h1>
+    
+    <div class="recommendations-overview">
+        <div class="overview-card">
+            <h2>Based on Your Preferences</h2>
+            <p>We've analyzed your shopping behavior and preferences to suggest products you might like.</p>
+        </div>
+    </div>
+
+    {% if recommendations %}
+        <div class="recommendations-section">
+            <h2>Personalized Recommendations</h2>
+            <div class="recommendations-grid">
+                {% for rec in recommendations.personalized %}
+                <div class="recommendation-card">
+                    <div class="product-image">
+                        {% if rec.product.image %}
+                            <img src="{% url 'core:serve_secure_image' rec.product.image.url %}" alt="{{ rec.product.name }}" loading="lazy">
+                        {% else %}
+                            <div class="no-image">No Image</div>
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        <h3>{{ rec.product.name }}</h3>
+                        <p class="vendor">by {{ rec.product.vendor.user.username }}</p>
+                        <p class="price">${{ rec.product.price|floatformat:2 }}</p>
+                        <p class="score">Match Score: {{ rec.score|floatformat:1 }}%</p>
+                        <div class="reason">
+                            <strong>Why recommended:</strong> {{ rec.reason }}
+                        </div>
+                        <a href="{% url 'products:product_detail' rec.product.id %}" class="view-btn">View Product</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if recommendations.trending %}
+        <div class="recommendations-section">
+            <h2>Trending Products</h2>
+            <div class="recommendations-grid">
+                {% for rec in recommendations.trending %}
+                <div class="recommendation-card trending">
+                    <div class="product-image">
+                        {% if rec.product.image %}
+                            <img src="{% url 'core:serve_secure_image' rec.product.image.url %}" alt="{{ rec.product.name }}" loading="lazy">
+                        {% else %}
+                            <div class="no-image">No Image</div>
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        <h3>{{ rec.product.name }}</h3>
+                        <p class="vendor">by {{ rec.product.vendor.user.username }}</p>
+                        <p class="price">${{ rec.product.price|floatformat:2 }}</p>
+                        <p class="trend">🔥 Trending</p>
+                        <a href="{% url 'products:product_detail' rec.product.id %}" class="view-btn">View Product</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if recommendations.similar %}
+        <div class="recommendations-section">
+            <h2>Similar to What You've Viewed</h2>
+            <div class="recommendations-grid">
+                {% for rec in recommendations.similar %}
+                <div class="recommendation-card similar">
+                    <div class="product-image">
+                        {% if rec.product.image %}
+                            <img src="{% url 'core:serve_secure_image' rec.product.image.url %}" alt="{{ rec.product.name }}" loading="lazy">
+                        {% else %}
+                            <div class="no-image">No Image</div>
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        <h3>{{ rec.product.name }}</h3>
+                        <p class="vendor">by {{ rec.product.vendor.user.username }}</p>
+                        <p class="price">${{ rec.product.price|floatformat:2 }}</p>
+                        <p class="similarity">Similarity: {{ rec.similarity|floatformat:1 }}%</p>
+                        <a href="{% url 'products:product_detail' rec.product.id %}" class="view-btn">View Product</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if recommendations.collaborative %}
+        <div class="recommendations-section">
+            <h2>Based on Similar Users</h2>
+            <div class="recommendations-grid">
+                {% for rec in recommendations.collaborative %}
+                <div class="recommendation-card collaborative">
+                    <div class="product-image">
+                        {% if rec.product.image %}
+                            <img src="{% url 'core:serve_secure_image' rec.product.image.url %}" alt="{{ rec.product.name }}" loading="lazy">
+                        {% else %}
+                            <div class="no-image">No Image</div>
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        <h3>{{ rec.product.name }}</h3>
+                        <p class="vendor">by {{ rec.product.vendor.user.username }}</p>
+                        <p class="price">${{ rec.product.price|floatformat:2 }}</p>
+                        <p class="collaborative">Popular with similar users</p>
+                        <a href="{% url 'products:product_detail' rec.product.id %}" class="view-btn">View Product</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="no-recommendations">
+            <h2>No Recommendations Yet</h2>
+            <p>We need to learn more about your preferences to provide personalized recommendations.</p>
+            <div class="suggestions">
+                <h3>To get better recommendations:</h3>
+                <ul>
+                    <li>Browse and view products</li>
+                    <li>Make purchases</li>
+                    <li>Rate products you've bought</li>
+                    <li>Add products to your wishlist</li>
+                </ul>
+            </div>
+            <a href="{% url 'core:tor_safe_product_list' %}" class="browse-btn">Browse Products</a>
+        </div>
+    {% endif %}
+
+    <div class="refresh-section">
+        <h3>Refresh Recommendations</h3>
+        <p>Click the button below to refresh your recommendations based on your latest activity.</p>
+        <form method="post" action="{% url 'core:refresh_recommendations' %}">
+            {% csrf_token %}
+            <button type="submit" class="refresh-btn">Refresh Recommendations</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.recommendations-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.recommendations-page h1 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+}
+
+.recommendations-overview {
+    margin-bottom: 40px;
+}
+
+.overview-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.overview-card h2 {
+    margin: 0 0 15px 0;
+    font-size: 1.8em;
+}
+
+.overview-card p {
+    margin: 0;
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.recommendations-section {
+    margin-bottom: 50px;
+}
+
+.recommendations-section h2 {
+    color: #34495e;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+}
+
+.recommendations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.recommendation-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #e1e8ed;
+}
+
+.recommendation-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.recommendation-card.trending {
+    border-left: 5px solid #e74c3c;
+}
+
+.recommendation-card.similar {
+    border-left: 5px solid #3498db;
+}
+
+.recommendation-card.collaborative {
+    border-left: 5px solid #f39c12;
+}
+
+.product-image {
+    height: 200px;
+    overflow: hidden;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-image {
+    color: #95a5a6;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.product-info {
+    padding: 20px;
+}
+
+.product-info h3 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.3em;
+    line-height: 1.3;
+}
+
+.vendor {
+    color: #7f8c8d;
+    margin: 5px 0;
+    font-size: 0.9em;
+}
+
+.price {
+    color: #27ae60;
+    font-size: 1.4em;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.score, .trend, .similarity, .collaborative {
+    background: #ecf0f1;
+    color: #2c3e50;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    display: inline-block;
+    margin: 5px 0;
+}
+
+.reason {
+    background: #e8f4fd;
+    border-left: 4px solid #3498db;
+    padding: 10px;
+    margin: 15px 0;
+    border-radius: 5px;
+    font-size: 0.9em;
+    color: #2c3e50;
+}
+
+.view-btn {
+    display: inline-block;
+    background: #3498db;
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 25px;
+    margin-top: 15px;
+    transition: background 0.3s ease;
+    font-weight: 500;
+}
+
+.view-btn:hover {
+    background: #2980b9;
+}
+
+.no-recommendations {
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    margin: 40px 0;
+}
+
+.no-recommendations h2 {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.suggestions {
+    text-align: left;
+    max-width: 500px;
+    margin: 30px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.suggestions h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.suggestions ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.suggestions li {
+    margin: 8px 0;
+    color: #34495e;
+}
+
+.browse-btn {
+    display: inline-block;
+    background: #27ae60;
+    color: white;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 25px;
+    font-size: 1.1em;
+    font-weight: 500;
+    transition: background 0.3s ease;
+}
+
+.browse-btn:hover {
+    background: #229954;
+}
+
+.refresh-section {
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    margin-top: 40px;
+}
+
+.refresh-section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.refresh-section p {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.refresh-btn {
+    background: #9b59b6;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 25px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.refresh-btn:hover {
+    background: #8e44ad;
+}
+
+@media (max-width: 768px) {
+    .recommendations-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .recommendations-page {
+        padding: 15px;
+    }
+    
+    .recommendations-page h1 {
+        font-size: 2em;
+    }
+}
+</style>
+{% endblock %}

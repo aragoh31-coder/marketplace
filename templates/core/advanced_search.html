@@ -1,0 +1,801 @@
+{% extends "base_tor_safe.html" %}
+{% load static %}
+
+{% block title %}Advanced Search - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="advanced-search-page">
+    <h1>Advanced Search & Filtering</h1>
+    
+    <div class="overview-section">
+        <div class="overview-card">
+            <h2>Intelligent Search</h2>
+            <p>Find exactly what you're looking for with our advanced filtering system and semantic search capabilities.</p>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <form method="get" action="{% url 'core:advanced_search' %}" class="search-form">
+            <div class="search-row">
+                <div class="search-field">
+                    <label for="q">Search Query</label>
+                    <input type="text" id="q" name="q" value="{{ request.GET.q }}" placeholder="Enter keywords, product names, or descriptions...">
+                </div>
+                <div class="search-field">
+                    <label for="category">Category</label>
+                    <select name="category" id="category">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="search-row">
+                <div class="search-field">
+                    <label for="price_min">Price Range</label>
+                    <div class="price-inputs">
+                        <input type="number" id="price_min" name="price_min" value="{{ request.GET.price_min }}" placeholder="Min" step="0.01" min="0">
+                        <span class="price-separator">to</span>
+                        <input type="number" id="price_max" name="price_max" value="{{ request.GET.price_max }}" placeholder="Max" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="search-field">
+                    <label for="vendor">Vendor</label>
+                    <select name="vendor" id="vendor">
+                        <option value="">All Vendors</option>
+                        {% for vend in vendors %}
+                        <option value="{{ vend.id }}" {% if request.GET.vendor == vend.id|stringformat:"s" %}selected{% endif %}>
+                            {{ vend.user.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="search-row">
+                <div class="search-field">
+                    <label for="rating">Minimum Rating</label>
+                    <select name="rating" id="rating">
+                        <option value="">Any Rating</option>
+                        <option value="4" {% if request.GET.rating == '4' %}selected{% endif %}>4+ Stars</option>
+                        <option value="3" {% if request.GET.rating == '3' %}selected{% endif %}>3+ Stars</option>
+                        <option value="2" {% if request.GET.rating == '2' %}selected{% endif %}>2+ Stars</option>
+                    </select>
+                </div>
+                <div class="search-field">
+                    <label for="sort">Sort By</label>
+                    <select name="sort" id="sort">
+                        <option value="relevance" {% if request.GET.sort == 'relevance' %}selected{% endif %}>Relevance</option>
+                        <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                        <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                        <option value="rating" {% if request.GET.sort == 'rating' %}selected{% endif %}>Highest Rated</option>
+                        <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>Newest First</option>
+                        <option value="popularity" {% if request.GET.sort == 'popularity' %}selected{% endif %}>Most Popular</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="search-actions">
+                <button type="submit" class="search-btn">Search</button>
+                <a href="{% url 'core:advanced_search' %}" class="clear-btn">Clear Filters</a>
+            </div>
+        </form>
+    </div>
+
+    {% if search_suggestions %}
+    <div class="suggestions-section">
+        <h2>Search Suggestions</h2>
+        <div class="suggestions-grid">
+            {% for suggestion in search_suggestions %}
+            <div class="suggestion-card">
+                <h3>{{ suggestion.type|title }}</h3>
+                <div class="suggestion-content">
+                    {% if suggestion.type == 'category' %}
+                        <p><strong>Category:</strong> {{ suggestion.name }}</p>
+                        <p><strong>Product Count:</strong> {{ suggestion.product_count }}</p>
+                        <p><strong>Avg Price:</strong> ${{ suggestion.avg_price|floatformat:2 }}</p>
+                    {% elif suggestion.type == 'vendor' %}
+                        <p><strong>Vendor:</strong> {{ suggestion.name }}</p>
+                        <p><strong>Rating:</strong> {{ suggestion.rating|floatformat:1 }}/5</p>
+                        <p><strong>Products:</strong> {{ suggestion.product_count }}</p>
+                    {% elif suggestion.type == 'product' %}
+                        <p><strong>Product:</strong> {{ suggestion.name }}</p>
+                        <p><strong>Price:</strong> ${{ suggestion.price|floatformat:2 }}</p>
+                        <p><strong>Category:</strong> {{ suggestion.category }}</p>
+                    {% endif %}
+                </div>
+                <div class="suggestion-actions">
+                    {% if suggestion.type == 'category' %}
+                        <a href="?category={{ suggestion.id }}" class="apply-suggestion">Apply Filter</a>
+                    {% elif suggestion.type == 'vendor' %}
+                        <a href="?vendor={{ suggestion.id }}" class="apply-suggestion">Apply Filter</a>
+                    {% elif suggestion.type == 'product' %}
+                        <a href="{% url 'products:product_detail' suggestion.id %}" class="view-product">View Product</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if search_results %}
+        <div class="results-section">
+            <div class="results-header">
+                <h2>Search Results</h2>
+                <div class="results-info">
+                    <span class="result-count">{{ paginator.count }} results found</span>
+                    {% if request.GET.q %}
+                        <span class="search-query">for "{{ request.GET.q }}"</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="results-grid">
+                {% for product in search_results %}
+                <div class="product-card">
+                    <div class="product-image">
+                        {% if product.image %}
+                            <img src="{% url 'core:serve_secure_image' product.image.url %}" alt="{{ product.name }}" loading="lazy">
+                        {% else %}
+                            <div class="no-image">No Image</div>
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        <h3>{{ product.name }}</h3>
+                        <p class="vendor">by {{ product.vendor.user.username }}</p>
+                        <p class="category">{{ product.category.name }}</p>
+                        <p class="price">${{ product.price|floatformat:2 }}</p>
+                        {% if product.rating %}
+                        <div class="rating">
+                            <span class="stars">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= product.rating %}
+                                        ★
+                                    {% else %}
+                                        ☆
+                                    {% endif %}
+                                {% endfor %}
+                            </span>
+                            <span class="rating-value">{{ product.rating|floatformat:1 }}/5</span>
+                        </div>
+                        {% endif %}
+                        <div class="product-actions">
+                            <a href="{% url 'products:product_detail' product.id %}" class="view-btn">View Details</a>
+                            <a href="?q={{ request.GET.q }}&category={{ product.category.id }}" class="similar-btn">Similar</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if paginator.num_pages > 1 %}
+            <div class="pagination">
+                <div class="pagination-info">
+                    Page {{ page_obj.number }} of {{ paginator.num_pages }}
+                </div>
+                <div class="pagination-links">
+                    {% if page_obj.has_previous %}
+                        <a href="?{{ request.GET.urlencode }}&page=1" class="page-link">First</a>
+                        <a href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}" class="page-link">Previous</a>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if num == page_obj.number %}
+                            <span class="current-page">{{ num }}</span>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <a href="?{{ request.GET.urlencode }}&page={{ num }}" class="page-link">{{ num }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <a href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}" class="page-link">Next</a>
+                        <a href="?{{ request.GET.urlencode }}&page={{ paginator.num_pages }}" class="page-link">Last</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    {% elif request.GET.q or request.GET.category or request.GET.price_min or request.GET.price_max or request.GET.vendor or request.GET.rating %}
+        <div class="no-results">
+            <h2>No Results Found</h2>
+            <p>Try adjusting your search criteria or browse our categories instead.</p>
+            <div class="suggestions">
+                <h3>Suggestions:</h3>
+                <ul>
+                    <li>Check your spelling</li>
+                    <li>Try more general keywords</li>
+                    <li>Remove some filters</li>
+                    <li>Browse categories</li>
+                </ul>
+            </div>
+            <a href="{% url 'core:tor_safe_product_list' %}" class="browse-btn">Browse All Products</a>
+        </div>
+    {% endif %}
+
+    {% if search_analytics %}
+    <div class="analytics-section">
+        <h2>Search Analytics</h2>
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <h3>Popular Searches</h3>
+                <ul class="popular-searches">
+                    {% for search in search_analytics.popular_searches %}
+                    <li>
+                        <span class="search-term">{{ search.term }}</span>
+                        <span class="search-count">{{ search.count }} searches</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <div class="analytics-card">
+                <h3>Search Performance</h3>
+                <div class="performance-metrics">
+                    <div class="metric">
+                        <span class="label">Avg Results:</span>
+                        <span class="value">{{ search_analytics.avg_results|floatformat:0 }}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Success Rate:</span>
+                        <span class="value">{{ search_analytics.success_rate|floatformat:1 }}%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Popular Categories:</span>
+                        <span class="value">{{ search_analytics.popular_categories|join:", " }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.advanced-search-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.advanced-search-page h1 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+}
+
+.overview-section {
+    margin-bottom: 40px;
+}
+
+.overview-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.overview-card h2 {
+    margin: 0 0 15px 0;
+    font-size: 1.8em;
+}
+
+.overview-card p {
+    margin: 0;
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.search-container {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    margin-bottom: 40px;
+    border: 1px solid #e1e8ed;
+}
+
+.search-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.search-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.search-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.search-field label {
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #2c3e50;
+    font-size: 0.9em;
+}
+
+.search-field input,
+.search-field select {
+    padding: 12px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    font-size: 1em;
+    background: white;
+    color: #2c3e50;
+    transition: border-color 0.3s ease;
+}
+
+.search-field input:focus,
+.search-field select:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.price-inputs input {
+    flex: 1;
+}
+
+.price-separator {
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.search-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.search-btn, .clear-btn {
+    padding: 12px 25px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+}
+
+.search-btn {
+    background: #3498db;
+    color: white;
+}
+
+.search-btn:hover { background: #2980b9; }
+
+.clear-btn {
+    background: #95a5a6;
+    color: white;
+}
+
+.clear-btn:hover { background: #7f8c8d; }
+
+.suggestions-section {
+    margin-bottom: 40px;
+}
+
+.suggestions-section h2 {
+    color: #34495e;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+}
+
+.suggestions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.suggestion-card {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.suggestion-card h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.3em;
+}
+
+.suggestion-content p {
+    margin: 8px 0;
+    color: #34495e;
+}
+
+.suggestion-actions {
+    margin-top: 15px;
+}
+
+.apply-suggestion, .view-product {
+    display: inline-block;
+    background: #9b59b6;
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 20px;
+    font-size: 0.9em;
+    transition: background 0.3s ease;
+}
+
+.apply-suggestion:hover, .view-product:hover { background: #8e44ad; }
+
+.results-section {
+    margin-bottom: 40px;
+}
+
+.results-header {
+    margin-bottom: 30px;
+}
+
+.results-header h2 {
+    color: #34495e;
+    margin: 0 0 10px 0;
+    font-size: 1.8em;
+}
+
+.results-info {
+    color: #7f8c8d;
+    font-size: 1.1em;
+}
+
+.result-count {
+    font-weight: 500;
+}
+
+.search-query {
+    font-style: italic;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.product-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.product-image {
+    height: 200px;
+    overflow: hidden;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-image {
+    color: #95a5a6;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.product-info {
+    padding: 20px;
+}
+
+.product-info h3 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.3em;
+    line-height: 1.3;
+}
+
+.vendor, .category {
+    margin: 5px 0;
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.price {
+    color: #27ae60;
+    font-size: 1.4em;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.rating {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.stars {
+    color: #f39c12;
+    font-size: 1.1em;
+}
+
+.rating-value {
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.product-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.view-btn, .similar-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 20px;
+    font-size: 0.9em;
+    transition: background 0.3s ease;
+    flex: 1;
+    text-align: center;
+}
+
+.view-btn {
+    background: #3498db;
+    color: white;
+}
+
+.view-btn:hover { background: #2980b9; }
+
+.similar-btn {
+    background: #9b59b6;
+    color: white;
+}
+
+.similar-btn:hover { background: #8e44ad; }
+
+.pagination {
+    text-align: center;
+    margin-top: 40px;
+}
+
+.pagination-info {
+    margin-bottom: 20px;
+    color: #7f8c8d;
+    font-size: 1.1em;
+}
+
+.pagination-links {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.page-link, .current-page {
+    padding: 10px 15px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    min-width: 40px;
+    text-align: center;
+}
+
+.page-link {
+    background: #ecf0f1;
+    color: #2c3e50;
+    border: 1px solid #bdc3c7;
+}
+
+.page-link:hover {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+.current-page {
+    background: #3498db;
+    color: white;
+    font-weight: bold;
+}
+
+.no-results {
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    margin: 40px 0;
+}
+
+.no-results h2 {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.suggestions {
+    text-align: left;
+    max-width: 500px;
+    margin: 30px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.suggestions h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.suggestions ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.suggestions li {
+    margin: 8px 0;
+    color: #34495e;
+}
+
+.browse-btn {
+    display: inline-block;
+    background: #27ae60;
+    color: white;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 25px;
+    font-size: 1.1em;
+    font-weight: 500;
+    transition: background 0.3s ease;
+}
+
+.browse-btn:hover { background: #229954; }
+
+.analytics-section {
+    margin-top: 40px;
+}
+
+.analytics-section h2 {
+    color: #34495e;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+}
+
+.analytics-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.analytics-card h3 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+}
+
+.popular-searches {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.popular-searches li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.popular-searches li:last-child {
+    border-bottom: none;
+}
+
+.search-term {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.search-count {
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.performance-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.metric .label {
+    font-weight: 500;
+    color: #34495e;
+}
+
+.metric .value {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+@media (max-width: 768px) {
+    .search-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .suggestions-grid, .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .advanced-search-page {
+        padding: 15px;
+    }
+    
+    .advanced-search-page h1 {
+        font-size: 2em;
+    }
+    
+    .search-actions {
+        flex-direction: column;
+    }
+    
+    .product-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

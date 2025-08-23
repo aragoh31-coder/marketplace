@@ -1,0 +1,652 @@
+{% extends "base_tor_safe.html" %}
+{% load static %}
+
+{% block title %}Dispute Management - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="dispute-management-page">
+    <h1>Dispute Management</h1>
+    
+    <div class="overview-section">
+        <div class="overview-card">
+            <h2>Automated Dispute Resolution</h2>
+            <p>Our AI-powered system analyzes evidence and automatically resolves disputes with high accuracy and fairness.</p>
+        </div>
+    </div>
+
+    {% if disputes %}
+        <div class="disputes-section">
+            <h2>Your Disputes</h2>
+            <div class="disputes-grid">
+                {% for dispute in disputes %}
+                <div class="dispute-card {{ dispute.status }}">
+                    <div class="dispute-header">
+                        <div class="dispute-id">
+                            <h3>Dispute #{{ dispute.id }}</h3>
+                            <span class="status-badge {{ dispute.status }}">{{ dispute.status|title }}</span>
+                        </div>
+                        <div class="dispute-date">
+                            Created: {{ dispute.created_at|date:"M d, Y" }}
+                        </div>
+                    </div>
+                    
+                    <div class="dispute-details">
+                        <div class="order-info">
+                            <h4>Order Information</h4>
+                            <p><strong>Order ID:</strong> #{{ dispute.order.id }}</p>
+                            <p><strong>Product:</strong> {{ dispute.order.product.name }}</p>
+                            <p><strong>Amount:</strong> ${{ dispute.order.total_amount|floatformat:2 }}</p>
+                            <p><strong>Vendor:</strong> {{ dispute.order.vendor.user.username }}</p>
+                        </div>
+                        
+                        <div class="dispute-reason">
+                            <h4>Dispute Reason</h4>
+                            <p>{{ dispute.reason }}</p>
+                        </div>
+                        
+                        {% if dispute.evidence %}
+                        <div class="evidence-section">
+                            <h4>Evidence Provided</h4>
+                            <ul class="evidence-list">
+                                {% for evidence in dispute.evidence %}
+                                <li>
+                                    <span class="evidence-type">{{ evidence.type|title }}:</span>
+                                    <span class="evidence-description">{{ evidence.description }}</span>
+                                    <span class="evidence-score">Score: {{ evidence.score|floatformat:1 }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if dispute.arbitration %}
+                    <div class="arbitration-result">
+                        <h4>Automated Arbitration Result</h4>
+                        <div class="arbitration-details">
+                            <div class="result-summary">
+                                <span class="result {{ dispute.arbitration.result }}">{{ dispute.arbitration.result|title }}</span>
+                                <span class="confidence">Confidence: {{ dispute.arbitration.confidence_level|floatformat:1 }}%</span>
+                            </div>
+                            <div class="arbitration-reasoning">
+                                <p><strong>Reasoning:</strong> {{ dispute.arbitration.reasoning }}</p>
+                            </div>
+                            {% if dispute.arbitration.automated_actions %}
+                            <div class="automated-actions">
+                                <h5>Automated Actions Taken:</h5>
+                                <ul>
+                                    {% for action in dispute.arbitration.automated_actions %}
+                                    <li>{{ action }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="dispute-actions">
+                        {% if dispute.status == 'open' %}
+                            <a href="#" class="action-btn primary">Provide Additional Evidence</a>
+                            <a href="#" class="action-btn secondary">Request Manual Review</a>
+                        {% elif dispute.status == 'resolved' %}
+                            <a href="#" class="action-btn success">View Resolution Details</a>
+                            {% if dispute.arbitration.result == 'buyer_wins' %}
+                                <a href="#" class="action-btn primary">Request Refund</a>
+                            {% endif %}
+                        {% elif dispute.status == 'under_review' %}
+                            <span class="status-message">Under manual review by our team</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="no-disputes">
+            <h2>No Disputes Found</h2>
+            <p>You haven't filed any disputes yet. If you encounter issues with an order, you can file a dispute through the order details page.</p>
+            <div class="suggestions">
+                <h3>How to file a dispute:</h3>
+                <ol>
+                    <li>Go to your order history</li>
+                    <li>Select the problematic order</li>
+                    <li>Click "File Dispute"</li>
+                    <li>Provide evidence and reasoning</li>
+                    <li>Submit for automated review</li>
+                </ol>
+            </div>
+            <a href="{% url 'orders:order_list' %}" class="view-orders-btn">View Your Orders</a>
+        </div>
+    {% endif %}
+
+    {% if dispute_statistics %}
+    <div class="statistics-section">
+        <h2>Dispute Statistics</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Resolution Rate</h3>
+                <div class="stat-value">{{ dispute_statistics.resolution_rate|floatformat:1 }}%</div>
+                <div class="stat-description">Automatically resolved</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Average Resolution Time</h3>
+                <div class="stat-value">{{ dispute_statistics.avg_resolution_time|floatformat:1 }} hours</div>
+                <div class="stat-description">From filing to resolution</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Buyer Win Rate</h3>
+                <div class="stat-value">{{ dispute_statistics.buyer_win_rate|floatformat:1 }}%</div>
+                <div class="stat-description">Disputes won by buyers</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Vendor Win Rate</h3>
+                <div class="stat-value">{{ dispute_statistics.vendor_win_rate|floatformat:1 }}%</div>
+                <div class="stat-description">Disputes won by vendors</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="dispute-process">
+        <h2>How Our Dispute Resolution Works</h2>
+        <div class="process-steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>File Dispute</h3>
+                    <p>Submit your dispute with evidence and reasoning through the order details page.</p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Evidence Analysis</h3>
+                    <p>Our AI system analyzes all provided evidence, order history, and vendor patterns.</p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Automated Decision</h3>
+                    <p>The system makes a decision based on evidence scoring and historical patterns.</p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Resolution & Actions</h3>
+                    <p>Automated actions are taken (refunds, order cancellations, etc.) based on the decision.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tips-section">
+        <h2>Tips for Successful Disputes</h2>
+        <div class="tips-grid">
+            <div class="tip-card">
+                <h3>Provide Clear Evidence</h3>
+                <p>Include screenshots, photos, or documents that clearly show the issue. The more specific and clear your evidence, the better your chances.</p>
+            </div>
+            
+            <div class="tip-card">
+                <h3>Be Specific</h3>
+                <p>Clearly describe what went wrong and how it differs from what was promised. Include relevant dates and details.</p>
+            </div>
+            
+            <div class="tip-card">
+                <h3>Stay Professional</h3>
+                <p>Keep your dispute description factual and professional. Emotional language doesn't improve your case.</p>
+            </div>
+            
+            <div class="tip-card">
+                <h3>Respond Promptly</h3>
+                <p>If additional information is requested, respond quickly to avoid delays in resolution.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.dispute-management-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.dispute-management-page h1 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+}
+
+.overview-section {
+    margin-bottom: 40px;
+}
+
+.overview-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.overview-card h2 {
+    margin: 0 0 15px 0;
+    font-size: 1.8em;
+}
+
+.overview-card p {
+    margin: 0;
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.disputes-section, .statistics-section, .dispute-process, .tips-section {
+    margin-bottom: 50px;
+}
+
+.disputes-section h2, .statistics-section h2, .dispute-process h2, .tips-section h2 {
+    color: #34495e;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+}
+
+.disputes-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 25px;
+}
+
+.dispute-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+    border-left: 5px solid;
+}
+
+.dispute-card.open { border-left-color: #f39c12; }
+.dispute-card.resolved { border-left-color: #27ae60; }
+.dispute-card.under_review { border-left-color: #3498db; }
+.dispute-card.escalated { border-left-color: #e74c3c; }
+
+.dispute-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.dispute-id h3 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-badge.open { background: #fef9e7; color: #f39c12; }
+.status-badge.resolved { background: #d5f4e6; color: #27ae60; }
+.status-badge.under_review { background: #e8f4fd; color: #3498db; }
+.status-badge.escalated { background: #fadbd8; color: #e74c3c; }
+
+.dispute-date {
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.dispute-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.order-info, .dispute-reason, .evidence-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.order-info h4, .dispute-reason h4, .evidence-section h4 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.2em;
+}
+
+.order-info p, .dispute-reason p {
+    margin: 8px 0;
+    color: #34495e;
+}
+
+.evidence-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.evidence-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.evidence-list li:last-child {
+    border-bottom: none;
+}
+
+.evidence-type {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.evidence-description {
+    color: #34495e;
+    flex: 1;
+    margin: 0 15px;
+}
+
+.evidence-score {
+    background: #e8f4fd;
+    color: #2c3e50;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.arbitration-result {
+    background: #f0f8f0;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border-left: 4px solid #27ae60;
+}
+
+.arbitration-result h4 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.2em;
+}
+
+.result-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.result {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 1.1em;
+    text-transform: uppercase;
+}
+
+.result.buyer_wins { background: #d5f4e6; color: #27ae60; }
+.result.vendor_wins { background: #fadbd8; color: #e74c3c; }
+.result.partial_refund { background: #fef9e7; color: #f39c12; }
+
+.confidence {
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.arbitration-reasoning p {
+    margin: 0 0 15px 0;
+    color: #34495e;
+    line-height: 1.5;
+}
+
+.automated-actions h5 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1em;
+}
+
+.automated-actions ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.automated-actions li {
+    margin: 5px 0;
+    color: #34495e;
+}
+
+.dispute-actions {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.action-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-align: center;
+    min-width: 150px;
+}
+
+.action-btn.primary { background: #3498db; color: white; }
+.action-btn.secondary { background: #95a5a6; color: white; }
+.action-btn.success { background: #27ae60; color: white; }
+
+.action-btn:hover { opacity: 0.8; }
+
+.status-message {
+    color: #7f8c8d;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    width: 100%;
+}
+
+.no-disputes {
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    margin: 40px 0;
+}
+
+.no-disputes h2 {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.suggestions {
+    text-align: left;
+    max-width: 600px;
+    margin: 30px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.suggestions h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.suggestions ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.suggestions li {
+    margin: 8px 0;
+    color: #34495e;
+}
+
+.view-orders-btn {
+    display: inline-block;
+    background: #27ae60;
+    color: white;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 25px;
+    font-size: 1.1em;
+    font-weight: 500;
+    transition: background 0.3s ease;
+}
+
+.view-orders-btn:hover { background: #229954; }
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.stat-card h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.2em;
+}
+
+.stat-value {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #3498db;
+    margin-bottom: 10px;
+}
+
+.stat-description {
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.process-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+}
+
+.step {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.step-number {
+    width: 50px;
+    height: 50px;
+    background: #3498db;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5em;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.step-content h3 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.3em;
+}
+
+.step-content p {
+    margin: 0;
+    color: #34495e;
+    line-height: 1.5;
+}
+
+.tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.tip-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.tip-card h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.3em;
+}
+
+.tip-card p {
+    margin: 0;
+    color: #34495e;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .dispute-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid, .process-steps, .tips-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .dispute-management-page {
+        padding: 15px;
+    }
+    
+    .dispute-management-page h1 {
+        font-size: 2em;
+    }
+    
+    .dispute-actions {
+        flex-direction: column;
+    }
+    
+    .action-btn {
+        min-width: auto;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,575 @@
+{% extends "base_tor_safe.html" %}
+{% load static %}
+
+{% block title %}Price Predictions - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="price-predictions-page">
+    <h1>Price Predictions & Market Analysis</h1>
+    
+    <div class="overview-section">
+        <div class="overview-card">
+            <h2>Market Intelligence</h2>
+            <p>Advanced analytics and machine learning algorithms analyze market trends, competitor pricing, and demand patterns to provide accurate price predictions.</p>
+        </div>
+    </div>
+
+    {% if predictions %}
+        <div class="predictions-section">
+            <h2>Price Predictions</h2>
+            <div class="predictions-grid">
+                {% for pred in predictions %}
+                <div class="prediction-card">
+                    <div class="product-header">
+                        <div class="product-image">
+                            {% if pred.product.image %}
+                                <img src="{% url 'core:serve_secure_image' pred.product.image.url %}" alt="{{ pred.product.name }}" loading="lazy">
+                            {% else %}
+                                <div class="no-image">No Image</div>
+                            {% endif %}
+                        </div>
+                        <div class="product-basic-info">
+                            <h3>{{ pred.product.name }}</h3>
+                            <p class="vendor">by {{ pred.product.vendor.user.username }}</p>
+                            <p class="category">{{ pred.product.category.name }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="price-analysis">
+                        <div class="current-price">
+                            <span class="label">Current Price:</span>
+                            <span class="price">${{ pred.current_price|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="predicted-price">
+                            <span class="label">Predicted Price:</span>
+                            <span class="price {% if pred.predicted_price > pred.current_price %}higher{% elif pred.predicted_price < pred.current_price %}lower{% else %}stable{% endif %}">
+                                ${{ pred.predicted_price|floatformat:2 }}
+                            </span>
+                        </div>
+                        
+                        <div class="price-change">
+                            <span class="label">Expected Change:</span>
+                            <span class="change {% if pred.price_change_percentage > 0 %}positive{% elif pred.price_change_percentage < 0 %}negative{% else %}neutral{% endif %}">
+                                {% if pred.price_change_percentage > 0 %}+{% endif %}{{ pred.price_change_percentage|floatformat:1 }}%
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="confidence-section">
+                        <div class="confidence-bar">
+                            <span class="label">Confidence Level:</span>
+                            <div class="confidence-meter">
+                                <div class="confidence-fill" style="width: {{ pred.confidence_level }}%"></div>
+                            </div>
+                            <span class="confidence-value">{{ pred.confidence_level|floatformat:0 }}%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="market-factors">
+                        <h4>Key Market Factors</h4>
+                        <ul>
+                            {% for factor in pred.market_factors %}
+                            <li>{{ factor }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    <div class="recommendation">
+                        <h4>Recommendation</h4>
+                        <p class="rec-text">{{ pred.recommendation }}</p>
+                        <div class="rec-type {{ pred.recommendation_type }}">
+                            {{ pred.recommendation_type|title }}
+                        </div>
+                    </div>
+                    
+                    <div class="actions">
+                        <a href="{% url 'products:product_detail' pred.product.id %}" class="view-btn">View Product</a>
+                        <a href="{% url 'core:advanced_search' %}?product={{ pred.product.id }}" class="compare-btn">Compare Prices</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if market_trends %}
+        <div class="trends-section">
+            <h2>Market Trends</h2>
+            <div class="trends-grid">
+                {% for trend in market_trends %}
+                <div class="trend-card">
+                    <h3>{{ trend.category_name }}</h3>
+                    <div class="trend-data">
+                        <div class="trend-metric">
+                            <span class="label">Average Price:</span>
+                            <span class="value">${{ trend.avg_price|floatformat:2 }}</span>
+                        </div>
+                        <div class="trend-metric">
+                            <span class="label">Price Trend:</span>
+                            <span class="trend-direction {% if trend.trend_direction == 'up' %}up{% elif trend.trend_direction == 'down' %}down{% else %}stable{% endif %}">
+                                {% if trend.trend_direction == 'up' %}↗ Rising{% elif trend.trend_direction == 'down' %}↘ Falling{% else %}→ Stable{% endif %}
+                            </span>
+                        </div>
+                        <div class="trend-metric">
+                            <span class="label">Demand Level:</span>
+                            <span class="demand-level {{ trend.demand_level }}">
+                                {{ trend.demand_level|title }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="trend-insight">
+                        <p>{{ trend.insight }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if competitor_analysis %}
+        <div class="competitor-section">
+            <h2>Competitor Analysis</h2>
+            <div class="competitor-grid">
+                {% for comp in competitor_analysis %}
+                <div class="competitor-card">
+                    <h3>{{ comp.product_name }}</h3>
+                    <div class="competitor-info">
+                        <p class="vendor">{{ comp.vendor_name }}</p>
+                        <p class="price">${{ comp.price|floatformat:2 }}</p>
+                        <p class="rating">Rating: {{ comp.rating|floatformat:1 }}/5</p>
+                    </div>
+                    <div class="price-comparison">
+                        <span class="label">Price Difference:</span>
+                        <span class="difference {% if comp.price_difference > 0 %}higher{% else %}lower{% endif %}">
+                            {% if comp.price_difference > 0 %}+{% endif %}${{ comp.price_difference|floatformat:2 }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="no-predictions">
+            <h2>No Price Predictions Available</h2>
+            <p>We need more market data to generate accurate price predictions.</p>
+            <div class="suggestions">
+                <h3>To get price predictions:</h3>
+                <ul>
+                    <li>Browse more products</li>
+                    <li>Make purchases to help train our algorithms</li>
+                    <li>Check back later as we gather more market data</li>
+                </ul>
+            </div>
+            <a href="{% url 'core:tor_safe_product_list' %}" class="browse-btn">Browse Products</a>
+        </div>
+    {% endif %}
+
+    <div class="disclaimer">
+        <h3>Disclaimer</h3>
+        <p>Price predictions are based on historical data analysis and market trends. They are estimates and should not be considered as financial advice. Actual prices may vary due to market conditions, supply and demand, and other factors.</p>
+    </div>
+</div>
+
+<style>
+.price-predictions-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.price-predictions-page h1 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+}
+
+.overview-section {
+    margin-bottom: 40px;
+}
+
+.overview-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.overview-card h2 {
+    margin: 0 0 15px 0;
+    font-size: 1.8em;
+}
+
+.overview-card p {
+    margin: 0;
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.predictions-section, .trends-section, .competitor-section {
+    margin-bottom: 50px;
+}
+
+.predictions-section h2, .trends-section h2, .competitor-section h2 {
+    color: #34495e;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+}
+
+.predictions-grid, .trends-grid, .competitor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 25px;
+}
+
+.prediction-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+    padding: 20px;
+}
+
+.product-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.product-image {
+    width: 80px;
+    height: 80px;
+    overflow: hidden;
+    border-radius: 10px;
+    margin-right: 15px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-image {
+    color: #95a5a6;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.product-basic-info h3 {
+    margin: 0 0 5px 0;
+    color: #2c3e50;
+    font-size: 1.2em;
+}
+
+.vendor, .category {
+    margin: 3px 0;
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.price-analysis {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.current-price, .predicted-price, .price-change {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.label {
+    font-weight: 500;
+    color: #34495e;
+}
+
+.price {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.price.higher { color: #e74c3c; }
+.price.lower { color: #27ae60; }
+.price.stable { color: #f39c12; }
+
+.change.positive { color: #27ae60; }
+.change.negative { color: #e74c3c; }
+.change.neutral { color: #f39c12; }
+
+.confidence-section {
+    margin-bottom: 20px;
+}
+
+.confidence-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.confidence-meter {
+    flex: 1;
+    height: 8px;
+    background: #ecf0f1;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60);
+    transition: width 0.3s ease;
+}
+
+.confidence-value {
+    font-weight: bold;
+    color: #2c3e50;
+    min-width: 40px;
+}
+
+.market-factors {
+    background: #e8f4fd;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border-left: 4px solid #3498db;
+}
+
+.market-factors h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+}
+
+.market-factors ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.market-factors li {
+    margin: 5px 0;
+    color: #34495e;
+}
+
+.recommendation {
+    background: #f0f8f0;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border-left: 4px solid #27ae60;
+}
+
+.recommendation h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+}
+
+.rec-text {
+    margin: 0 0 10px 0;
+    color: #34495e;
+}
+
+.rec-type {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.rec-type.buy { background: #d5f4e6; color: #27ae60; }
+.rec-type.sell { background: #fadbd8; color: #e74c3c; }
+.rec-type.hold { background: #fef9e7; color: #f39c12; }
+
+.actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.view-btn, .compare-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: 500;
+    transition: background 0.3s ease;
+    flex: 1;
+    text-align: center;
+    min-width: 120px;
+}
+
+.view-btn {
+    background: #3498db;
+    color: white;
+}
+
+.view-btn:hover { background: #2980b9; }
+
+.compare-btn {
+    background: #9b59b6;
+    color: white;
+}
+
+.compare-btn:hover { background: #8e44ad; }
+
+.trend-card, .competitor-card {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.trend-card h3, .competitor-card h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.3em;
+}
+
+.trend-metric, .competitor-info p {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+}
+
+.trend-direction.up { color: #27ae60; }
+.trend-direction.down { color: #e74c3c; }
+.trend-direction.stable { color: #f39c12; }
+
+.demand-level.high { color: #27ae60; }
+.demand-level.medium { color: #f39c12; }
+.demand-level.low { color: #e74c3c; }
+
+.trend-insight {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 15px;
+}
+
+.trend-insight p {
+    margin: 0;
+    color: #34495e;
+    font-style: italic;
+}
+
+.price-comparison {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.difference.higher { color: #e74c3c; }
+.difference.lower { color: #27ae60; }
+
+.no-predictions {
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    margin: 40px 0;
+}
+
+.no-predictions h2 {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.suggestions {
+    text-align: left;
+    max-width: 500px;
+    margin: 30px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.suggestions h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.suggestions ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.suggestions li {
+    margin: 8px 0;
+    color: #34495e;
+}
+
+.browse-btn {
+    display: inline-block;
+    background: #27ae60;
+    color: white;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 25px;
+    font-size: 1.1em;
+    font-weight: 500;
+    transition: background 0.3s ease;
+}
+
+.browse-btn:hover { background: #229954; }
+
+.disclaimer {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 40px;
+}
+
+.disclaimer h3 {
+    color: #856404;
+    margin: 0 0 10px 0;
+}
+
+.disclaimer p {
+    margin: 0;
+    color: #856404;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .predictions-grid, .trends-grid, .competitor-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .price-predictions-page {
+        padding: 15px;
+    }
+    
+    .price-predictions-page h1 {
+        font-size: 2em;
+    }
+    
+    .actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

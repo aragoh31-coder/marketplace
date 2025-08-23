@@ -1,0 +1,718 @@
+{% extends "base_tor_safe.html" %}
+{% load static %}
+
+{% block title %}User Preferences & Insights - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="user-preferences-page">
+    <h1>Your Preferences & Insights</h1>
+    
+    <div class="overview-section">
+        <div class="overview-card">
+            <h2>Personalized Insights</h2>
+            <p>We analyze your behavior to understand your preferences and provide personalized recommendations.</p>
+        </div>
+    </div>
+
+    {% if user_profile %}
+        <div class="profile-section">
+            <h2>Your Profile Analysis</h2>
+            <div class="profile-grid">
+                <div class="profile-card">
+                    <h3>RFM Analysis</h3>
+                    <div class="rfm-metrics">
+                        <div class="rfm-metric">
+                            <span class="label">Recency:</span>
+                            <span class="value {{ user_profile.rfm_recency_level }}">{{ user_profile.rfm_recency_level|title }}</span>
+                        </div>
+                        <div class="rfm-metric">
+                            <span class="label">Frequency:</span>
+                            <span class="value {{ user_profile.rfm_frequency_level }}">{{ user_profile.rfm_frequency_level|title }}</span>
+                        </div>
+                        <div class="rfm-metric">
+                            <span class="label">Monetary:</span>
+                            <span class="value {{ user_profile.rfm_monetary_level }}">{{ user_profile.rfm_monetary_level|title }}</span>
+                        </div>
+                    </div>
+                    <div class="rfm-insight">
+                        <p>{{ user_profile.rfm_insight }}</p>
+                    </div>
+                </div>
+
+                <div class="profile-card">
+                    <h3>Churn Risk</h3>
+                    <div class="churn-risk">
+                        <div class="risk-level {{ user_profile.churn_risk_level }}">
+                            {{ user_profile.churn_risk_level|title }}
+                        </div>
+                        <div class="risk-score">
+                            Score: {{ user_profile.churn_risk_score|floatformat:1 }}%
+                        </div>
+                    </div>
+                    <div class="churn-insight">
+                        <p>{{ user_profile.churn_insight }}</p>
+                    </div>
+                </div>
+
+                <div class="profile-card">
+                    <h3>Price Sensitivity</h3>
+                    <div class="price-sensitivity">
+                        <div class="sensitivity-level {{ user_profile.price_sensitivity_level }}">
+                            {{ user_profile.price_sensitivity_level|title }}
+                        </div>
+                        <div class="sensitivity-details">
+                            <p>Average order value: ${{ user_profile.avg_order_value|floatformat:2 }}</p>
+                            <p>Preferred price range: ${{ user_profile.preferred_price_min|floatformat:2 }} - ${{ user_profile.preferred_price_max|floatformat:2 }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="preferences-section">
+            <h2>Category Preferences</h2>
+            <div class="category-preferences">
+                {% for category in user_profile.category_preferences %}
+                <div class="category-pref">
+                    <div class="category-info">
+                        <h4>{{ category.name }}</h4>
+                        <p class="affinity">Affinity: {{ category.affinity_score|floatformat:1 }}%</p>
+                    </div>
+                    <div class="category-stats">
+                        <div class="stat">
+                            <span class="label">Purchases:</span>
+                            <span class="value">{{ category.purchase_count }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="label">Total Spent:</span>
+                            <span class="value">${{ category.total_spent|floatformat:2 }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="label">Avg Rating:</span>
+                            <span class="value">{{ category.avg_rating|floatformat:1 }}/5</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="vendor-preferences">
+            <h2>Vendor Preferences</h2>
+            <div class="vendor-grid">
+                {% for vendor in user_profile.vendor_preferences %}
+                <div class="vendor-pref">
+                    <div class="vendor-info">
+                        <h4>{{ vendor.name }}</h4>
+                        <p class="trust-score">Trust Score: {{ vendor.trust_score|floatformat:1 }}%</p>
+                    </div>
+                    <div class="vendor-stats">
+                        <div class="stat">
+                            <span class="label">Orders:</span>
+                            <span class="value">{{ vendor.order_count }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="label">Total Spent:</span>
+                            <span class="value">${{ vendor.total_spent|floatformat:2 }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="label">Satisfaction:</span>
+                            <span class="value">{{ vendor.satisfaction_score|floatformat:1 }}%</span>
+                        </div>
+                    </div>
+                    <div class="vendor-insight">
+                        <p>{{ vendor.insight }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="behavioral-patterns">
+            <h2>Behavioral Patterns</h2>
+            <div class="patterns-grid">
+                <div class="pattern-card">
+                    <h3>Purchase Timing</h3>
+                    <div class="timing-analysis">
+                        <p><strong>Peak shopping hours:</strong> {{ user_profile.purchase_timing.peak_hours }}</p>
+                        <p><strong>Preferred days:</strong> {{ user_profile.purchase_timing.preferred_days }}</p>
+                        <p><strong>Seasonal patterns:</strong> {{ user_profile.purchase_timing.seasonal_patterns }}</p>
+                    </div>
+                </div>
+
+                <div class="pattern-card">
+                    <h3>Search Behavior</h3>
+                    <div class="search-analysis">
+                        <p><strong>Common search terms:</strong> {{ user_profile.search_behavior.common_terms }}</p>
+                        <p><strong>Filter preferences:</strong> {{ user_profile.search_behavior.filter_preferences }}</p>
+                        <p><strong>Search frequency:</strong> {{ user_profile.search_behavior.search_frequency }}</p>
+                    </div>
+                </div>
+
+                <div class="pattern-card">
+                    <h3>Product Interaction</h3>
+                    <div class="interaction-analysis">
+                        <p><strong>View-to-purchase ratio:</strong> {{ user_profile.product_interaction.view_to_purchase_ratio|floatformat:1 }}%</p>
+                        <p><strong>Wishlist usage:</strong> {{ user_profile.product_interaction.wishlist_usage }}</p>
+                        <p><strong>Review participation:</strong> {{ user_profile.product_interaction.review_participation }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="recommendations-section">
+            <h2>Personalized Recommendations</h2>
+            <div class="rec-grid">
+                <div class="rec-card">
+                    <h3>Product Suggestions</h3>
+                    <ul class="rec-list">
+                        {% for rec in user_profile.product_recommendations %}
+                        <li>{{ rec }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="rec-card">
+                    <h3>Vendor Suggestions</h3>
+                    <ul class="rec-list">
+                        {% for rec in user_profile.vendor_recommendations %}
+                        <li>{{ rec }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="rec-card">
+                    <h3>Category Suggestions</h3>
+                    <ul class="rec-list">
+                        {% for rec in user_profile.category_recommendations %}
+                        <li>{{ rec }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="no-profile">
+            <h2>No Profile Data Available</h2>
+            <p>We need to learn more about your preferences to provide personalized insights.</p>
+            <div class="suggestions">
+                <h3>To build your profile:</h3>
+                <ul>
+                    <li>Browse and view products</li>
+                    <li>Make purchases</li>
+                    <li>Rate products you've bought</li>
+                    <li>Use the search and filter features</li>
+                    <li>Add products to your wishlist</li>
+                </ul>
+            </div>
+            <a href="{% url 'core:tor_safe_product_list' %}" class="browse-btn">Start Browsing</a>
+        </div>
+    {% endif %}
+
+    <div class="update-preferences">
+        <h3>Update Your Preferences</h3>
+        <p>Help us provide better recommendations by updating your preferences.</p>
+        <form method="post" action="{% url 'core:update_user_preferences' %}">
+            {% csrf_token %}
+            <div class="preference-fields">
+                <div class="field-group">
+                    <label for="price_range">Preferred Price Range:</label>
+                    <select name="price_range" id="price_range">
+                        <option value="budget">Budget ($0-$50)</option>
+                        <option value="mid_range">Mid-Range ($50-$200)</option>
+                        <option value="premium">Premium ($200+)</option>
+                    </select>
+                </div>
+                
+                <div class="field-group">
+                    <label for="shipping_preference">Shipping Preference:</label>
+                    <select name="shipping_preference" id="shipping_preference">
+                        <option value="fastest">Fastest Available</option>
+                        <option value="cheapest">Cheapest Available</option>
+                        <option value="balanced">Balanced (Speed vs Cost)</option>
+                    </select>
+                </div>
+                
+                <div class="field-group">
+                    <label for="product_quality">Product Quality Priority:</label>
+                    <select name="product_quality" id="product_quality">
+                        <option value="highest">Highest Quality</option>
+                        <option value="good_value">Good Value for Money</option>
+                        <option value="affordable">Most Affordable</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="update-btn">Update Preferences</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.user-preferences-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.user-preferences-page h1 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+}
+
+.overview-section {
+    margin-bottom: 40px;
+}
+
+.overview-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.overview-card h2 {
+    margin: 0 0 15px 0;
+    font-size: 1.8em;
+}
+
+.overview-card p {
+    margin: 0;
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.profile-section, .preferences-section, .vendor-preferences, .behavioral-patterns, .recommendations-section {
+    margin-bottom: 50px;
+}
+
+.profile-section h2, .preferences-section h2, .vendor-preferences h2, .behavioral-patterns h2, .recommendations-section h2 {
+    color: #34495e;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.profile-card h3 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+}
+
+.rfm-metrics {
+    margin-bottom: 20px;
+}
+
+.rfm-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px 0;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.rfm-metric .label {
+    font-weight: 500;
+    color: #34495e;
+}
+
+.rfm-metric .value {
+    font-weight: bold;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    text-transform: uppercase;
+}
+
+.value.high { background: #d5f4e6; color: #27ae60; }
+.value.medium { background: #fef9e7; color: #f39c12; }
+.value.low { background: #fadbd8; color: #e74c3c; }
+
+.rfm-insight {
+    background: #e8f4fd;
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 4px solid #3498db;
+}
+
+.rfm-insight p {
+    margin: 0;
+    color: #2c3e50;
+    font-style: italic;
+}
+
+.churn-risk {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.risk-level {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.risk-level.low { background: #d5f4e6; color: #27ae60; }
+.risk-level.medium { background: #fef9e7; color: #f39c12; }
+.risk-level.high { background: #fadbd8; color: #e74c3c; }
+
+.risk-score {
+    font-size: 1.1em;
+    color: #7f8c8d;
+}
+
+.churn-insight {
+    background: #fff3cd;
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 4px solid #f39c12;
+}
+
+.churn-insight p {
+    margin: 0;
+    color: #856404;
+}
+
+.price-sensitivity {
+    text-align: center;
+}
+
+.sensitivity-level {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 1.2em;
+    margin-bottom: 15px;
+}
+
+.sensitivity-level.low { background: #d5f4e6; color: #27ae60; }
+.sensitivity-level.medium { background: #fef9e7; color: #f39c12; }
+.sensitivity-level.high { background: #fadbd8; color: #e74c3c; }
+
+.sensitivity-details p {
+    margin: 8px 0;
+    color: #34495e;
+}
+
+.category-preferences {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+}
+
+.category-pref {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.category-pref h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.3em;
+}
+
+.affinity {
+    background: #e8f4fd;
+    color: #2c3e50;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    display: inline-block;
+    margin-bottom: 15px;
+}
+
+.category-stats {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+}
+
+.stat .label {
+    font-weight: 500;
+    color: #34495e;
+}
+
+.stat .value {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.vendor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.vendor-pref {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.vendor-pref h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.3em;
+}
+
+.trust-score {
+    background: #e8f4fd;
+    color: #2c3e50;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    display: inline-block;
+    margin-bottom: 15px;
+}
+
+.vendor-stats {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.vendor-insight {
+    background: #f0f8f0;
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 4px solid #27ae60;
+}
+
+.vendor-insight p {
+    margin: 0;
+    color: #34495e;
+    font-style: italic;
+}
+
+.patterns-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.pattern-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.pattern-card h3 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+}
+
+.timing-analysis p, .search-analysis p, .interaction-analysis p {
+    margin: 10px 0;
+    color: #34495e;
+    line-height: 1.5;
+}
+
+.rec-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.rec-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.rec-card h3 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+}
+
+.rec-list {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.rec-list li {
+    margin: 10px 0;
+    color: #34495e;
+    line-height: 1.4;
+}
+
+.no-profile {
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    margin: 40px 0;
+}
+
+.no-profile h2 {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.suggestions {
+    text-align: left;
+    max-width: 500px;
+    margin: 30px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.suggestions h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.suggestions ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.suggestions li {
+    margin: 8px 0;
+    color: #34495e;
+}
+
+.browse-btn {
+    display: inline-block;
+    background: #27ae60;
+    color: white;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 25px;
+    font-size: 1.1em;
+    font-weight: 500;
+    transition: background 0.3s ease;
+}
+
+.browse-btn:hover { background: #229954; }
+
+.update-preferences {
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 15px;
+    margin-top: 40px;
+}
+
+.update-preferences h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.update-preferences p {
+    color: #7f8c8d;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.preference-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.field-group label {
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.field-group select {
+    padding: 12px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    font-size: 1em;
+    background: white;
+    color: #2c3e50;
+}
+
+.field-group select:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.update-btn {
+    background: #9b59b6;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 25px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    display: block;
+    margin: 0 auto;
+}
+
+.update-btn:hover { background: #8e44ad; }
+
+@media (max-width: 768px) {
+    .profile-grid, .category-preferences, .vendor-grid, .patterns-grid, .rec-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .user-preferences-page {
+        padding: 15px;
+    }
+    
+    .user-preferences-page h1 {
+        font-size: 2em;
+    }
+    
+    .preference-fields {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

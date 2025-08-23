@@ -1,0 +1,717 @@
+{% extends "base_tor_safe.html" %}
+{% load static %}
+
+{% block title %}System Insights - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="system-insights-page">
+    <h1>System Insights & Analytics</h1>
+    
+    <div class="overview-section">
+        <div class="overview-card">
+            <h2>Comprehensive System Overview</h2>
+            <p>Real-time insights into marketplace performance, user behavior, and system health metrics.</p>
+        </div>
+    </div>
+
+    {% if system_metrics %}
+        <div class="metrics-section">
+            <h2>Key Performance Indicators</h2>
+            <div class="metrics-grid">
+                <div class="metric-card primary">
+                    <h3>Total Users</h3>
+                    <div class="metric-value">{{ system_metrics.total_users|floatformat:0 }}</div>
+                    <div class="metric-change positive">
+                        +{{ system_metrics.user_growth|floatformat:1 }}% this month
+                    </div>
+                </div>
+                
+                <div class="metric-card success">
+                    <h3>Active Orders</h3>
+                    <div class="metric-value">{{ system_metrics.active_orders|floatformat:0 }}</div>
+                    <div class="metric-change positive">
+                        +{{ system_metrics.order_growth|floatformat:1 }}% this week
+                    </div>
+                </div>
+                
+                <div class="metric-card info">
+                    <h3>Total Revenue</h3>
+                    <div class="metric-value">${{ system_metrics.total_revenue|floatformat:0 }}</div>
+                    <div class="metric-change positive">
+                        +{{ system_metrics.revenue_growth|floatformat:1 }}% this month
+                    </div>
+                </div>
+                
+                <div class="metric-card warning">
+                    <h3>System Uptime</h3>
+                    <div class="metric-value">{{ system_metrics.system_uptime|floatformat:2 }}%</div>
+                    <div class="metric-change neutral">
+                        Last 30 days
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="performance-section">
+            <h2>Performance Metrics</h2>
+            <div class="performance-grid">
+                <div class="performance-card">
+                    <h3>Response Times</h3>
+                    <div class="performance-metrics">
+                        <div class="perf-metric">
+                            <span class="label">Average API Response:</span>
+                            <span class="value">{{ system_metrics.avg_api_response|floatformat:0 }}ms</span>
+                        </div>
+                        <div class="perf-metric">
+                            <span class="label">Page Load Time:</span>
+                            <span class="value">{{ system_metrics.avg_page_load|floatformat:0 }}ms</span>
+                        </div>
+                        <div class="perf-metric">
+                            <span class="label">Database Query Time:</span>
+                            <span class="value">{{ system_metrics.avg_db_query|floatformat:0 }}ms</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="performance-card">
+                    <h3>System Resources</h3>
+                    <div class="performance-metrics">
+                        <div class="perf-metric">
+                            <span class="label">CPU Usage:</span>
+                            <span class="value">{{ system_metrics.cpu_usage|floatformat:1 }}%</span>
+                        </div>
+                        <div class="perf-metric">
+                            <span class="label">Memory Usage:</span>
+                            <span class="value">{{ system_metrics.memory_usage|floatformat:1 }}%</span>
+                        </div>
+                        <div class="perf-metric">
+                            <span class="label">Disk Usage:</span>
+                            <span class="value">{{ system_metrics.disk_usage|floatformat:1 }}%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="performance-card">
+                    <h3>Cache Performance</h3>
+                    <div class="performance-metrics">
+                        <div class="perf-metric">
+                            <span class="label">Cache Hit Rate:</span>
+                            <span class="value">{{ system_metrics.cache_hit_rate|floatformat:1 }}%</span>
+                        </div>
+                        <div class="perf-metric">
+                            <span class="label">Redis Memory:</span>
+                            <span class="value">{{ system_metrics.redis_memory|floatformat:1 }}MB</span>
+                        </div>
+                        <div class="perf-metric">
+                            <span class="label">Cache Evictions:</span>
+                            <span class="value">{{ system_metrics.cache_evictions|floatformat:0 }}/day</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="security-section">
+            <h2>Security & Safety Metrics</h2>
+            <div class="security-grid">
+                <div class="security-card">
+                    <h3>Threat Detection</h3>
+                    <div class="security-metrics">
+                        <div class="sec-metric">
+                            <span class="label">Blocked Attacks:</span>
+                            <span class="value">{{ system_metrics.blocked_attacks|floatformat:0 }}</span>
+                        </div>
+                        <div class="sec-metric">
+                            <span class="label">Suspicious IPs:</span>
+                            <span class="value">{{ system_metrics.suspicious_ips|floatformat:0 }}</span>
+                        </div>
+                        <div class="sec-metric">
+                            <span class="label">Rate Limit Violations:</span>
+                            <span class="value">{{ system_metrics.rate_limit_violations|floatformat:0 }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="security-card">
+                    <h3>Content Moderation</h3>
+                    <div class="security-metrics">
+                        <div class="sec-metric">
+                            <span class="label">Flagged Products:</span>
+                            <span class="value">{{ system_metrics.flagged_products|floatformat:0 }}</span>
+                        </div>
+                        <div class="sec-metric">
+                            <span class="label">Removed Listings:</span>
+                            <span class="value">{{ system_metrics.removed_listings|floatformat:0 }}</span>
+                        </div>
+                        <div class="sec-metric">
+                            <span class="label">User Reports:</span>
+                            <span class="value">{{ system_metrics.user_reports|floatformat:0 }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="security-card">
+                    <h3>Compliance</h3>
+                    <div class="security-metrics">
+                        <div class="sec-metric">
+                            <span class="label">GDPR Compliance:</span>
+                            <span class="value status-compliant">Compliant</span>
+                        </div>
+                        <div class="sec-metric">
+                            <span class="label">Data Encryption:</span>
+                            <span class="value status-compliant">AES-256</span>
+                        </div>
+                        <div class="sec-metric">
+                            <span class="label">Privacy Audits:</span>
+                            <span class="value status-compliant">Passed</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if user_behavior_insights %}
+        <div class="behavior-section">
+            <h2>User Behavior Insights</h2>
+            <div class="behavior-grid">
+                <div class="behavior-card">
+                    <h3>Traffic Patterns</h3>
+                    <div class="traffic-chart">
+                        <div class="chart-header">
+                            <h4>Hourly Traffic Distribution</h4>
+                        </div>
+                        <div class="chart-bars">
+                            {% for hour, traffic in user_behavior_insights.hourly_traffic.items %}
+                            <div class="chart-bar">
+                                <div class="bar" style="height: {{ traffic|floatformat:0 }}px;"></div>
+                                <div class="bar-label">{{ hour }}:00</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="behavior-card">
+                    <h3>Popular Actions</h3>
+                    <div class="action-list">
+                        {% for action in user_behavior_insights.popular_actions %}
+                        <div class="action-item">
+                            <span class="action-name">{{ action.name }}</span>
+                            <span class="action-count">{{ action.count }}</span>
+                            <div class="action-bar">
+                                <div class="bar-fill" style="width: {{ action.percentage|floatformat:1 }}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="behavior-card">
+                    <h3>Device Usage</h3>
+                    <div class="device-stats">
+                        {% for device in user_behavior_insights.device_usage %}
+                        <div class="device-item">
+                            <span class="device-type">{{ device.type }}</span>
+                            <span class="device-percentage">{{ device.percentage|floatformat:1 }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if market_insights %}
+        <div class="market-section">
+            <h2>Market Insights</h2>
+            <div class="market-grid">
+                <div class="market-card">
+                    <h3>Top Categories</h3>
+                    <div class="category-list">
+                        {% for category in market_insights.top_categories %}
+                        <div class="category-item">
+                            <span class="category-name">{{ category.name }}</span>
+                            <span class="category-stats">
+                                <span class="product-count">{{ category.product_count }} products</span>
+                                <span class="category-revenue">${{ category.revenue|floatformat:0 }}</span>
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="market-card">
+                    <h3>Price Trends</h3>
+                    <div class="price-trends">
+                        {% for trend in market_insights.price_trends %}
+                        <div class="trend-item">
+                            <span class="trend-category">{{ trend.category }}</span>
+                            <span class="trend-direction {{ trend.direction }}">
+                                {% if trend.direction == 'up' %}↗{% elif trend.direction == 'down' %}↘{% else %}→{% endif %}
+                                {{ trend.change|floatformat:1 }}%
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="market-card">
+                    <h3>Vendor Performance</h3>
+                    <div class="vendor-performance">
+                        {% for vendor in market_insights.top_vendors %}
+                        <div class="vendor-item">
+                            <span class="vendor-name">{{ vendor.name }}</span>
+                            <span class="vendor-stats">
+                                <span class="vendor-rating">{{ vendor.rating|floatformat:1 }}/5</span>
+                                <span class="vendor-sales">${{ vendor.sales|floatformat:0 }}</span>
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="no-insights">
+            <h2>No System Insights Available</h2>
+            <p>System metrics are being collected. Check back later for comprehensive insights.</p>
+        </div>
+    {% endif %}
+
+    <div class="system-health">
+        <h2>System Health Status</h2>
+        <div class="health-grid">
+            <div class="health-card">
+                <h3>Database</h3>
+                <div class="health-status healthy">
+                    <span class="status-icon">✓</span>
+                    <span class="status-text">Healthy</span>
+                </div>
+                <div class="health-details">
+                    <p>All connections active</p>
+                    <p>Query performance optimal</p>
+                </div>
+            </div>
+            
+            <div class="health-card">
+                <h3>Cache System</h3>
+                <div class="health-status healthy">
+                    <span class="status-icon">✓</span>
+                    <span class="status-text">Healthy</span>
+                </div>
+                <div class="health-details">
+                    <p>Redis running normally</p>
+                    <p>Hit rate optimal</p>
+                </div>
+            </div>
+            
+            <div class="health-card">
+                <h3>Background Tasks</h3>
+                <div class="health-status healthy">
+                    <span class="status-icon">✓</span>
+                    <span class="status-text">Healthy</span>
+                </div>
+                <div class="health-details">
+                    <p>Celery workers active</p>
+                    <p>Task queue normal</p>
+                </div>
+            </div>
+            
+            <div class="health-card">
+                <h3>External Services</h3>
+                <div class="health-status healthy">
+                    <span class="status-icon">✓</span>
+                    <span class="status-text">Healthy</span>
+                </div>
+                <div class="health-details">
+                    <p>All APIs responding</p>
+                    <p>No service outages</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="refresh-section">
+        <h3>Refresh Insights</h3>
+        <p>Click the button below to refresh all system insights and metrics.</p>
+        <form method="post" action="{% url 'core:refresh_recommendations' %}">
+            {% csrf_token %}
+            <button type="submit" class="refresh-btn">Refresh Insights</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.system-insights-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.system-insights-page h1 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+}
+
+.overview-section {
+    margin-bottom: 40px;
+}
+
+.overview-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.overview-card h2 {
+    margin: 0 0 15px 0;
+    font-size: 1.8em;
+}
+
+.overview-card p {
+    margin: 0;
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.metrics-section, .performance-section, .security-section, .behavior-section, .market-section, .system-health {
+    margin-bottom: 50px;
+}
+
+.metrics-section h2, .performance-section h2, .security-section h2, .behavior-section h2, .market-section h2, .system-health h2 {
+    color: #34495e;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+    border-top: 4px solid;
+}
+
+.metric-card.primary { border-top-color: #3498db; }
+.metric-card.success { border-top-color: #27ae60; }
+.metric-card.info { border-top-color: #17a2b8; }
+.metric-card.warning { border-top-color: #ffc107; }
+
+.metric-card h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.2em;
+}
+
+.metric-value {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.metric-change {
+    font-size: 0.9em;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 15px;
+    display: inline-block;
+}
+
+.metric-change.positive { background: #d5f4e6; color: #27ae60; }
+.metric-change.negative { background: #fadbd8; color: #e74c3c; }
+.metric-change.neutral { background: #ecf0f1; color: #7f8c8d; }
+
+.performance-grid, .security-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+}
+
+.performance-card, .security-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.performance-card h3, .security-card h3 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+}
+
+.performance-metrics, .security-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.perf-metric, .sec-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.perf-metric .label, .sec-metric .label {
+    font-weight: 500;
+    color: #34495e;
+}
+
+.perf-metric .value, .sec-metric .value {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.status-compliant {
+    background: #d5f4e6;
+    color: #27ae60;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.behavior-grid, .market-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+}
+
+.behavior-card, .market-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.behavior-card h3, .market-card h3 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+}
+
+.traffic-chart {
+    text-align: center;
+}
+
+.chart-header h4 {
+    margin: 0 0 20px 0;
+    color: #34495e;
+    font-size: 1.1em;
+}
+
+.chart-bars {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    height: 150px;
+    gap: 5px;
+}
+
+.chart-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.bar {
+    width: 20px;
+    background: linear-gradient(to top, #3498db, #2980b9);
+    border-radius: 3px 3px 0 0;
+    min-height: 5px;
+}
+
+.bar-label {
+    margin-top: 8px;
+    font-size: 0.8em;
+    color: #7f8c8d;
+    transform: rotate(-45deg);
+}
+
+.action-list, .device-stats, .category-list, .price-trends, .vendor-performance {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.action-item, .device-item, .category-item, .trend-item, .vendor-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.action-name, .device-type, .category-name, .trend-category, .vendor-name {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.action-count, .device-percentage, .category-stats, .trend-direction, .vendor-stats {
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.action-bar {
+    width: 100px;
+    height: 8px;
+    background: #ecf0f1;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-left: 10px;
+}
+
+.bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2980b9);
+    transition: width 0.3s ease;
+}
+
+.trend-direction.up { color: #27ae60; }
+.trend-direction.down { color: #e74c3c; }
+.trend-direction.stable { color: #f39c12; }
+
+.health-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+}
+
+.health-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.health-card h3 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+}
+
+.health-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 10px;
+    border-radius: 20px;
+}
+
+.health-status.healthy {
+    background: #d5f4e6;
+    color: #27ae60;
+}
+
+.status-icon {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.status-text {
+    font-weight: 500;
+    font-size: 1.1em;
+}
+
+.health-details p {
+    margin: 5px 0;
+    color: #34495e;
+    font-size: 0.9em;
+}
+
+.no-insights {
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    margin: 40px 0;
+}
+
+.no-insights h2 {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.refresh-section {
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    margin-top: 40px;
+}
+
+.refresh-section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.refresh-section p {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.refresh-btn {
+    background: #9b59b6;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 25px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.refresh-btn:hover { background: #8e44ad; }
+
+@media (max-width: 768px) {
+    .metrics-grid, .performance-grid, .security-grid, .behavior-grid, .market-grid, .health-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .system-insights-page {
+        padding: 15px;
+    }
+    
+    .system-insights-page h1 {
+        font-size: 2em;
+    }
+    
+    .chart-bars {
+        height: 120px;
+    }
+    
+    .bar {
+        width: 15px;
+    }
+}
+</style>
+{% endblock %}

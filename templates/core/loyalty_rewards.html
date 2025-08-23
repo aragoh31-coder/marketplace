@@ -1,0 +1,710 @@
+{% extends "base_tor_safe.html" %}
+{% load static %}
+
+{% block title %}Loyalty Rewards - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="loyalty-rewards-page">
+    <h1>Loyalty Rewards & Redemptions</h1>
+    
+    <div class="overview-section">
+        <div class="overview-card">
+            <h2>Redeem Your Points</h2>
+            <p>Convert your loyalty points into valuable rewards, discounts, and exclusive benefits.</p>
+        </div>
+    </div>
+
+    {% if user_loyalty %}
+        <div class="loyalty-status">
+            <div class="status-card">
+                <h3>Your Loyalty Status</h3>
+                <div class="status-details">
+                    <div class="level-info">
+                        <span class="level-badge {{ user_loyalty.level }}">{{ user_loyalty.level|title }}</span>
+                        <span class="points-available">{{ user_loyalty.points|floatformat:0 }} points available</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ user_loyalty.progress_percentage|floatformat:1 }}%"></div>
+                    </div>
+                    <div class="progress-info">
+                        <span>{{ user_loyalty.points_to_next_level|floatformat:0 }} points to {{ user_loyalty.next_level|title }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if available_rewards %}
+        <div class="rewards-section">
+            <h2>Available Rewards</h2>
+            <div class="rewards-grid">
+                {% for reward in available_rewards %}
+                <div class="reward-card">
+                    <div class="reward-header">
+                        <h3>{{ reward.name }}</h3>
+                        <span class="reward-cost">{{ reward.points_cost|floatformat:0 }} points</span>
+                    </div>
+                    
+                    <div class="reward-description">
+                        <p>{{ reward.description }}</p>
+                    </div>
+                    
+                    <div class="reward-details">
+                        <div class="detail-item">
+                            <span class="label">Category:</span>
+                            <span class="value">{{ reward.category|title }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Value:</span>
+                            <span class="value">${{ reward.monetary_value|floatformat:2 }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Expires:</span>
+                            <span class="value">{{ reward.expiry_date|date:"M d, Y" }}</span>
+                        </div>
+                        {% if reward.availability %}
+                        <div class="detail-item">
+                            <span class="label">Available:</span>
+                            <span class="value">{{ reward.availability }} remaining</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="reward-actions">
+                        {% if user_loyalty.points >= reward.points_cost %}
+                            <form method="post" action="{% url 'core:loyalty_rewards' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="reward_id" value="{{ reward.id }}">
+                                <button type="submit" class="redeem-btn" name="action" value="redeem">Redeem Reward</button>
+                            </form>
+                        {% else %}
+                            <div class="insufficient-points">
+                                Need {{ reward.points_cost|add:"-"|add:user_loyalty.points|floatformat:0 }} more points
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if redeemed_rewards %}
+        <div class="redeemed-section">
+            <h2>Your Redeemed Rewards</h2>
+            <div class="redeemed-grid">
+                {% for redemption in redeemed_rewards %}
+                <div class="redemption-card {{ redemption.status }}">
+                    <div class="redemption-header">
+                        <h3>{{ redemption.reward.name }}</h3>
+                        <span class="redemption-status {{ redemption.status }}">{{ redemption.status|title }}</span>
+                    </div>
+                    
+                    <div class="redemption-details">
+                        <div class="detail-item">
+                            <span class="label">Redeemed:</span>
+                            <span class="value">{{ redemption.redeemed_at|date:"M d, Y" }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Points Spent:</span>
+                            <span class="value">{{ redemption.points_spent|floatformat:0 }}</span>
+                        </div>
+                        {% if redemption.expires_at %}
+                        <div class="detail-item">
+                            <span class="label">Expires:</span>
+                            <span class="value">{{ redemption.expires_at|date:"M d, Y" }}</span>
+                        </div>
+                        {% endif %}
+                        {% if redemption.usage_instructions %}
+                        <div class="usage-instructions">
+                            <strong>How to use:</strong> {{ redemption.usage_instructions }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="redemption-actions">
+                        {% if redemption.status == 'active' %}
+                            <a href="#" class="action-btn primary">Use Reward</a>
+                            {% if redemption.can_transfer %}
+                            <a href="#" class="action-btn secondary">Transfer</a>
+                            {% endif %}
+                        {% elif redemption.status == 'expired' %}
+                            <span class="expired-message">This reward has expired</span>
+                        {% elif redemption.status == 'used' %}
+                            <span class="used-message">This reward has been used</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="earning-opportunities">
+            <h2>Ways to Earn More Points</h2>
+            <div class="opportunities-grid">
+                <div class="opportunity-card">
+                    <h3>Shopping</h3>
+                    <div class="opportunity-details">
+                        <p><strong>Purchase Products:</strong> Earn 1 point per $1 spent</p>
+                        <p><strong>First Purchase Bonus:</strong> +50 points</p>
+                        <p><strong>Large Order Bonus:</strong> +100 points for orders over $500</p>
+                    </div>
+                </div>
+                
+                <div class="opportunity-card">
+                    <h3>Engagement</h3>
+                    <div class="opportunity-details">
+                        <p><strong>Product Reviews:</strong> +10 points per review</p>
+                        <p><strong>Profile Completion:</strong> +25 points</p>
+                        <p><strong>Refer Friends:</strong> +100 points per successful referral</p>
+                    </div>
+                </div>
+                
+                <div class="opportunity-card">
+                    <h3>Special Events</h3>
+                    <div class="opportunity-details">
+                        <p><strong>Birthday Month:</strong> 2x points on all purchases</p>
+                        <p><strong>Holiday Sales:</strong> Bonus points on select items</p>
+                        <p><strong>Loyalty Milestones:</strong> Bonus points at level ups</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="loyalty-benefits">
+            <h2>Loyalty Level Benefits</h2>
+            <div class="benefits-grid">
+                <div class="benefit-card bronze">
+                    <h3>Bronze</h3>
+                    <div class="benefit-list">
+                        <p>✓ Standard point earning (1:1)</p>
+                        <p>✓ Basic customer support</p>
+                        <p>✓ Standard shipping</p>
+                    </div>
+                </div>
+                
+                <div class="benefit-card silver">
+                    <h3>Silver</h3>
+                    <div class="benefit-list">
+                        <p>✓ 1.2x point earning</p>
+                        <p>✓ Priority customer support</p>
+                        <p>✓ Free standard shipping</p>
+                        <p>✓ Exclusive monthly deals</p>
+                    </div>
+                </div>
+                
+                <div class="benefit-card gold">
+                    <h3>Gold</h3>
+                    <div class="benefit-list">
+                        <p>✓ 1.5x point earning</p>
+                        <p>✓ VIP customer support</p>
+                        <p>✓ Free expedited shipping</p>
+                        <p>✓ Early access to sales</p>
+                        <p>✓ Birthday month bonus</p>
+                    </div>
+                </div>
+                
+                <div class="benefit-card platinum">
+                    <h3>Platinum</h3>
+                    <div class="benefit-list">
+                        <p>✓ 2x point earning</p>
+                        <p>✓ Dedicated account manager</p>
+                        <p>✓ Free premium shipping</p>
+                        <p>✓ Exclusive platinum rewards</p>
+                        <p>✓ Priority dispute resolution</p>
+                    </div>
+                </div>
+                
+                <div class="benefit-card diamond">
+                    <h3>Diamond</h3>
+                    <div class="benefit-list">
+                        <p>✓ 3x point earning</p>
+                        <p>✓ 24/7 concierge service</p>
+                        <p>✓ All shipping methods free</p>
+                        <p>✓ Custom reward creation</p>
+                        <p>✓ Invitation-only events</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="no-loyalty">
+            <h2>No Loyalty Account Found</h2>
+            <p>Start earning loyalty points by making your first purchase!</p>
+            <div class="suggestions">
+                <h3>How to get started:</h3>
+                <ol>
+                    <li>Browse our products</li>
+                    <li>Make your first purchase</li>
+                    <li>Earn points automatically</li>
+                    <li>Start redeeming rewards</li>
+                </ol>
+            </div>
+            <a href="{% url 'core:tor_safe_product_list' %}" class="browse-btn">Browse Products</a>
+        </div>
+    {% endif %}
+
+    <div class="rewards-history">
+        <h2>Rewards History</h2>
+        <div class="history-summary">
+            <div class="summary-item">
+                <span class="label">Total Points Earned:</span>
+                <span class="value">{{ user_loyalty.total_earned|default:0|floatformat:0 }}</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">Total Points Spent:</span>
+                <span class="value">{{ user_loyalty.total_spent|default:0|floatformat:0 }}</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">Rewards Redeemed:</span>
+                <span class="value">{{ redeemed_rewards|length|default:0 }}</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">Member Since:</span>
+                <span class="value">{{ user_loyalty.created_at|date:"M d, Y"|default:"N/A" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.loyalty-rewards-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.loyalty-rewards-page h1 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+}
+
+.overview-section {
+    margin-bottom: 40px;
+}
+
+.overview-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.overview-card h2 {
+    margin: 0 0 15px 0;
+    font-size: 1.8em;
+}
+
+.overview-card p {
+    margin: 0;
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.loyalty-status {
+    margin-bottom: 40px;
+}
+
+.status-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+    text-align: center;
+}
+
+.status-card h3 {
+    margin: 0 0 25px 0;
+    color: #2c3e50;
+    font-size: 1.6em;
+}
+
+.level-info {
+    margin-bottom: 20px;
+}
+
+.level-badge {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 1.2em;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+}
+
+.level-badge.bronze { background: #cd7f32; color: white; }
+.level-badge.silver { background: #c0c0c0; color: white; }
+.level-badge.gold { background: #ffd700; color: #2c3e50; }
+.level-badge.platinum { background: #e5e4e2; color: #2c3e50; }
+.level-badge.diamond { background: #b9f2ff; color: #2c3e50; }
+
+.points-available {
+    display: block;
+    font-size: 1.5em;
+    color: #27ae60;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #ecf0f1;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 20px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2980b9);
+    transition: width 0.3s ease;
+}
+
+.progress-info {
+    color: #7f8c8d;
+    font-size: 1.1em;
+}
+
+.rewards-section, .redeemed-section, .earning-opportunities, .loyalty-benefits, .rewards-history {
+    margin-bottom: 50px;
+}
+
+.rewards-section h2, .redeemed-section h2, .earning-opportunities h2, .loyalty-benefits h2, .rewards-history h2 {
+    color: #34495e;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+}
+
+.rewards-grid, .redeemed-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+}
+
+.reward-card, .redemption-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+    border-left: 5px solid;
+}
+
+.reward-card { border-left-color: #3498db; }
+.redemption-card.active { border-left-color: #27ae60; }
+.redemption-card.expired { border-left-color: #e74c3c; }
+.redemption-card.used { border-left-color: #95a5a6; }
+
+.reward-header, .redemption-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.reward-header h3, .redemption-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+}
+
+.reward-cost {
+    background: #e8f4fd;
+    color: #2c3e50;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.redemption-status {
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.redemption-status.active { background: #d5f4e6; color: #27ae60; }
+.redemption-status.expired { background: #fadbd8; color: #e74c3c; }
+.redemption-status.used { background: #ecf0f1; color: #7f8c8d; }
+
+.reward-description {
+    margin-bottom: 20px;
+}
+
+.reward-description p {
+    margin: 0;
+    color: #34495e;
+    line-height: 1.5;
+}
+
+.reward-details, .redemption-details {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.detail-item .label {
+    font-weight: 500;
+    color: #34495e;
+}
+
+.detail-item .value {
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.usage-instructions {
+    background: #e8f4fd;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    border-left: 4px solid #3498db;
+}
+
+.usage-instructions p {
+    margin: 0;
+    color: #2c3e50;
+    font-style: italic;
+}
+
+.reward-actions, .redemption-actions {
+    text-align: center;
+}
+
+.redeem-btn {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 25px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    font-weight: 500;
+}
+
+.redeem-btn:hover { background: #229954; }
+
+.insufficient-points {
+    background: #fadbd8;
+    color: #e74c3c;
+    padding: 12px 25px;
+    border-radius: 25px;
+    font-size: 1em;
+    font-weight: 500;
+}
+
+.action-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 20px;
+    font-size: 0.9em;
+    transition: background 0.3s ease;
+    margin: 5px;
+}
+
+.action-btn.primary { background: #3498db; color: white; }
+.action-btn.secondary { background: #95a5a6; color: white; }
+
+.action-btn:hover { opacity: 0.8; }
+
+.expired-message, .used-message {
+    color: #7f8c8d;
+    font-style: italic;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    width: 100%;
+}
+
+.opportunities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.opportunity-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.opportunity-card h3 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+}
+
+.opportunity-details p {
+    margin: 10px 0;
+    color: #34495e;
+    line-height: 1.5;
+}
+
+.benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+}
+
+.benefit-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+    border-top: 4px solid;
+}
+
+.benefit-card.bronze { border-top-color: #cd7f32; }
+.benefit-card.silver { border-top-color: #c0c0c0; }
+.benefit-card.gold { border-top-color: #ffd700; }
+.benefit-card.platinum { border-top-color: #e5e4e2; }
+.benefit-card.diamond { border-top-color: #b9f2ff; }
+
+.benefit-card h3 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+    text-align: center;
+}
+
+.benefit-list p {
+    margin: 8px 0;
+    color: #34495e;
+    line-height: 1.4;
+}
+
+.history-summary {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e1e8ed;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-item .label {
+    font-weight: 500;
+    color: #34495e;
+}
+
+.summary-item .value {
+    font-weight: bold;
+    color: #2c3e50;
+    font-size: 1.1em;
+}
+
+.no-loyalty {
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    margin: 40px 0;
+}
+
+.no-loyalty h2 {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.suggestions {
+    text-align: left;
+    max-width: 500px;
+    margin: 30px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.suggestions h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.suggestions ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.suggestions li {
+    margin: 8px 0;
+    color: #34495e;
+}
+
+.browse-btn {
+    display: inline-block;
+    background: #27ae60;
+    color: white;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 25px;
+    font-size: 1.1em;
+    font-weight: 500;
+    transition: background 0.3s ease;
+}
+
+.browse-btn:hover { background: #229954; }
+
+@media (max-width: 768px) {
+    .rewards-grid, .redeemed-grid, .opportunities-grid, .benefits-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .loyalty-rewards-page {
+        padding: 15px;
+    }
+    
+    .loyalty-rewards-page h1 {
+        font-size: 2em;
+    }
+    
+    .reward-header, .redemption-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .detail-item {
+        flex-direction: column;
+        gap: 5px;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}
