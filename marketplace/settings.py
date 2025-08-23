@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "adminpanel",
     "disputes",
     "apps.security",
+    "captcha",  # One-Click CAPTCHA app
 ]
 
 MIDDLEWARE = [

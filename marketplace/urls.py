@@ -36,4 +36,5 @@ urlpatterns = [
     path("adminpanel/", include("adminpanel.urls")),
     path("disputes/", include("disputes.urls")),
     path("security/", include("apps.security.urls")),
+    path("captcha/", include("captcha.urls")),  # One-Click CAPTCHA URLs
 ]

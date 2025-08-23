@@ -1,0 +1,235 @@
+{% extends "base_tor_safe.html" %}
+
+{% block title %}Login - Secure Marketplace{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Skip Link -->
+    <a href="#login-form" class="skip-link">Skip to login form</a>
+    
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{% url 'home' %}" class="breadcrumb-item">Home</a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">Login</span>
+    </nav>
+    
+    <div class="grid grid-center">
+        <div class="box-glow card-elevation-3" style="max-width: 500px;">
+            <h1 class="text-center mb-5">🔐 Secure Login</h1>
+            
+            <!-- Security Indicators -->
+            <div class="grid grid-4 mb-4">
+                <div class="text-center">
+                    <div class="security-badge">
+                        <span class="security-badge-icon">🌐</span>
+                        Tor Safe
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="security-badge">
+                        <span class="security-badge-icon">🚫</span>
+                        No JS
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="security-badge">
+                        <span class="security-badge-icon">🔒</span>
+                        E2E Secure
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="security-badge">
+                        <span class="security-badge-icon">👤</span>
+                        Anonymous
+                    </div>
+                </div>
+            </div>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} mb-3">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <form method="post" id="login-form">
+                {% csrf_token %}
+                
+                <!-- Display form errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mb-3">
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <!-- Progress Steps -->
+                <div class="progress-steps mb-4">
+                    <div class="progress-step active">1</div>
+                    <div class="progress-step">2</div>
+                    <div class="progress-step">3</div>
+                </div>
+                <div class="text-center mb-4">
+                    <small class="text-muted">Step 1: Enter Credentials | Step 2: Security Check | Step 3: Login</small>
+                </div>
+                
+                <!-- Username Field -->
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}" class="form-label">
+                        Username 
+                        <span class="tooltip" data-tooltip="Your unique marketplace username">ℹ️</span>
+                    </label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="form-error">
+                            {% for error in form.username.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Password Field -->
+                <div class="form-group">
+                    <label for="{{ form.password.id_for_label }}" class="form-label">
+                        Password
+                        <span class="tooltip" data-tooltip="Your secure password">ℹ️</span>
+                    </label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <div class="form-error">
+                            {% for error in form.password.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- One-Click CAPTCHA -->
+                <div class="form-group">
+                    <div class="card card-elevation-1 p-3">
+                        <h4 class="mb-3">🎯 Security Verification</h4>
+                        <p class="text-muted mb-3">Click on the circle with the missing slice (like Pac-Man):</p>
+                        
+                        <div class="captcha-container text-center">
+                            <input type="image" 
+                                   name="captcha" 
+                                   src="{% url 'captcha:generate' %}" 
+                                   alt="Click the circle with the gap"
+                                   class="captcha-image"
+                                   style="border: 2px solid var(--border); border-radius: 8px; cursor: pointer; max-width: 100%;">
+                            
+                            <!-- Hidden fields for captcha -->
+                            {{ form.captcha_x }}
+                            {{ form.captcha_y }}
+                            {{ form.captcha_token }}
+                        </div>
+                        
+                        <p class="text-center mt-3">
+                            <small class="text-muted">
+                                This helps us prevent automated access while keeping you anonymous.
+                                <br>The circle with a "bite" taken out is the target.
+                            </small>
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Hidden security fields -->
+                {{ form.website }}
+                {{ form.email_address }}
+                {{ form.form_timestamp }}
+                {{ form.form_hash }}
+                
+                <!-- Remember Me Option -->
+                <label class="checkbox-label mb-4">
+                    <input type="checkbox" name="remember_me">
+                    Remember me for 30 days (use only on secure devices)
+                </label>
+                
+                <button type="submit" class="cta-primary w-full btn-touch">
+                    🔓 Login Securely
+                </button>
+            </form>
+            
+            <!-- Section Divider -->
+            <div class="section-divider with-text mt-4 mb-4">
+                <span class="section-divider-text">Security Tips</span>
+            </div>
+            
+            <!-- Security Tips Accordion -->
+            <div class="accordion mb-4">
+                <div class="accordion-item">
+                    <input type="checkbox" id="security-tip-1" class="accordion-toggle">
+                    <label for="security-tip-1" class="accordion-header">
+                        How to complete the CAPTCHA
+                    </label>
+                    <div class="accordion-content">
+                        <p>Look for the circle that looks like Pac-Man - it will have a triangular slice missing. Simply click anywhere on that circle to verify you're human.</p>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <input type="checkbox" id="security-tip-2" class="accordion-toggle">
+                    <label for="security-tip-2" class="accordion-header">
+                        Why we use visual CAPTCHA
+                    </label>
+                    <div class="accordion-content">
+                        <p>Visual CAPTCHAs are harder for bots to solve while being easy for humans. This one-click system respects your privacy - no tracking, no JavaScript.</p>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <input type="checkbox" id="security-tip-3" class="accordion-toggle">
+                    <label for="security-tip-3" class="accordion-header">
+                        Tor Browser Compatibility
+                    </label>
+                    <div class="accordion-content">
+                        <p>This CAPTCHA works perfectly in Tor Browser's safest mode. No JavaScript or external resources are required.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <p class="mb-2">
+                    Don't have an account? 
+                    <a href="{% url 'accounts:register' %}" class="text-primary fw-600">
+                        Register here →
+                    </a>
+                </p>
+                <!-- Password reset link removed until implemented -->
+            </div>
+            
+            <!-- Trust Indicators -->
+            <div class="mt-4 text-center">
+                <div class="pgp-indicator verified">
+                    🔐 PGP Support Available
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Additional styles for One-Click CAPTCHA */
+.captcha-container {
+    position: relative;
+    display: inline-block;
+}
+
+.captcha-image {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.captcha-image:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 255, 136, 0.2);
+}
+
+.captcha-image:active {
+    transform: scale(0.98);
+}
+</style>
+{% endblock %}

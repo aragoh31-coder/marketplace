@@ -1,0 +1,172 @@
+{% extends "base_tor_safe.html" %}
+{% block title %}Security Challenge Required{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="box-glow card-elevation-3" style="max-width: 600px; margin: 0 auto;">
+        <h1 class="text-center mb-4">🛡️ Security Challenge Required</h1>
+        
+        <div class="alert alert-warning">
+            <h4>⚠️ Unusual Activity Detected</h4>
+            <p>Your request has been flagged by our security system.</p>
+            {% if reason %}
+            <small class="text-muted">Reason: {{ reason }}</small>
+            {% endif %}
+        </div>
+        
+        <p class="text-center mt-4 mb-4">
+            To continue, please complete <strong>both</strong> security challenges below:
+        </p>
+        
+        <form method="post" action="{% url 'security:security_challenge' %}">
+            {% csrf_token %}
+            
+            <!-- Progress indicator -->
+            <div class="progress-steps mb-4">
+                <div class="progress-step active">1</div>
+                <div class="progress-step">2</div>
+            </div>
+            <div class="text-center mb-4">
+                <small class="text-muted">Complete both challenges to proceed</small>
+            </div>
+            
+            <!-- Challenge 1: Math CAPTCHA -->
+            <div class="card card-elevation-1 mb-4">
+                <div class="card-header">
+                    <h3>📐 Challenge 1: Math Verification</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">{{ challenge_question }}</label>
+                        <input type="text" 
+                               name="challenge_answer" 
+                               class="form-input" 
+                               placeholder="Enter your answer"
+                               autocomplete="off"
+                               required>
+                        <small class="form-text text-muted">
+                            Solve this simple math problem to prove you're human.
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Challenge 2: One-Click CAPTCHA -->
+            <div class="card card-elevation-1 mb-4">
+                <div class="card-header">
+                    <h3>🎯 Challenge 2: Visual Verification</h3>
+                </div>
+                <div class="card-body">
+                    <p class="text-center mb-3">
+                        Click on the circle with the missing slice (like Pac-Man):
+                    </p>
+                    
+                    <div class="text-center captcha-container">
+                        <input type="image" 
+                               name="captcha" 
+                               src="{% url 'captcha:generate' %}" 
+                               alt="Click the circle with the gap"
+                               class="captcha-image"
+                               style="border: 2px solid var(--border); border-radius: 8px; cursor: pointer; max-width: 100%;">
+                    </div>
+                    
+                    <p class="text-center mt-3">
+                        <small class="text-muted">
+                            Look for the circle that has a "bite" taken out of it.
+                            <br>Click anywhere on that specific circle.
+                        </small>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Hidden fields -->
+            <input type="hidden" name="challenge_id" value="{{ challenge_id }}">
+            <input type="hidden" name="next" value="{{ request.path }}">
+            
+            <!-- Submit button -->
+            <div class="text-center mt-4">
+                <button type="submit" class="cta-primary btn-touch">
+                    🔓 Complete Verification
+                </button>
+            </div>
+        </form>
+        
+        <!-- Info section -->
+        <div class="section-divider with-text mt-5 mb-4">
+            <span class="section-divider-text">Why This Challenge?</span>
+        </div>
+        
+        <div class="accordion">
+            <div class="accordion-item">
+                <input type="checkbox" id="why-challenge" class="accordion-toggle">
+                <label for="why-challenge" class="accordion-header">
+                    Why am I seeing this?
+                </label>
+                <div class="accordion-content">
+                    <p>Our advanced security system detected unusual patterns that could indicate automated activity. This dual-challenge system helps us maintain a secure marketplace while respecting your privacy.</p>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <input type="checkbox" id="privacy-info" class="accordion-toggle">
+                <label for="privacy-info" class="accordion-header">
+                    Privacy & Anonymity
+                </label>
+                <div class="accordion-content">
+                    <p>These challenges work without JavaScript or tracking. We don't collect any personal information - this is purely to verify you're a human user, not a bot.</p>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <input type="checkbox" id="tor-compat" class="accordion-toggle">
+                <label for="tor-compat" class="accordion-header">
+                    Tor Browser Compatibility
+                </label>
+                <div class="accordion-content">
+                    <p>Both challenges are 100% compatible with Tor Browser's safest mode. No JavaScript, no external resources, no fingerprinting.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <p class="text-secondary">
+                <small>
+                    <strong>Tip:</strong> If you're having trouble, try refreshing the page for a new challenge.
+                    <br>This security measure helps protect our marketplace from automated attacks.
+                </small>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Enhanced styles for dual CAPTCHA challenge */
+.captcha-container {
+    position: relative;
+    display: inline-block;
+}
+
+.captcha-image {
+    transition: all 0.2s ease;
+}
+
+.captcha-image:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
+}
+
+.captcha-image:active {
+    transform: scale(0.98);
+}
+
+.progress-step.completed {
+    background: var(--success);
+    color: white;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+</style>
+{% endblock %}

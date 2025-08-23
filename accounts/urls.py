@@ -1,14 +1,15 @@
 from django.urls import path
 
 from . import views
+from . import views_oneclick
 
 app_name = "accounts"
 
 urlpatterns = [
     path("", views.home, name="home"),
-    path("login/", views.login_view, name="login"),
+    path("login/", views_oneclick.login_view_oneclick, name="login"),
     path("logout/", views.logout_view, name="logout"),
-    path("register/", views.register, name="register"),
+    path("register/", views_oneclick.register_view_oneclick, name="register"),
     path("profile/", views.profile_view, name="profile"),
     path("profile/settings/", views.profile_settings, name="profile_settings"),
     path("profile/change-password/", views.change_password, name="change_password"),
