@@ -399,6 +399,16 @@
                 text-align: left;
             }
             
+            #mobile-menu-toggle:checked ~ .nav .nav-dropdown {
+                width: 100%;
+            }
+            
+            #mobile-menu-toggle:checked ~ .nav .dropdown-label {
+                width: 100%;
+                padding: 0.75rem 1rem;
+                margin: 0.25rem 0;
+            }
+            
             .main-content {
                 padding: 1rem;
             }
@@ -453,6 +463,129 @@
                 box-shadow: none;
             }
         }
+        
+        /* Dropdown Menu Styles */
+        .nav-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-toggle {
+            display: none;
+        }
+        
+        .dropdown-label {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(96, 165, 250, 0.05));
+            border: 1px solid transparent;
+        }
+        
+        .dropdown-label:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(96, 165, 250, 0.1));
+            border-color: rgba(139, 92, 246, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            min-width: 200px;
+            background: linear-gradient(135deg, rgba(30, 27, 75, 0.95), rgba(26, 26, 26, 0.98));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            padding: 0.5rem;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4),
+                        0 0 40px rgba(139, 92, 246, 0.1);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+        
+        .dropdown-toggle:checked ~ .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .dropdown-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            margin: 0.25rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .dropdown-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.2), rgba(96, 165, 250, 0.1));
+            transition: width 0.3s ease;
+            z-index: -1;
+        }
+        
+        .dropdown-item:hover::before {
+            width: 100%;
+        }
+        
+        .dropdown-item:hover {
+            color: #a78bfa;
+            transform: translateX(4px);
+            padding-left: 1.25rem;
+        }
+        
+        .dropdown-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), rgba(96, 165, 250, 0.2), transparent);
+            margin: 0.5rem 0;
+        }
+        
+        /* Mobile dropdown adjustments */
+        @media (max-width: 768px) {
+            .nav-dropdown {
+                width: 100%;
+            }
+            
+            .dropdown-label {
+                width: 100%;
+                text-align: left;
+            }
+            
+            .dropdown-menu {
+                position: static;
+                width: 100%;
+                margin-left: 1rem;
+                margin-right: 0;
+                opacity: 1;
+                visibility: visible;
+                transform: none;
+                display: none;
+                box-shadow: none;
+                border: none;
+                background: rgba(139, 92, 246, 0.05);
+            }
+            
+            .dropdown-toggle:checked ~ .dropdown-menu {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
@@ -473,8 +606,23 @@
                 {% if user.is_authenticated %}
                     <a href="{% url 'orders:list' %}" class="{% if 'orders' in request.resolver_match.namespace %}active{% endif %}">📋 Orders</a>
                     <a href="{% url 'wallets:dashboard' %}" class="{% if 'wallets' in request.resolver_match.namespace %}active{% endif %}">💰 Wallet</a>
-                    <a href="{% url 'accounts:profile' %}" class="{% if 'accounts' in request.resolver_match.namespace %}active{% endif %}">👤 Profile</a>
-                    <a href="{% url 'accounts:logout' %}">🚪 Logout</a>
+                    
+                    <!-- User Dropdown -->
+                    <div class="nav-dropdown">
+                        <input type="checkbox" id="user-dropdown-toggle" class="dropdown-toggle">
+                        <label for="user-dropdown-toggle" class="dropdown-label">
+                            👤 {{ user.username|truncatechars:15 }} ▼
+                        </label>
+                        <div class="dropdown-menu">
+                            <a href="{% url 'accounts:profile' %}" class="dropdown-item">🔧 Profile Settings</a>
+                            <a href="{% url 'accounts:profile' %}#security" class="dropdown-item">🔐 Security</a>
+                            {% if user.vendor %}
+                                <a href="{% url 'vendors:dashboard' %}" class="dropdown-item">🏪 Vendor Dashboard</a>
+                            {% endif %}
+                            <div class="dropdown-divider"></div>
+                            <a href="{% url 'accounts:logout' %}" class="dropdown-item">🚪 Logout</a>
+                        </div>
+                    </div>
                 {% else %}
                     <a href="{% url 'accounts:login' %}">🔑 Login</a>
                     <a href="{% url 'accounts:register' %}">📝 Register</a>
