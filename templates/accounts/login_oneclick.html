@@ -4,9 +4,6 @@
 
 {% block content %}
 <div class="container">
-    <!-- Skip Link -->
-    <a href="#login-form" class="skip-link">Skip to login form</a>
-    
     <!-- Breadcrumb -->
     <nav class="breadcrumb" aria-label="Breadcrumb">
         <a href="{% url 'home' %}" class="breadcrumb-item">Home</a>
@@ -15,35 +12,14 @@
     </nav>
     
     <div class="grid grid-center">
-        <div class="box-glow card-elevation-3" style="max-width: 500px;">
-            <h1 class="text-center mb-5">🔐 Secure Login</h1>
-            
-            <!-- Security Indicators -->
-            <div class="grid grid-4 mb-4">
-                <div class="text-center">
-                    <div class="security-badge">
-                        <span class="security-badge-icon">🌐</span>
-                        Tor Safe
-                    </div>
-                </div>
-                <div class="text-center">
-                    <div class="security-badge">
-                        <span class="security-badge-icon">🚫</span>
-                        No JS
-                    </div>
-                </div>
-                <div class="text-center">
-                    <div class="security-badge">
-                        <span class="security-badge-icon">🔒</span>
-                        E2E Secure
-                    </div>
-                </div>
-                <div class="text-center">
-                    <div class="security-badge">
-                        <span class="security-badge-icon">👤</span>
-                        Anonymous
-                    </div>
-                </div>
+        <div class="box-glow card-elevation-3" style="max-width: 600px;">
+            <!-- Stylized Title -->
+            <div class="title-container mb-5">
+                <h1 class="login-title">
+                    <span class="title-icon">🔐</span>
+                    <span class="title-text">Welcome Back</span>
+                </h1>
+                <div class="title-underline"></div>
             </div>
             
             {% if messages %}
@@ -66,53 +42,69 @@
                     </div>
                 {% endif %}
                 
-                <!-- Progress Steps -->
-                <div class="progress-steps mb-4">
-                    <div class="progress-step active">1</div>
-                    <div class="progress-step">2</div>
-                    <div class="progress-step">3</div>
-                </div>
-                <div class="text-center mb-4">
-                    <small class="text-muted">Step 1: Enter Credentials | Step 2: Security Check | Step 3: Login</small>
+                <!-- Progress Steps Box -->
+                <div class="card card-elevation-1 mb-4" style="background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)); border: 1px solid var(--primary); border-radius: 12px;">
+                    <div class="p-3">
+                        <div class="progress-steps mb-3">
+                            <div class="progress-step active" style="background: var(--primary); color: var(--bg-primary); font-weight: bold;">1</div>
+                            <div class="progress-line" style="background: linear-gradient(to right, var(--primary), var(--border));"></div>
+                            <div class="progress-step" style="border-color: var(--primary);">2</div>
+                        </div>
+                        <div class="text-center">
+                            <small class="text-primary fw-600">Step 1: Enter Credentials</small>
+                            <span class="mx-2">→</span>
+                            <small class="text-muted">Step 2: Click Captcha to Login</small>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Username Field -->
                 <div class="form-group">
-                    <label for="{{ form.username.id_for_label }}" class="form-label">
-                        Username 
-                        <span class="tooltip" data-tooltip="Your unique marketplace username">ℹ️</span>
-                    </label>
-                    {{ form.username }}
-                    {% if form.username.errors %}
-                        <div class="form-error">
-                            {% for error in form.username.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    <div class="input-wrapper" style="background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                        <label for="{{ form.username.id_for_label }}" class="form-label" style="color: var(--primary); font-weight: 600;">
+                            Username 
+                            <span class="tooltip" data-tooltip="Your unique marketplace username">ℹ️</span>
+                        </label>
+                        {{ form.username }}
+                        {% if form.username.help_text %}
+                            <small class="form-text text-muted">{{ form.username.help_text }}</small>
+                        {% endif %}
+                        {% if form.username.errors %}
+                            <div class="form-error">
+                                {% for error in form.username.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
                 
                 <!-- Password Field -->
                 <div class="form-group">
-                    <label for="{{ form.password.id_for_label }}" class="form-label">
-                        Password
-                        <span class="tooltip" data-tooltip="Your secure password">ℹ️</span>
-                    </label>
-                    {{ form.password }}
-                    {% if form.password.errors %}
-                        <div class="form-error">
-                            {% for error in form.password.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    <div class="input-wrapper" style="background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                        <label for="{{ form.password.id_for_label }}" class="form-label" style="color: var(--primary); font-weight: 600;">
+                            Password
+                            <span class="tooltip" data-tooltip="Your secure password">ℹ️</span>
+                        </label>
+                        {{ form.password }}
+                        {% if form.password.help_text %}
+                            <small class="form-text text-muted">{{ form.password.help_text }}</small>
+                        {% endif %}
+                        {% if form.password.errors %}
+                            <div class="form-error">
+                                {% for error in form.password.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
                 
                 <!-- One-Click CAPTCHA -->
                 <div class="form-group">
                     <div class="card card-elevation-1 p-3">
-                        <h4 class="mb-3">🎯 Security Verification</h4>
-                        <p class="text-muted mb-3">Click on the circle with the missing slice (like Pac-Man):</p>
+                        <h4 class="mb-3">🎯 Click to Login</h4>
+                        <p class="text-muted mb-3">Click on the circle with the missing slice (like Pac-Man) to login:</p>
                         
                         <div class="captcha-container text-center">
                             <input type="image" 
@@ -130,8 +122,7 @@
                         
                         <p class="text-center mt-3">
                             <small class="text-muted">
-                                This helps us prevent automated access while keeping you anonymous.
-                                <br>The circle with a "bite" taken out is the target.
+                                <strong>Clicking the correct circle will log you in instantly.</strong>
                             </small>
                         </p>
                     </div>
@@ -142,16 +133,6 @@
                 {{ form.email_address }}
                 {{ form.form_timestamp }}
                 {{ form.form_hash }}
-                
-                <!-- Remember Me Option -->
-                <label class="checkbox-label mb-4">
-                    <input type="checkbox" name="remember_me">
-                    Remember me for 30 days (use only on secure devices)
-                </label>
-                
-                <button type="submit" class="cta-primary w-full btn-touch">
-                    🔓 Login Securely
-                </button>
             </form>
             
             <!-- Section Divider -->
@@ -201,18 +182,127 @@
                 </p>
                 <!-- Password reset link removed until implemented -->
             </div>
-            
-            <!-- Trust Indicators -->
-            <div class="mt-4 text-center">
-                <div class="pgp-indicator verified">
-                    🔐 PGP Support Available
-                </div>
-            </div>
+
         </div>
     </div>
 </div>
 
 <style>
+/* Stylized Title */
+.title-container {
+    text-align: center;
+    position: relative;
+}
+
+.login-title {
+    font-size: 2.5rem;
+    margin: 0;
+    position: relative;
+    display: inline-block;
+}
+
+.title-text {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.title-icon {
+    display: inline-block;
+    animation: pulse 2s ease-in-out infinite;
+    margin-right: 0.5rem;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.title-underline {
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--primary), var(--accent), transparent);
+    margin: 1rem auto 0;
+    width: 200px;
+    border-radius: 2px;
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 0.6; transform: translateX(0); }
+    50% { opacity: 1; transform: translateX(10px); }
+}
+
+/* Progress Line Animation */
+.progress-line {
+    height: 2px;
+    flex: 1;
+    margin: 0 0.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: progressFlow 2s ease-in-out infinite;
+}
+
+@keyframes progressFlow {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Input Wrapper Effects */
+.input-wrapper {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.input-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    transition: left 0.5s ease;
+}
+
+.input-wrapper:hover::before,
+.input-wrapper:focus-within::before {
+    left: 100%;
+}
+
+.input-wrapper:hover {
+    border-color: var(--primary) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 255, 136, 0.1);
+}
+
+.input-wrapper input {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.input-wrapper input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.1);
+}
+
 /* Additional styles for One-Click CAPTCHA */
 .captcha-container {
     position: relative;
