@@ -31,6 +31,13 @@ from .views import (
     withdrawal_reject,
     withdrawals_list,
 )
+from .views_ddos import (
+    ddos_dashboard,
+    unblock_ip,
+    block_ip,
+    get_ip_history,
+    update_rate_limits,
+)
 
 app_name = "adminpanel"
 urlpatterns = [
@@ -64,4 +71,10 @@ urlpatterns = [
     path("withdrawal-approve/<int:withdrawal_id>/", withdrawal_approve, name="withdrawal_approve"),
     path("withdrawal-reject/<int:withdrawal_id>/", withdrawal_reject, name="withdrawal_reject"),
     path("withdrawal-notes/<int:withdrawal_id>/", withdrawal_add_notes, name="withdrawal_add_notes"),
+    # DDoS Protection Management
+    path("ddos/", ddos_dashboard, name="ddos_dashboard"),
+    path("ddos/unblock/", unblock_ip, name="ddos_unblock_ip"),
+    path("ddos/block/", block_ip, name="ddos_block_ip"),
+    path("ddos/ip/<str:ip>/", get_ip_history, name="ddos_ip_history"),
+    path("ddos/update-limits/", update_rate_limits, name="ddos_update_limits"),
 ]

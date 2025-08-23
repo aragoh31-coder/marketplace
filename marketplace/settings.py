@@ -56,6 +56,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # DDoS Protection - MUST be early in the chain
+    "core.antiddos.DDoSProtectionMiddleware",
     # "django_ratelimit.middleware.RatelimitMiddleware",  # Temporarily disabled due to cache backend issue
     "apps.security.middleware.EnhancedSecurityMiddleware",
     # "apps.security.middleware.WalletSecurityMiddleware",

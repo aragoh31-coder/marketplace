@@ -1,0 +1,178 @@
+{% extends "base_tor_safe.html" %}
+{% block title %}DDoS Protection Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>🛡️ DDoS Protection Dashboard</h1>
+    
+    <!-- Current Stats -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Current Requests/Min</h5>
+                    <h2 class="text-primary">{{ stats.current_requests_per_minute }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Blacklisted IPs</h5>
+                    <h2 class="text-danger">{{ stats.blacklisted_ips }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Blocked (Last Hour)</h5>
+                    <h2 class="text-warning">{{ stats.blocked_requests_last_hour }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Protection Status</h5>
+                    <h2 class="text-success">✅ Active</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Rate Limits Configuration -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Current Rate Limits</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5>Global Limits</h5>
+                    <ul>
+                        <li>Per Second: {{ rate_limits.global.requests_per_second }}</li>
+                        <li>Per Minute: {{ rate_limits.global.requests_per_minute }}</li>
+                        <li>Per Hour: {{ rate_limits.global.requests_per_hour }}</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>Per IP Limits</h5>
+                    <ul>
+                        <li>Per Second: {{ rate_limits.per_ip.requests_per_second }}</li>
+                        <li>Per Minute: {{ rate_limits.per_ip.requests_per_minute }}</li>
+                        <li>Per Hour: {{ rate_limits.per_ip.requests_per_hour }}</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>Per User Limits</h5>
+                    <ul>
+                        <li>Per Second: {{ rate_limits.per_user.requests_per_second }}</li>
+                        <li>Per Minute: {{ rate_limits.per_user.requests_per_minute }}</li>
+                        <li>Per Hour: {{ rate_limits.per_user.requests_per_hour }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Suspicious Pattern Thresholds -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Suspicious Pattern Detection</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <ul>
+                        <li>Rapid Endpoint Switching: {{ suspicious_patterns.rapid_endpoint_switching }} endpoints/min</li>
+                        <li>Failed Auth Attempts: {{ suspicious_patterns.failed_auth_attempts }} attempts</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul>
+                        <li>Error Rate Threshold: {{ suspicious_patterns.error_rate|floatformat:0 }}%</li>
+                        <li>Identical Requests: {{ suspicious_patterns.identical_requests }} requests/min</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Manual IP Management -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>IP Management</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Block IP Address</h5>
+                    <form method="post" action="{% url 'adminpanel:ddos_block_ip' %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <input type="text" name="ip" class="form-control" placeholder="IP Address" required>
+                        </div>
+                        <div class="form-group">
+                            <select name="duration" class="form-control">
+                                <option value="3600">1 Hour</option>
+                                <option value="86400">24 Hours</option>
+                                <option value="604800">7 Days</option>
+                                <option value="2592000">30 Days</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-danger">Block IP</button>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <h5>Unblock IP Address</h5>
+                    <form method="post" action="{% url 'adminpanel:ddos_unblock_ip' %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <input type="text" name="ip" class="form-control" placeholder="IP Address" required>
+                        </div>
+                        <button type="submit" class="btn btn-success">Unblock IP</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Blocked IPs -->
+    {% if blocked_ips %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Recently Blocked IPs</h4>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>IP Address</th>
+                        <th>Blocked At</th>
+                        <th>Reason</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for blocked in blocked_ips %}
+                    <tr>
+                        <td>{{ blocked.ip }}</td>
+                        <td>{{ blocked.timestamp }}</td>
+                        <td>{{ blocked.reason }}</td>
+                        <td>
+                            <form method="post" action="{% url 'adminpanel:ddos_unblock_ip' %}" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="ip" value="{{ blocked.ip }}">
+                                <button type="submit" class="btn btn-sm btn-success">Unblock</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
