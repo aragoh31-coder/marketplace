@@ -1,0 +1,26 @@
+{% extends "base_tor_safe.html" %}
+{% block title %}Server Error{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="card text-center">
+        <h1>⚠️ 500 - Server Error</h1>
+        <p class="mt-3">We're experiencing technical difficulties. Please try again later.</p>
+        
+        {% if error_id %}
+        <div class="alert alert-info mt-4">
+            <p>Error ID: <code>{{ error_id }}</code></p>
+            <small>Please provide this ID when contacting support.</small>
+        </div>
+        {% endif %}
+        
+        <div class="mt-4">
+            <a href="{% url 'home' %}" class="btn btn-primary">🏠 Go to Homepage</a>
+            <a href="{{ request.path }}" class="btn btn-secondary">🔄 Try Again</a>
+        </div>
+        
+        <div class="mt-4">
+            <p class="text-secondary">Our team has been notified and is working to fix this issue.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
