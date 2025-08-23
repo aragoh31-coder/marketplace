@@ -61,7 +61,7 @@ class MetricsCollector:
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Could not get CPU usage: {e}")
-                continue
+                # Continue with execution even if CPU monitoring fails
             
             metrics['last_updated'] = current_time
     

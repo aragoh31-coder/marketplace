@@ -12,7 +12,9 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.db.models import Q
 from django.core.paginator import Paginator
 
-from .models import Product, Category, Wallet, Transaction
+# Import models from their respective apps
+from products.models import Product, Category
+from wallets.models import Wallet, Transaction
 
 
 @cache_control(max_age=3600)  # Cache for 1 hour
@@ -47,6 +49,17 @@ def serve_secure_image(request, path):
 
     except Exception:
         raise Http404("Error serving image")
+
+
+def home(request):
+    """Regular home view."""
+    context = {
+        'tor_enabled': False,
+        'javascript_disabled': False,
+        'external_cdns_disabled': False,
+        'analytics_disabled': False,
+    }
+    return render(request, 'home.html', context)
 
 
 def tor_safe_home(request):
