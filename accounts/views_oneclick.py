@@ -58,7 +58,7 @@ def login_view_oneclick(request):
             else:
                 messages.error(request, 'Invalid username or password.')
     else:
-        form = SecureLoginFormOneClick(request=request)
+        form = SecureLoginFormOneClick(request)
     
     return render(request, 'accounts/login_oneclick.html', {
         'form': form,
