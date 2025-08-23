@@ -55,7 +55,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+    "core.middleware_csrf.TorSafeCsrfMiddleware",  # Custom CSRF for Tor
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -143,6 +143,17 @@ SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_SSL_REDIRECT = False
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
+
+# CSRF Settings for Tor
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://seczzblxgf5cg2srw7tztrd4kyrwilqzroyxpliyuh3mkfcje2lls7id.onion",
+]
+
+# Allow null origin for Tor Browser (privacy mode)
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_USE_SESSIONS = True  # Store CSRF token in session instead of cookie
 
 # Tor Security Settings
 # ======================================================

@@ -32,7 +32,7 @@
                 {% endfor %}
             {% endif %}
             
-            <form method="post" id="register-form">
+            <form method="post" action="{% url 'accounts:register' %}" id="register-form">
                 {% csrf_token %}
                 
                 <!-- Display form errors -->
