@@ -392,7 +392,7 @@ def advanced_search(request):
                 filters=filters,
                 results_count=len(search_results),
                 session_id=request.session.session_key or '',
-                ip_address=request.META.get('REMOTE_ADDR', ''),
+                ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',  # Using session ID
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
             )
             

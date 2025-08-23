@@ -43,14 +43,10 @@ class WalletSecurityMiddleware:
                 messages.info(request, "Your session has expired due to inactivity.")
 
     def get_anonymized_ip(self, request):
-        """Get anonymized IP address for privacy protection"""
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0].strip()
-        else:
-            ip = request.META.get("REMOTE_ADDR", "127.0.0.1")
-
-        return hashlib.sha256(ip.encode()).hexdigest()[:16]
+        """Get anonymized session ID for privacy protection"""
+        # Use session ID instead of IP for Tor compatibility
+        session_id = request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session'
+        return hashlib.sha256(session_id.encode()).hexdigest()[:16]
 
 
 class RateLimitMiddleware:
@@ -94,11 +90,7 @@ class RateLimitMiddleware:
         return True
 
     def get_anonymized_ip(self, request):
-        """Get anonymized IP address for privacy protection"""
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0].strip()
-        else:
-            ip = request.META.get("REMOTE_ADDR", "127.0.0.1")
-
-        return hashlib.sha256(ip.encode()).hexdigest()[:16]
+        """Get anonymized session ID for privacy protection"""
+        # Use session ID instead of IP for Tor compatibility
+        session_id = request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session'
+        return hashlib.sha256(session_id.encode()).hexdigest()[:16]

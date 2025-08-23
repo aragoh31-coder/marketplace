@@ -129,9 +129,10 @@ class AdminSecurityManager:
         return True, "Session valid"
 
     def _hash_ip(self, request):
-        """Hash IP for session validation without logging actual IP"""
-        ip = request.META.get("REMOTE_ADDR", "127.0.0.1")
-        return hashlib.sha256(ip.encode()).hexdigest()[:16]
+        """Hash session ID for session validation without logging actual IP"""
+        # Use session ID instead of IP for Tor compatibility
+        session_id = request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session'
+        return hashlib.sha256(session_id.encode()).hexdigest()[:16]
 
     def _log_security_event(self, user, event_type, details):
         """Log security events"""

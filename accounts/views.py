@@ -340,9 +340,12 @@ def change_password(request):
             user = form.save()
             update_session_auth_hash(request, user)
 
+            # Use session ID instead of IP for Tor compatibility
+            session_id = request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session'
+            
             LoginHistory.objects.create(
                 user=user,
-                ip_hash=hashlib.sha256(request.META.get("REMOTE_ADDR", "").encode()).hexdigest(),
+                ip_hash=hashlib.sha256(session_id.encode()).hexdigest(),
                 user_agent=request.META.get("HTTP_USER_AGENT", "")[:200],
                 success=True,
             )
@@ -718,9 +721,12 @@ def pgp_challenge_view(request):
             request.session.pop("pgp_2fa_timestamp", None)
             request.session.pop("pgp_2fa_encrypted_challenge", None)
 
+            # Use session ID instead of IP for Tor compatibility
+            session_id = request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session'
+            
             LoginHistory.objects.create(
                 user=user,
-                ip_hash=hashlib.sha256(request.META.get("REMOTE_ADDR", "").encode()).hexdigest(),
+                ip_hash=hashlib.sha256(session_id.encode()).hexdigest(),
                 user_agent=request.META.get("HTTP_USER_AGENT", "")[:200],
                 success=True,
             )

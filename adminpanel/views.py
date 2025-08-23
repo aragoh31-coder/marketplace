@@ -184,7 +184,7 @@ def handle_triple_auth(request):
         AuditLog.objects.create(
             user=user,
             action="admin_action",
-            ip_address=request.META.get("REMOTE_ADDR", "127.0.0.1"),
+            ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',
             user_agent=request.META.get("HTTP_USER_AGENT", ""),
             details={"action": "triple_auth_login", "success": True, "timestamp": timezone.now().isoformat()},
         )
@@ -244,7 +244,7 @@ def secondary_auth(request):
                         target_model="User",
                         target_id=str(user.id),
                         description=f"Admin triple authentication completed for {user.username} (no PGP)",
-                        ip_address=request.META.get("REMOTE_ADDR", "127.0.0.1"),
+                        ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',
                     )
 
                     messages.success(request, "Welcome to the enhanced admin panel!")
@@ -303,7 +303,7 @@ def pgp_verify(request):
                         target_model="User",
                         target_id=str(user.id),
                         description=f"Admin login with PGP verification completed for {user.username}",
-                        ip_address=request.META.get("REMOTE_ADDR", "127.0.0.1"),
+                        ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',
                     )
 
                     messages.success(request, "Welcome to the admin panel!")
@@ -805,7 +805,7 @@ def admin_user_action(request, username):
                 target_model="User",
                 target_id=str(user.id),
                 description=f"Banned user {user.username}",
-                ip_address=request.META.get("REMOTE_ADDR", "127.0.0.1"),
+                ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',
             )
             messages.success(request, f"User {user.username} has been banned.")
 
@@ -818,7 +818,7 @@ def admin_user_action(request, username):
                 target_model="User",
                 target_id=str(user.id),
                 description=f"Unbanned user {user.username}",
-                ip_address=request.META.get("REMOTE_ADDR", "127.0.0.1"),
+                ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',
             )
             messages.success(request, f"User {user.username} has been unbanned.")
 
@@ -833,7 +833,7 @@ def admin_user_action(request, username):
                 target_model="User",
                 target_id=str(user.id),
                 description=f"Reset 2FA for user {user.username}",
-                ip_address=request.META.get("REMOTE_ADDR", "127.0.0.1"),
+                ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',
             )
             messages.success(request, f"2FA has been reset for {user.username}.")
 
@@ -846,7 +846,7 @@ def admin_user_action(request, username):
                 target_model="User",
                 target_id=str(user.id),
                 description=f"Granted staff privileges to {user.username}",
-                ip_address=request.META.get("REMOTE_ADDR", "127.0.0.1"),
+                ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',
             )
             messages.success(request, f"{user.username} is now a staff member.")
 
@@ -859,7 +859,7 @@ def admin_user_action(request, username):
                 target_model="User",
                 target_id=str(user.id),
                 description=f"Removed staff privileges from {user.username}",
-                ip_address=request.META.get("REMOTE_ADDR", "127.0.0.1"),
+                ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',
             )
             messages.success(request, f"Staff privileges removed from {user.username}.")
 

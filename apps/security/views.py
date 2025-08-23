@@ -258,9 +258,7 @@ def security_status_api(request):
     return JsonResponse(security_data)
 
 
-def ip_change_detected(request):
-    """Handle IP change detection"""
-    return render(request, "security/ip_change.html")
+# IP change detection removed for Tor compatibility
 
 
 def session_expired(request):

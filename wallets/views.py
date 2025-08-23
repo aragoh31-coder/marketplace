@@ -141,13 +141,16 @@ def withdraw(request):
             if not form.errors:
                 try:
                     with transaction.atomic():
+                        # Get session ID instead of IP for Tor compatibility
+                        session_id = request.session.session_key if hasattr(request, 'session') else 'no-session'
+                        
                         wr = WithdrawalRequest.objects.create(
                             user=request.user,
                             amount=form.cleaned_data["amount"],
                             currency=form.cleaned_data["currency"],
                             address=form.cleaned_data["address"],
                             user_note=form.cleaned_data.get("note", ""),
-                            ip_address=get_client_ip(request),
+                            ip_address=session_id,  # Using session ID instead of IP
                             user_agent=request.META.get("HTTP_USER_AGENT", ""),
                             two_fa_verified=wallet.two_fa_enabled,
                             pin_verified=bool(wallet.withdrawal_pin),
@@ -253,7 +256,7 @@ def convert(request):
                         balance_before=from_balance_before,
                         balance_after=from_balance_before - amount,
                         reference=f"CONV-{timezone.now().timestamp()}",
-                        ip_address=get_client_ip(request),
+                        ip_address=request.session.session_key if hasattr(request, 'session') else 'no-session',  # Using session ID
                         metadata={
                             "rate_used": str(rate),
                             "from_balance_before": str(from_balance_before),
