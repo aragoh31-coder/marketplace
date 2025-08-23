@@ -9,23 +9,23 @@ class OneClickCaptchaMixin:
     No JavaScript required - uses image input type for click coordinates.
     """
     
-    # Hidden fields to store click coordinates
-    captcha_x = forms.IntegerField(
-        required=False,
-        widget=forms.HiddenInput()
-    )
-    captcha_y = forms.IntegerField(
-        required=False,
-        widget=forms.HiddenInput()
-    )
-    captcha_token = forms.CharField(
-        required=False,
-        widget=forms.HiddenInput()
-    )
-    
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
+        
+        # Add hidden fields to store click coordinates
+        self.fields['captcha_x'] = forms.IntegerField(
+            required=False,
+            widget=forms.HiddenInput()
+        )
+        self.fields['captcha_y'] = forms.IntegerField(
+            required=False,
+            widget=forms.HiddenInput()
+        )
+        self.fields['captcha_token'] = forms.CharField(
+            required=False,
+            widget=forms.HiddenInput()
+        )
         
         if self.request and hasattr(self.request, 'session'):
             # Get current token from session

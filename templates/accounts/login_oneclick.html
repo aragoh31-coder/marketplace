@@ -123,9 +123,9 @@
                                    style="border: 2px solid var(--border); border-radius: 8px; cursor: pointer; max-width: 100%;">
                             
                             <!-- Hidden fields for captcha -->
-                            {{ form.captcha_x }}
-                            {{ form.captcha_y }}
-                            {{ form.captcha_token }}
+                            {% if form.captcha_x %}{{ form.captcha_x }}{% endif %}
+                            {% if form.captcha_y %}{{ form.captcha_y }}{% endif %}
+                            {% if form.captcha_token %}{{ form.captcha_token }}{% endif %}
                         </div>
                         
                         <p class="text-center mt-3">
