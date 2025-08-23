@@ -60,85 +60,80 @@
                     </div>
                 {% endif %}
                 
-                <!-- Progress Steps -->
-                <div class="progress-steps mb-4">
-                    <div class="progress-step active">1</div>
-                    <div class="progress-step">2</div>
-                </div>
-                <div class="text-center mb-4">
-                    <small class="text-muted">Step 1: Enter Details | Step 2: Click Captcha to Create Account</small>
+                <!-- Progress Steps Box -->
+                <div class="card card-elevation-1 mb-4" style="background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)); border: 1px solid var(--primary); border-radius: 12px;">
+                    <div class="p-3">
+                        <div class="progress-steps mb-3">
+                            <div class="progress-step active" style="background: var(--primary); color: var(--bg-primary); font-weight: bold;">1</div>
+                            <div class="progress-line" style="background: linear-gradient(to right, var(--primary), var(--border));"></div>
+                            <div class="progress-step" style="border-color: var(--primary);">2</div>
+                        </div>
+                        <div class="text-center">
+                            <small class="text-primary fw-600">Step 1: Enter Details</small>
+                            <span class="mx-2">→</span>
+                            <small class="text-muted">Step 2: Click Captcha to Create Account</small>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Username Field -->
                 <div class="form-group">
-                    <label for="{{ form.username.id_for_label }}" class="form-label">
-                        Username 
-                        <span class="tooltip" data-tooltip="Choose a unique username for your marketplace identity">ℹ️</span>
-                    </label>
-                    {{ form.username }}
-                    {% if form.username.help_text %}
-                        <small class="form-text text-muted">{{ form.username.help_text }}</small>
-                    {% endif %}
-                    {% if form.username.errors %}
-                        <div class="form-error">
-                            {% for error in form.username.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    <div class="input-wrapper" style="background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                        <label for="{{ form.username.id_for_label }}" class="form-label" style="color: var(--primary); font-weight: 600;">
+                            Username 
+                            <span class="tooltip" data-tooltip="Choose a unique username for your marketplace identity">ℹ️</span>
+                        </label>
+                        {{ form.username }}
+                        {% if form.username.help_text %}
+                            <small class="form-text text-muted">{{ form.username.help_text }}</small>
+                        {% endif %}
+                        {% if form.username.errors %}
+                            <div class="form-error">
+                                {% for error in form.username.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
                 
-                <!-- Email Field -->
-                <div class="form-group">
-                    <label for="{{ form.email.id_for_label }}" class="form-label">
-                        Email Address
-                        <span class="tooltip" data-tooltip="Used only for account recovery - we recommend using an anonymous email">ℹ️</span>
-                    </label>
-                    {{ form.email }}
-                    {% if form.email.help_text %}
-                        <small class="form-text text-muted">{{ form.email.help_text }}</small>
-                    {% endif %}
-                    {% if form.email.errors %}
-                        <div class="form-error">
-                            {% for error in form.email.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-                
+
                 <!-- Password Fields -->
                 <div class="form-group">
-                    <label for="{{ form.password1.id_for_label }}" class="form-label">
-                        Password
-                        <span class="tooltip" data-tooltip="Choose a strong, unique password">ℹ️</span>
-                    </label>
-                    {{ form.password1 }}
-                    {% if form.password1.help_text %}
-                        <small class="form-text text-muted">{{ form.password1.help_text }}</small>
-                    {% endif %}
-                    {% if form.password1.errors %}
-                        <div class="form-error">
-                            {% for error in form.password1.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    <div class="input-wrapper" style="background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                        <label for="{{ form.password1.id_for_label }}" class="form-label" style="color: var(--primary); font-weight: 600;">
+                            Password
+                            <span class="tooltip" data-tooltip="Choose a strong, unique password">ℹ️</span>
+                        </label>
+                        {{ form.password1 }}
+                        {% if form.password1.help_text %}
+                            <small class="form-text text-muted">{{ form.password1.help_text }}</small>
+                        {% endif %}
+                        {% if form.password1.errors %}
+                            <div class="form-error">
+                                {% for error in form.password1.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="{{ form.password2.id_for_label }}" class="form-label">
-                        Confirm Password
-                        <span class="tooltip" data-tooltip="Re-enter your password to confirm">ℹ️</span>
-                    </label>
-                    {{ form.password2 }}
-                    {% if form.password2.errors %}
-                        <div class="form-error">
-                            {% for error in form.password2.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    <div class="input-wrapper" style="background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                        <label for="{{ form.password2.id_for_label }}" class="form-label" style="color: var(--primary); font-weight: 600;">
+                            Confirm Password
+                            <span class="tooltip" data-tooltip="Re-enter your password to confirm">ℹ️</span>
+                        </label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                            <div class="form-error">
+                                {% for error in form.password2.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
                 
                 <!-- One-Click CAPTCHA -->
@@ -239,13 +234,7 @@
                 </p>
             </div>
             
-            <!-- Trust Indicators -->
-            <div class="mt-4 text-center">
-                <div class="trust-score high">
-                    <span class="trust-score-value">🛡️</span>
-                    Military-Grade Security
-                </div>
-            </div>
+
         </div>
     </div>
 </div>
@@ -276,6 +265,41 @@
 
 .text-small li {
     margin-bottom: 0.25rem;
+}
+
+/* Progress line style */
+.progress-line {
+    height: 2px;
+    flex: 1;
+    margin: 0 1rem;
+    align-self: center;
+}
+
+/* Smooth input styling */
+.input-wrapper {
+    transition: all 0.3s ease;
+}
+
+.input-wrapper:hover {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.1);
+}
+
+.input-wrapper input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem;
+    width: 100%;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+}
+
+.input-wrapper input:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.2);
+    outline: none;
 }
 </style>
 {% endblock %}

@@ -127,14 +127,9 @@ class SecureLoginFormOneClick(NoJSOneClickCaptchaMixin, AuthenticationForm):
 class SecureRegistrationFormOneClick(NoJSOneClickCaptchaMixin, UserCreationForm):
     """Registration form with One-Click CAPTCHA"""
     
-    email = forms.EmailField(
-        required=True,
-        help_text="Required for account recovery"
-    )
-    
     class Meta:
         model = User
-        fields = ("username", "email", "password1", "password2")
+        fields = ("username", "password1", "password2")
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -161,10 +156,7 @@ class SecureRegistrationFormOneClick(NoJSOneClickCaptchaMixin, UserCreationForm)
         return True
     
     def save(self, commit=True):
-        user = super().save(commit=False)
-        user.email = self.cleaned_data["email"]
-        if commit:
-            user.save()
+        user = super().save(commit=commit)
         return user
     
     def get_captcha_html(self):
