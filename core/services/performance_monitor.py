@@ -56,8 +56,12 @@ class MetricsCollector:
             try:
                 cpu_percent = psutil.cpu_percent(interval=0.1)
                 metrics['cpu_usage'].append(cpu_percent)
-            except Exception:
-                pass  # Ignore if psutil fails
+            except Exception as e:
+                # Log the error instead of silently passing
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Could not get CPU usage: {e}")
+                continue
             
             metrics['last_updated'] = current_time
     

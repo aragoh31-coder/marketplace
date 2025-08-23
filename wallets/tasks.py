@@ -359,9 +359,12 @@ def update_exchange_rates():
         ConversionRate.objects.filter(is_active=True).update(is_active=False, valid_until=timezone.now())
 
         import random
+        import secrets
 
         base_btc_xmr = Decimal("350.0")
-        variation = Decimal(str(random.uniform(-5.0, 5.0)))  # ±5 XMR variation
+        # SECURITY: Use SystemRandom for better entropy in financial calculations
+        secure_random = random.SystemRandom()
+        variation = Decimal(str(secure_random.uniform(-5.0, 5.0)))  # ±5 XMR variation
         btc_to_xmr_rate = base_btc_xmr + variation
 
         ConversionRate.objects.create(

@@ -208,8 +208,10 @@ class SettingsManager:
                 try:
                     value = getattr(settings, key)
                     all_settings[key] = value
-                except Exception:
-                    pass
+                except Exception as e:
+                    # Log the error instead of silently passing
+                    logger.warning(f"Could not access setting {key}: {e}")
+                    continue
 
         # Override with environment variables
         all_settings.update(self._environment_overrides)

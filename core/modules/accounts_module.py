@@ -415,8 +415,10 @@ class AccountsModule(BaseModule, ModelInterface, ViewInterface, TemplateInterfac
 
                 wallet_service = WalletService()
                 wallet_data = wallet_service.get_wallet_summary(user_id)
-            except Exception:
-                pass
+            except Exception as e:
+                # Log the error instead of silently passing
+                logger.warning(f"Could not get wallet data for user {user_id}: {e}")
+                wallet_data = {}
 
             return {
                 "user_id": str(user.id),

@@ -125,8 +125,12 @@ def _preload_critical_services():
     for service in critical_services:
         try:
             _lazy_loader.preload_service(service)
-        except Exception:
-            pass  # Ignore errors during preloading
+        except Exception as e:
+            # Log the error instead of silently passing
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Could not preload service {service}: {e}")
+            continue
 
 
 # Initialize critical services

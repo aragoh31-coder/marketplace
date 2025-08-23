@@ -15,9 +15,11 @@ register = template.Library()
 @register.simple_tag
 def design_css_variables():
     """Generate CSS variables from the design system theme."""
+    from django.utils.html import escape
     design_system = get_design_system()
     css_vars = design_system.generate_css_variables()
-    return mark_safe(f":root {{\n            {css_vars}\n        }}")
+    # SECURITY: Escape CSS variables to prevent XSS
+    return mark_safe(f":root {{\n            {escape(css_vars)}\n        }}")
 
 
 @register.simple_tag
@@ -100,9 +102,11 @@ def design_system_description():
 @register.simple_tag
 def inline_css_variables():
     """Generate inline CSS variables for immediate use."""
+    from django.utils.html import escape
     design_system = get_design_system()
     css_vars = design_system.generate_css_variables()
-    return mark_safe(f"<style>:root {{\n            {css_vars}\n        }}</style>")
+    # SECURITY: Escape CSS variables to prevent XSS
+    return mark_safe(f"<style>:root {{\n            {escape(css_vars)}\n        }}</style>")
 
 
 @register.simple_tag
@@ -133,7 +137,9 @@ def theme_style(property_name, value_key, fallback=None):
         value = fallback
 
     if value:
-        return mark_safe(f'style="{property_name}: {value};"')
+        from django.utils.html import escape
+        # SECURITY: Escape property name and value to prevent XSS
+        return mark_safe(f'style="{escape(property_name)}: {escape(str(value))};"')
 
     return ""
 
@@ -202,7 +208,9 @@ def theme_glassmorphism(intensity="normal"):
         backdrop_blur = "20px"
         background = "rgba(15, 23, 42, 0.6)"
 
-    return mark_safe(f'style="background: {background}; backdrop-filter: blur({backdrop_blur});"')
+    from django.utils.html import escape
+    # SECURITY: Escape background and backdrop-blur values to prevent XSS
+    return mark_safe(f'style="background: {escape(background)}; backdrop-filter: blur({escape(backdrop_blur)});"')
 
 
 @register.simple_tag
@@ -212,6 +220,8 @@ def theme_text_gradient(color1, color2, direction="135deg"):
     c1 = design_system.get_color(color1, color1)
     c2 = design_system.get_color(color2, color2)
 
+    from django.utils.html import escape
+    # SECURITY: Escape all values to prevent XSS
     return mark_safe(
-        f'style="background: linear-gradient({direction}, {c1} 0%, {c2} 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"'
+        f'style="background: linear-gradient({escape(direction)}, {escape(c1)} 0%, {escape(c2)} 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"'
     )

@@ -1,5 +1,8 @@
 import random
 import secrets
+
+# SECURITY: Use SystemRandom for better entropy in mock data generation
+secure_random = random.SystemRandom()
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -144,8 +147,8 @@ class Command(BaseCommand):
                 defaults={
                     "email": f"{vdata['username'].lower()}@market.onion",
                     "is_vendor": True,
-                    "total_trades": random.randint(100, 500),
-                    "positive_feedback_count": random.randint(95, 500),
+                                            "total_trades": secure_random.randint(100, 500),
+                        "positive_feedback_count": secure_random.randint(95, 500),
                     "feedback_score": float(vdata["rating"]),
                 },
             )
@@ -155,7 +158,7 @@ class Command(BaseCommand):
                 if vdata["pgp_enabled"]:
                     user.pgp_public_key = self.generate_mock_pgp_key(user.username)
                     user.pgp_fingerprint = secrets.token_hex(20)
-                    user.pgp_login_enabled = random.choice([True, False])
+                    user.pgp_login_enabled = secure_random.choice([True, False])
                 user.save()
 
             vendor, created = Vendor.objects.get_or_create(
@@ -181,19 +184,19 @@ class Command(BaseCommand):
                 email=f"{username}@market.onion",
                 password="vendor123",
                 is_vendor=True,
-                total_trades=random.randint(10, 100),
-                positive_feedback_count=random.randint(8, 95),
-                feedback_score=random.uniform(4.0, 4.9),
+                                    total_trades=secure_random.randint(10, 100),
+                    positive_feedback_count=secure_random.randint(8, 95),
+                    feedback_score=secure_random.uniform(4.0, 4.9),
             )
 
             vendor = Vendor.objects.create(
                 user=user,
                 vendor_name=f"Vendor {i+1}",
                 description=f"Trusted vendor specializing in digital goods. Fast delivery guaranteed.",
-                trust_level=random.choice(["NEW", "TRUSTED", "VERIFIED"]),
-                total_sales=Decimal(str(random.uniform(100, 5000))),
-                rating=Decimal(str(random.uniform(4.0, 4.9))),
-                is_approved=random.choice([True, False]),
+                                    trust_level=secure_random.choice(["NEW", "TRUSTED", "VERIFIED"]),
+                    total_sales=Decimal(str(secure_random.uniform(100, 5000))),
+                    rating=Decimal(str(secure_random.uniform(4.0, 4.9))),
+                    is_approved=secure_random.choice([True, False]),
             )
 
             self.create_vendor_wallets(user)
@@ -206,8 +209,8 @@ class Command(BaseCommand):
         Wallet.objects.get_or_create(
             user=user,
             defaults={
-                "balance_btc": Decimal(str(random.uniform(0.1, 5.0))),
-                "balance_xmr": Decimal(str(random.uniform(10, 500))),
+                "balance_btc": Decimal(str(secure_random.uniform(0.1, 5.0))),
+                "balance_xmr": Decimal(str(secure_random.uniform(10, 500))),
                 "escrow_btc": Decimal("0.00000000"),
                 "escrow_xmr": Decimal("0.000000000000"),
                 "daily_withdrawal_limit_btc": Decimal("1.00000000"),
@@ -282,18 +285,18 @@ class Command(BaseCommand):
         card_values = [10, 25, 50, 100, 200, 500]
 
         for i in range(count):
-            template = random.choice(product_templates)
-            vendor = random.choice(vendors)
+                            template = secure_random.choice(product_templates)
+                vendor = secure_random.choice(vendors)
 
-            value = random.choice(card_values)
+                value = secure_random.choice(card_values)
             if value > template["price_range"][1]:
                 value = template["price_range"][1]
 
-            discount = random.uniform(0.85, 0.95)
-            base_price = value * discount
+                            discount = secure_random.uniform(0.85, 0.95)
+                base_price = value * discount
 
-            btc_rate = random.uniform(45000, 55000)
-            xmr_rate = random.uniform(150, 200)
+                btc_rate = secure_random.uniform(45000, 55000)
+                xmr_rate = secure_random.uniform(150, 200)
 
             price_btc = Decimal(str(base_price / btc_rate)).quantize(Decimal("0.00000001"))
             price_xmr = Decimal(str(base_price / xmr_rate)).quantize(Decimal("0.00000001"))
@@ -311,7 +314,7 @@ class Command(BaseCommand):
                 product_type=template["product_type"],
                 price_btc=price_btc,
                 price_xmr=price_xmr,
-                stock_quantity=random.randint(5, 100),
+                                    stock_quantity=secure_random.randint(5, 100),
                 is_available=True,
             )
 
@@ -332,9 +335,9 @@ class Command(BaseCommand):
                 username=name,
                 defaults={
                     "email": f"{name.lower()}@customer.onion",
-                    "total_trades": random.randint(5, 50),
-                    "positive_feedback_count": random.randint(4, 48),
-                    "feedback_score": random.uniform(4.5, 5.0),
+                                            "total_trades": secure_random.randint(5, 50),
+                        "positive_feedback_count": secure_random.randint(4, 48),
+                        "feedback_score": secure_random.uniform(4.5, 5.0),
                 },
             )
 
@@ -355,9 +358,9 @@ class Command(BaseCommand):
                 username=username,
                 email=f"{username}@customer.onion",
                 password="buyer123",
-                total_trades=random.randint(1, 20),
-                positive_feedback_count=random.randint(1, 19),
-                feedback_score=random.uniform(4.0, 5.0),
+                                    total_trades=secure_random.randint(1, 20),
+                    positive_feedback_count=secure_random.randint(1, 19),
+                    feedback_score=secure_random.uniform(4.0, 5.0),
             )
 
             self.create_buyer_wallets(user)
@@ -370,8 +373,8 @@ class Command(BaseCommand):
         """Create wallet for buyer"""
         Wallet.objects.create(
             user=user,
-            balance_btc=Decimal(str(random.uniform(0.01, 0.5))),
-            balance_xmr=Decimal(str(random.uniform(1, 50))),
+                            balance_btc=Decimal(str(secure_random.uniform(0.01, 0.5))),
+                balance_xmr=Decimal(str(secure_random.uniform(1, 50))),
             escrow_btc=Decimal("0.00000000"),
             escrow_xmr=Decimal("0.000000000000"),
             daily_withdrawal_limit_btc=Decimal("1.00000000"),
@@ -385,16 +388,16 @@ class Command(BaseCommand):
         order_count = 0
 
         for buyer in buyers[:6]:
-            num_orders = random.randint(1, 5)
+                            num_orders = secure_random.randint(1, 5)
 
             for _ in range(num_orders):
                 order_date = timezone.now() - timezone.timedelta(
-                    days=random.randint(0, 30), hours=random.randint(0, 23)
+                    days=secure_random.randint(0, 30), hours=secure_random.randint(0, 23)
                 )
 
                 order = Order.objects.create(
                     user=buyer,
-                    status=random.choice(["DELIVERED", "SHIPPED", "PAID", "PENDING"]),
+                                            status=secure_random.choice(["DELIVERED", "SHIPPED", "PAID", "PENDING"]),
                     total_btc=Decimal("0"),
                     total_xmr=Decimal("0"),
                     escrow_address=f"escrow_{secrets.token_hex(16)}",
@@ -402,13 +405,13 @@ class Command(BaseCommand):
                     created_at=order_date,
                 )
 
-                num_items = random.randint(1, 3)
+                                    num_items = secure_random.randint(1, 3)
                 order_total_btc = Decimal("0")
                 order_total_xmr = Decimal("0")
 
                 for _ in range(num_items):
-                    product = random.choice(products)
-                    quantity = random.randint(1, min(3, product.stock_quantity))
+                                            product = secure_random.choice(products)
+                        quantity = secure_random.randint(1, min(3, product.stock_quantity))
 
                     OrderItem.objects.create(
                         order=order,
@@ -448,20 +451,20 @@ class Command(BaseCommand):
         message_count = 0
 
         for _ in range(25):
-            sender = random.choice(buyers)
-            vendor = random.choice(vendors)
+            sender = secure_random.choice(buyers)
+            vendor = secure_random.choice(vendors)
             recipient = vendor.user
 
-            if random.choice([True, False]):
+            if secure_random.choice([True, False]):
                 sender, recipient = recipient, sender
 
             Message.objects.create(
                 sender=sender,
                 recipient=recipient,
-                subject=f"Re: {random.choice(['Order inquiry', 'Product question', 'Delivery status', 'Bulk order'])}",
-                content=random.choice(message_templates),
-                is_read=random.choice([True, False]),
-                created_at=timezone.now() - timezone.timedelta(days=random.randint(0, 7), hours=random.randint(0, 23)),
+                subject=f"Re: {secure_random.choice(['Order inquiry', 'Product question', 'Delivery status', 'Bulk order'])}",
+                content=secure_random.choice(message_templates),
+                is_read=secure_random.choice([True, False]),
+                created_at=timezone.now() - timezone.timedelta(days=secure_random.randint(0, 7), hours=secure_random.randint(0, 23)),
             )
             message_count += 1
 
