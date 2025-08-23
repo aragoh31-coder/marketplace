@@ -4,7 +4,7 @@ Product service with optimized operations
 from django.db import transaction
 from django.db.models import Q, F, Count, Avg
 from django.core.cache import cache
-from core.models import Product, Category
+from products.models import Product, Category
 from core.optimizations import QueryOptimizer, cache_query
 from core.cache_config import CacheKeys, CacheTimeouts, CacheInvalidation
 from core.error_handlers import ProductNotAvailableError, safe_transaction
