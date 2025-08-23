@@ -36,22 +36,28 @@ The marketplace now features a comprehensive, multi-layered DDoS protection syst
 
 Current default limits are optimized for Tor usage:
 
+**What is "Global"?**
+- Global limits apply to the ENTIRE marketplace across ALL users and sessions combined
+- It's the total capacity limit for your server
+- Even if individual sessions are within their limits, global limits prevent server overload
+- Example: If global limit is 30 req/sec, that's the max for everyone together
+
 ```python
 RATE_LIMITS = {
-    'global': {
-        'requests_per_second': 10,
+    'global': {  # Total requests across ALL users/sessions combined
+        'requests_per_second': 30,
         'requests_per_minute': 100,
         'requests_per_hour': 1000,
     },
-    'per_session': {
-        'requests_per_second': 5,
+    'per_session': {  # Limits for each individual session
+        'requests_per_second': 20,
         'requests_per_minute': 50,
         'requests_per_hour': 500,
     },
-    'per_user': {
-        'requests_per_second': 3,
-        'requests_per_minute': 30,
-        'requests_per_hour': 300,
+    'per_user': {  # Limits for authenticated users
+        'requests_per_second': 20,
+        'requests_per_minute': 50,
+        'requests_per_hour': 500,
     }
 }
 ```

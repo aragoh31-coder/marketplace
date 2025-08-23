@@ -30,20 +30,20 @@ class DDoSProtection:
     
     # Rate limit configurations
     RATE_LIMITS = {
-        'global': {
-            'requests_per_second': 10,
+        'global': {  # Total requests across ALL users/sessions combined
+            'requests_per_second': 30,
             'requests_per_minute': 100,
             'requests_per_hour': 1000,
         },
-        'per_session': {
-            'requests_per_second': 5,
+        'per_session': {  # Limits for each individual session
+            'requests_per_second': 20,
             'requests_per_minute': 50,
             'requests_per_hour': 500,
         },
-        'per_user': {
-            'requests_per_second': 3,
-            'requests_per_minute': 30,
-            'requests_per_hour': 300,
+        'per_user': {  # Limits for authenticated users
+            'requests_per_second': 20,
+            'requests_per_minute': 50,
+            'requests_per_hour': 500,
         },
         'sensitive_endpoints': {
             '/login': {'requests_per_minute': 5, 'requests_per_hour': 20},
