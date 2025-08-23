@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from . import views_dual_captcha
 
 app_name = "security"
 
@@ -10,7 +11,7 @@ urlpatterns = [
     path("settings/", views.security_settings, name="settings"),
     path("bot-challenge/", views.bot_challenge, name="bot_challenge"),
     path("challenge-complete/", views.security_challenge_completion, name="challenge_completion"),
-    path("challenge/", views.security_challenge, name="security_challenge"),
+    path("challenge/", views_dual_captcha.security_challenge_dual, name="security_challenge"),
     path("test/", views.test_view, name="test_view"),
     path("test-session/", views.test_session, name="test_session"),
     path("challenge-status/", views.challenge_status, name="challenge_status"),

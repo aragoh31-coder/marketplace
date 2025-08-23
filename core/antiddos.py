@@ -412,7 +412,7 @@ class DDoSProtectionMiddleware:
                 })
             elif "suspicious_pattern" in block_reason:
                 # Redirect to challenge page
-                return render(request, 'security/challenge_required.html', {
+                return render(request, 'security/challenge_required_dual.html', {
                     'reason': block_reason,
                 })
             else:

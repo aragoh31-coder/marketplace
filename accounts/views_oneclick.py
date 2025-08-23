@@ -17,7 +17,7 @@ from django.views.generic import FormView
 from django.http import HttpResponseRedirect
 
 from apps.security.forms_oneclick import SecureLoginFormOneClick, SecureRegistrationFormOneClick
-from apps.security.models import log_security_event
+from apps.security.utils import log_security_event
 from accounts.models import LoginHistory
 
 logger = logging.getLogger(__name__)

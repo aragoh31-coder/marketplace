@@ -27,10 +27,11 @@ class OneClickCaptchaMixin:
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         
-        if self.request:
+        if self.request and hasattr(self.request, 'session'):
             # Get current token from session
             token = self.request.session.get('current_captcha_token', '')
-            self.fields['captcha_token'].initial = token
+            if 'captcha_token' in self.fields:
+                self.fields['captcha_token'].initial = token
     
     def clean(self):
         cleaned_data = super().clean()
