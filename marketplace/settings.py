@@ -18,6 +18,7 @@ ALLOWED_HOSTS = env.list(
         "localhost",
         "127.0.0.1",
         "[::1]",
+        "testserver",  # For Django test client
         # Specific .onion addresses only - no wildcards for security
         "uw3va4m7ryfl26bfdywucyw2bxorelmzc3g46d7sbmgbycvynz4ylxid.onion",
         "fcmxauihkxovvkjgaysocxpapwmqkxxqvd5m6xaqbwuzohklunjpaead.onion",

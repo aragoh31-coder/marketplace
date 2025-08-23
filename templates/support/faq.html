@@ -1,0 +1,240 @@
+{% extends "base_tor_safe.html" %}
+
+{% block title %}Frequently Asked Questions{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{% url 'home' %}" class="breadcrumb-item">Home</a>
+        <span class="breadcrumb-separator">›</span>
+        <a href="{% url 'support:home' %}" class="breadcrumb-item">Support</a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">FAQ</span>
+    </nav>
+    
+    <div class="section-header mb-4">
+        <h1>❓ Frequently Asked Questions</h1>
+        <p class="text-muted">Find answers to common questions about our marketplace</p>
+    </div>
+    
+    <!-- FAQ Categories -->
+    <div class="grid grid-3 mb-5">
+        <div class="card card-elevation-1">
+            <div class="card-header">
+                <h3>🛡️ Security</h3>
+            </div>
+            <div class="card-body">
+                <p>Learn about our security measures and best practices</p>
+            </div>
+        </div>
+        
+        <div class="card card-elevation-1">
+            <div class="card-header">
+                <h3>💰 Payments</h3>
+            </div>
+            <div class="card-body">
+                <p>Information about cryptocurrencies and transactions</p>
+            </div>
+        </div>
+        
+        <div class="card card-elevation-1">
+            <div class="card-header">
+                <h3>📦 Orders</h3>
+            </div>
+            <div class="card-body">
+                <p>How to place orders and track shipments</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section Divider -->
+    <div class="section-divider with-text mb-4">
+        <span class="section-divider-text">Security Questions</span>
+    </div>
+    
+    <!-- Security FAQs -->
+    <div class="accordion mb-5">
+        <div class="accordion-item">
+            <input type="checkbox" id="faq-security-1" class="accordion-toggle">
+            <label for="faq-security-1" class="accordion-header">
+                How do I enable Two-Factor Authentication (2FA)?
+            </label>
+            <div class="accordion-content">
+                <p>To enable 2FA:</p>
+                <ol>
+                    <li>Go to your Account Settings</li>
+                    <li>Click on "Security" tab</li>
+                    <li>Select "Enable 2FA"</li>
+                    <li>Scan the QR code with your authenticator app</li>
+                    <li>Enter the verification code to confirm</li>
+                </ol>
+                <div class="alert alert-info mt-3">
+                    <strong>Tip:</strong> We recommend using apps like Aegis or andOTP for maximum security.
+                </div>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <input type="checkbox" id="faq-security-2" class="accordion-toggle">
+            <label for="faq-security-2" class="accordion-header">
+                What is PGP and why should I use it?
+            </label>
+            <div class="accordion-content">
+                <p>PGP (Pretty Good Privacy) provides end-to-end encryption for messages. Benefits include:</p>
+                <ul>
+                    <li>✅ Encrypted communication with vendors</li>
+                    <li>✅ Secure 2FA alternative</li>
+                    <li>✅ Identity verification</li>
+                    <li>✅ Protection against phishing</li>
+                </ul>
+                <p class="mt-3">You can add your PGP key in Account Settings → PGP Settings.</p>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <input type="checkbox" id="faq-security-3" class="accordion-toggle">
+            <label for="faq-security-3" class="accordion-header">
+                How do I verify I'm on the correct .onion address?
+            </label>
+            <div class="accordion-content">
+                <p>Always verify you're on the official .onion address:</p>
+                <ol>
+                    <li>Bookmark the correct address</li>
+                    <li>Check for the secure padlock icon</li>
+                    <li>Verify the PGP-signed canary</li>
+                    <li>Never access through search engines</li>
+                </ol>
+                <div class="alert alert-warning mt-3">
+                    <strong>Warning:</strong> Phishing sites are common. Always double-check the URL.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section Divider -->
+    <div class="section-divider with-text mb-4">
+        <span class="section-divider-text">Payment Questions</span>
+    </div>
+    
+    <!-- Payment FAQs -->
+    <div class="accordion mb-5">
+        <div class="accordion-item">
+            <input type="checkbox" id="faq-payment-1" class="accordion-toggle">
+            <label for="faq-payment-1" class="accordion-header">
+                Which cryptocurrencies do you accept?
+            </label>
+            <div class="accordion-content">
+                <p>We currently accept:</p>
+                <ul>
+                    <li>₿ <strong>Bitcoin (BTC)</strong> - Most widely accepted</li>
+                    <li>🔒 <strong>Monero (XMR)</strong> - Maximum privacy</li>
+                </ul>
+                <p class="mt-3">All transactions are processed securely through our escrow system.</p>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <input type="checkbox" id="faq-payment-2" class="accordion-toggle">
+            <label for="faq-payment-2" class="accordion-header">
+                How does the escrow system work?
+            </label>
+            <div class="accordion-content">
+                <p>Our escrow system protects both buyers and vendors:</p>
+                <ol>
+                    <li>Buyer deposits funds into escrow</li>
+                    <li>Vendor ships the order</li>
+                    <li>Buyer confirms receipt</li>
+                    <li>Funds are released to vendor</li>
+                </ol>
+                <p class="mt-3">Disputes are handled by our support team if issues arise.</p>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <input type="checkbox" id="faq-payment-3" class="accordion-toggle">
+            <label for="faq-payment-3" class="accordion-header">
+                What are the transaction fees?
+            </label>
+            <div class="accordion-content">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Fee</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Marketplace Fee</td>
+                            <td>2.5%</td>
+                        </tr>
+                        <tr>
+                            <td>Withdrawal (BTC)</td>
+                            <td>0.0001 BTC</td>
+                        </tr>
+                        <tr>
+                            <td>Withdrawal (XMR)</td>
+                            <td>0.001 XMR</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section Divider -->
+    <div class="section-divider with-text mb-4">
+        <span class="section-divider-text">Order Questions</span>
+    </div>
+    
+    <!-- Order FAQs -->
+    <div class="accordion mb-5">
+        <div class="accordion-item">
+            <input type="checkbox" id="faq-order-1" class="accordion-toggle">
+            <label for="faq-order-1" class="accordion-header">
+                How do I place an order?
+            </label>
+            <div class="accordion-content">
+                <ol>
+                    <li>Browse products or search for what you need</li>
+                    <li>Add items to your cart</li>
+                    <li>Review your order and shipping details</li>
+                    <li>Complete payment to escrow</li>
+                    <li>Wait for vendor confirmation</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <input type="checkbox" id="faq-order-2" class="accordion-toggle">
+            <label for="faq-order-2" class="accordion-header">
+                What if I have a problem with my order?
+            </label>
+            <div class="accordion-content">
+                <p>If you experience any issues:</p>
+                <ol>
+                    <li>First, contact the vendor through secure messaging</li>
+                    <li>If unresolved, open a dispute within 14 days</li>
+                    <li>Provide evidence (photos, tracking, etc.)</li>
+                    <li>Our support team will mediate</li>
+                </ol>
+                <div class="alert alert-info mt-3">
+                    Always try to resolve issues with the vendor first before opening a dispute.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Still Need Help? -->
+    <div class="card card-elevation-2 text-center">
+        <div class="card-body p-4">
+            <h2 class="mb-3">Still have questions?</h2>
+            <p class="mb-4">Our support team is here to help you 24/7</p>
+            <a href="{% url 'support:create_ticket' %}" class="cta-primary">
+                📧 Contact Support
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
