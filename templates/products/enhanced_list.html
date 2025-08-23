@@ -1,0 +1,223 @@
+{% extends "base_tor_safe.html" %}
+
+{% block title %}Products - Enhanced UI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Skip Link for Accessibility -->
+    <a href="#main-products" class="skip-link">Skip to products</a>
+    
+    <!-- Breadcrumb Navigation -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{% url 'home' %}" class="breadcrumb-item">Home</a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">Products</span>
+    </nav>
+    
+    <!-- Page Header with Search -->
+    <div class="section-header mb-4">
+        <h1 class="section-title">🛍️ Marketplace Products</h1>
+        <p class="section-subtitle">Browse our secure, verified products</p>
+    </div>
+    
+    <!-- Search Bar with Live Count -->
+    <div class="search-container mb-4">
+        <form method="get" action="{% url 'products:search' %}" class="position-relative">
+            <input type="search" 
+                   name="q" 
+                   class="form-input search-input input-glow" 
+                   placeholder="Search products..."
+                   value="{{ request.GET.q }}">
+            <span class="search-results-count">{{ products.count }} results</span>
+            <button type="submit" class="btn btn-primary btn-touch">🔍 Search</button>
+        </form>
+    </div>
+    
+    <!-- Sub-Navigation for Categories -->
+    <nav class="sub-nav mb-4">
+        <div class="container">
+            <div class="sub-nav-list">
+                <a href="?category=all" class="sub-nav-item {% if not request.GET.category or request.GET.category == 'all' %}active{% endif %}">All Categories</a>
+                <a href="?category=electronics" class="sub-nav-item {% if request.GET.category == 'electronics' %}active{% endif %}">Electronics</a>
+                <a href="?category=software" class="sub-nav-item {% if request.GET.category == 'software' %}active{% endif %}">Software</a>
+                <a href="?category=services" class="sub-nav-item {% if request.GET.category == 'services' %}active{% endif %}">Services</a>
+                <a href="?category=other" class="sub-nav-item {% if request.GET.category == 'other' %}active{% endif %}">Other</a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Filter Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>🎯 Filters</h3>
+        </div>
+        
+        <!-- Active Filters -->
+        {% if active_filters %}
+        <div class="filter-pills mb-3">
+            {% for filter in active_filters %}
+            <span class="filter-pill">
+                {{ filter.name }}: {{ filter.value }}
+                <a href="{{ filter.remove_url }}" class="filter-pill-remove">×</a>
+            </span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Sort Options -->
+        <div class="form-group">
+            <label class="form-label">Sort By</label>
+            <select class="sort-select form-input" onchange="window.location.href='?sort=' + this.value">
+                <option value="newest">Newest First</option>
+                <option value="price_low">Price: Low to High</option>
+                <option value="price_high">Price: High to Low</option>
+                <option value="popular">Most Popular</option>
+                <option value="rating">Highest Rated</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Products Grid -->
+    <main id="main-products">
+        {% if products %}
+        <div class="grid grid-3 product-grid">
+            {% for product in products %}
+            <article class="preview-card card card-elevation-2">
+                <!-- Status Badge -->
+                {% if product.is_new %}
+                <span class="badge-status badge-new">NEW</span>
+                {% elif product.stock == 0 %}
+                <span class="badge-status badge-sold-out">SOLD OUT</span>
+                {% else %}
+                <span class="badge-status badge-available">IN STOCK</span>
+                {% endif %}
+                
+                <!-- Product Image with Lazy Loading -->
+                <div class="product-image">
+                    <img src="{{ product.image_url }}" 
+                         alt="{{ product.name }}" 
+                         loading="lazy"
+                         class="w-full rounded-lg">
+                </div>
+                
+                <!-- Product Info -->
+                <div class="card-body">
+                    <h3 class="text-heading fw-600">{{ product.name }}</h3>
+                    
+                    <!-- Trust Score -->
+                    <div class="trust-score mb-2">
+                        {% for i in "12345" %}
+                        <span class="star {% if forloop.counter <= product.rating %}filled{% endif %}">★</span>
+                        {% endfor %}
+                        <span class="text-muted">({{ product.review_count }})</span>
+                    </div>
+                    
+                    <!-- Price Display -->
+                    <div class="price-display mb-3">
+                        {% if product.original_price %}
+                        <span class="price-original">${{ product.original_price }}</span>
+                        {% endif %}
+                        <span>${{ product.price }}</span>
+                        {% if product.discount_percent %}
+                        <span class="price-discount">-{{ product.discount_percent }}%</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Vendor Info with Security Badge -->
+                    <div class="vendor-info mb-3">
+                        <span class="security-badge">
+                            <span class="security-badge-icon">🔒</span>
+                            Verified Vendor
+                        </span>
+                        <a href="{% url 'vendors:detail' product.vendor.slug %}" 
+                           class="tooltip" 
+                           data-tooltip="View vendor profile">
+                            {{ product.vendor.name }}
+                        </a>
+                    </div>
+                    
+                    <!-- Preview Content (shown on hover) -->
+                    <div class="preview-content">
+                        <p class="text-body">{{ product.description|truncatewords:30 }}</p>
+                        
+                        <!-- PGP Indicator -->
+                        {% if product.vendor.has_pgp %}
+                        <div class="pgp-indicator verified">
+                            🔐 PGP Verified
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Action Button -->
+                    <a href="{% url 'products:detail' product.slug %}" 
+                       class="cta-primary w-full text-center">
+                        View Details
+                    </a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination with Progress -->
+        {% if is_paginated %}
+        <nav class="mt-5" aria-label="Product pagination">
+            <div class="progress-steps">
+                {% for num in page_obj.paginator.page_range %}
+                <a href="?page={{ num }}" 
+                   class="progress-step {% if num == page_obj.number %}active{% elif num < page_obj.number %}completed{% endif %}"
+                   aria-label="Page {{ num }}">
+                    {{ num }}
+                </a>
+                {% endfor %}
+            </div>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-state-icon">📦</div>
+            <h2 class="empty-state-title">No Products Found</h2>
+            <p class="empty-state-description">
+                We couldn't find any products matching your criteria. 
+                Try adjusting your filters or search terms.
+            </p>
+            <a href="{% url 'products:list' %}" class="btn btn-primary">
+                View All Products
+            </a>
+        </div>
+        {% endif %}
+    </main>
+    
+    <!-- Section Divider -->
+    <div class="section-divider with-text mt-5">
+        <span class="section-divider-text">Popular Categories</span>
+    </div>
+    
+    <!-- Category Cards -->
+    <div class="grid grid-4 mb-5">
+        {% for category in popular_categories %}
+        <div class="feature-box">
+            <div class="feature-icon">{{ category.icon }}</div>
+            <h4 class="feature-title">{{ category.name }}</h4>
+            <p class="feature-description">{{ category.product_count }} products</p>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Back to Top Button -->
+    <a href="#" class="back-to-top" aria-label="Back to top">↑</a>
+</div>
+
+<!-- CSS for Back to Top visibility -->
+<style>
+/* Show back to top button when scrolled down */
+@media (min-height: 600px) {
+    body:has(.back-to-top:target) .back-to-top,
+    body:has(.back-to-top:hover) .back-to-top {
+        opacity: 1;
+        pointer-events: all;
+    }
+}
+</style>
+{% endblock %}

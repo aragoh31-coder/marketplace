@@ -1,0 +1,362 @@
+{% extends "base_tor_safe.html" %}
+
+{% block title %}Dashboard - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Dashboard Header -->
+    <div class="mb-4">
+        <h1 class="text-heading">Welcome back, {{ user.username }}! 👋</h1>
+        <p class="text-muted">Manage your account, orders, and security settings</p>
+    </div>
+    
+    <!-- Quick Stats Cards -->
+    <div class="dashboard-grid mb-5">
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div>
+                <div class="text-muted">Active Orders</div>
+                <div class="widget-value">{{ active_orders_count|default:"0" }}</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div>
+                <div class="text-muted">Wallet Balance</div>
+                <div class="widget-value">${{ wallet_balance|default:"0.00" }}</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">⭐</div>
+            <div>
+                <div class="text-muted">Trust Score</div>
+                <div class="trust-score">
+                    {% for i in "12345" %}
+                    <span class="star {% if forloop.counter <= user_trust_score|default:4 %}filled{% endif %}">★</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">🔒</div>
+            <div>
+                <div class="text-muted">Security Level</div>
+                <div class="security-badge">
+                    <span class="security-badge-icon">🛡️</span>
+                    {% if user.has_2fa %}Enhanced{% else %}Basic{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab Navigation -->
+    <div class="tabs mb-5">
+        <input type="radio" name="dashboard-tabs" id="tab-overview" class="tab-input" checked>
+        <label for="tab-overview" class="tab-label">Overview</label>
+        
+        <input type="radio" name="dashboard-tabs" id="tab-orders" class="tab-input">
+        <label for="tab-orders" class="tab-label">Orders</label>
+        
+        <input type="radio" name="dashboard-tabs" id="tab-security" class="tab-input">
+        <label for="tab-security" class="tab-label">Security</label>
+        
+        <input type="radio" name="dashboard-tabs" id="tab-settings" class="tab-input">
+        <label for="tab-settings" class="tab-label">Settings</label>
+        
+        <!-- Overview Tab Content -->
+        <div class="tab-content" id="overview-content">
+            <div class="grid grid-2 gap-4">
+                <!-- Recent Activity Widget -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">📊 Recent Activity</h3>
+                        <a href="#" class="text-primary">View All</a>
+                    </div>
+                    
+                    {% if recent_activities %}
+                    <div class="activity-list">
+                        {% for activity in recent_activities %}
+                        <div class="activity-item">
+                            <span class="activity-icon">{{ activity.icon }}</span>
+                            <div class="activity-content">
+                                <p class="fw-500">{{ activity.title }}</p>
+                                <p class="text-muted text-sm">{{ activity.time_ago }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No recent activity</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Order Summary Chart -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">📈 Order Summary</h3>
+                    </div>
+                    
+                    <div class="chart-bar">
+                        <div class="chart-bar-item" style="height: 60%">
+                            <span class="chart-bar-label">Mon</span>
+                        </div>
+                        <div class="chart-bar-item" style="height: 80%">
+                            <span class="chart-bar-label">Tue</span>
+                        </div>
+                        <div class="chart-bar-item" style="height: 40%">
+                            <span class="chart-bar-label">Wed</span>
+                        </div>
+                        <div class="chart-bar-item" style="height: 90%">
+                            <span class="chart-bar-label">Thu</span>
+                        </div>
+                        <div class="chart-bar-item" style="height: 70%">
+                            <span class="chart-bar-label">Fri</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Orders Tab Content -->
+        <div class="tab-content" id="orders-content">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Product</th>
+                            <th>Status</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td class="crypto-address">{{ order.id|slice:":8" }}...</td>
+                            <td>{{ order.product_name }}</td>
+                            <td>
+                                <span class="badge badge-{{ order.status_class }}">
+                                    {{ order.status }}
+                                </span>
+                            </td>
+                            <td class="fw-600">${{ order.amount }}</td>
+                            <td>{{ order.date|date:"Y-m-d" }}</td>
+                            <td>
+                                <a href="{% url 'orders:detail' order.id %}" class="btn btn-sm">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted p-4">
+                                No orders found
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Security Tab Content -->
+        <div class="tab-content" id="security-content">
+            <div class="grid grid-2 gap-4">
+                <!-- 2FA Status -->
+                <div class="card card-elevation-1">
+                    <h4 class="mb-3">🔐 Two-Factor Authentication</h4>
+                    {% if user.has_2fa %}
+                    <div class="alert alert-success">
+                        <span>✅ 2FA is enabled</span>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <span>⚠️ 2FA is not enabled</span>
+                    </div>
+                    <a href="{% url 'accounts:enable_2fa' %}" class="btn btn-primary">
+                        Enable 2FA
+                    </a>
+                    {% endif %}
+                </div>
+                
+                <!-- PGP Key Status -->
+                <div class="card card-elevation-1">
+                    <h4 class="mb-3">🔑 PGP Key</h4>
+                    {% if user.pgp_key %}
+                    <div class="pgp-indicator verified">
+                        🔐 PGP Key Added
+                    </div>
+                    <p class="crypto-address mt-2">
+                        {{ user.pgp_fingerprint }}
+                    </p>
+                    {% else %}
+                    <div class="pgp-indicator unverified">
+                        🔓 No PGP Key
+                    </div>
+                    <a href="{% url 'accounts:add_pgp' %}" class="btn btn-primary mt-3">
+                        Add PGP Key
+                    </a>
+                    {% endif %}
+                </div>
+                
+                <!-- Login History -->
+                <div class="card card-elevation-1">
+                    <h4 class="mb-3">📋 Recent Logins</h4>
+                    <div class="loading-overlay" style="display: none;">
+                        <span class="spinner"></span>
+                    </div>
+                    <ul class="list-unstyled">
+                        {% for login in recent_logins|slice:":5" %}
+                        <li class="mb-2">
+                            <small class="text-muted">
+                                {{ login.timestamp|date:"Y-m-d H:i" }} - 
+                                {% if login.success %}✅ Success{% else %}❌ Failed{% endif %}
+                            </small>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                
+                <!-- Security Tips -->
+                <div class="card card-elevation-1">
+                    <h4 class="mb-3">💡 Security Tips</h4>
+                    <div class="accordion">
+                        <div class="accordion-item">
+                            <input type="checkbox" id="tip1" class="accordion-toggle">
+                            <label for="tip1" class="accordion-header">
+                                Use a strong password
+                            </label>
+                            <div class="accordion-content">
+                                <p>Use a unique password with at least 12 characters, 
+                                including uppercase, lowercase, numbers, and symbols.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <input type="checkbox" id="tip2" class="accordion-toggle">
+                            <label for="tip2" class="accordion-header">
+                                Enable 2FA
+                            </label>
+                            <div class="accordion-content">
+                                <p>Two-factor authentication adds an extra layer of 
+                                security to your account.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Tab Content -->
+        <div class="tab-content" id="settings-content">
+            <form method="post" action="{% url 'accounts:update_settings' %}">
+                {% csrf_token %}
+                
+                <!-- Auto-save indicator -->
+                <div class="auto-save-indicator saved mb-3">
+                    ✓ Settings saved automatically
+                </div>
+                
+                <div class="grid grid-2 gap-4">
+                    <!-- Profile Settings -->
+                    <div class="card">
+                        <h4 class="mb-3">👤 Profile Settings</h4>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Display Name</label>
+                            <input type="text" 
+                                   name="display_name" 
+                                   class="form-input" 
+                                   value="{{ user.display_name }}"
+                                   required>
+                            <span class="form-feedback">✓ Valid display name</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" 
+                                   name="email" 
+                                   class="form-input" 
+                                   value="{{ user.email }}"
+                                   required>
+                            <span class="form-feedback">✓ Valid email address</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Currency</label>
+                            <select name="currency" class="form-select">
+                                <option value="USD">USD - US Dollar</option>
+                                <option value="EUR">EUR - Euro</option>
+                                <option value="BTC">BTC - Bitcoin</option>
+                                <option value="XMR">XMR - Monero</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Notification Settings -->
+                    <div class="card">
+                        <h4 class="mb-3">🔔 Notifications</h4>
+                        
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="notify_orders" checked>
+                            Order updates
+                        </label>
+                        
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="notify_messages" checked>
+                            New messages
+                        </label>
+                        
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="notify_security">
+                            Security alerts
+                        </label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-touch mt-4">
+                    Save Settings
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Success Message with Animation -->
+    <div class="text-center mt-5" style="display: none;">
+        <svg class="checkmark" viewBox="0 0 52 52">
+            <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+            <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+        </svg>
+        <p class="text-success mt-3">Changes saved successfully!</p>
+    </div>
+</div>
+
+<!-- Mobile Bottom Navigation -->
+<nav class="bottom-nav">
+    <a href="{% url 'home' %}" class="bottom-nav-item">
+        <span>🏠</span>
+        <span>Home</span>
+    </a>
+    <a href="{% url 'products:list' %}" class="bottom-nav-item">
+        <span>📦</span>
+        <span>Products</span>
+    </a>
+    <a href="{% url 'accounts:dashboard' %}" class="bottom-nav-item active">
+        <span>📊</span>
+        <span>Dashboard</span>
+    </a>
+    <a href="{% url 'wallets:dashboard' %}" class="bottom-nav-item">
+        <span>💰</span>
+        <span>Wallet</span>
+    </a>
+    <a href="{% url 'accounts:profile' %}" class="bottom-nav-item">
+        <span>👤</span>
+        <span>Profile</span>
+    </a>
+</nav>
+{% endblock %}

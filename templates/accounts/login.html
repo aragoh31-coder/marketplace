@@ -2,123 +2,213 @@
 
 {% block title %}Login - Secure Marketplace{% endblock %}
 
-{% block extra_head %}
-<style>
-    .security-notice {
-        background: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
-        padding: 15px;
-        border-radius: 5px;
-        margin: 20px 0;
-    }
-    .form-group {
-        margin-bottom: 15px;
-    }
-    .form-control {
-        width: 100%;
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-    }
-    .btn {
-        background: #007bff;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-    .btn:hover {
-        background: #0056b3;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="container">
-    <div class="grid">
-        <div style="grid-column: 1/-1; max-width: 500px; margin: 0 auto;">
-            <div class="box-glow">
-                <div class="box-header">
-                    <h2>🔐 Secure Login</h2>
+    <!-- Skip Link -->
+    <a href="#login-form" class="skip-link">Skip to login form</a>
+    
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{% url 'home' %}" class="breadcrumb-item">Home</a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">Login</span>
+    </nav>
+    
+    <div class="grid grid-center">
+        <div class="box-glow card-elevation-3" style="max-width: 500px;">
+            <h1 class="text-center mb-5">🔐 Secure Login</h1>
+            
+            <!-- Security Indicators -->
+            <div class="grid grid-4 mb-4">
+                <div class="text-center">
+                    <div class="security-badge">
+                        <span class="security-badge-icon">🌐</span>
+                        Tor Safe
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="security-badge">
+                        <span class="security-badge-icon">🚫</span>
+                        No JS
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="security-badge">
+                        <span class="security-badge-icon">🔒</span>
+                        E2E Secure
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="security-badge">
+                        <span class="security-badge-icon">👤</span>
+                        Anonymous
+                    </div>
+                </div>
+            </div>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} mb-3">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <form method="post" id="login-form">
+                {% csrf_token %}
+                
+                <!-- Display form errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mb-3">
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <!-- Progress Steps -->
+                <div class="progress-steps mb-4">
+                    <div class="progress-step active">1</div>
+                    <div class="progress-step">2</div>
+                    <div class="progress-step">3</div>
+                </div>
+                <div class="text-center mb-4">
+                    <small class="text-muted">Step 1 of 3: Enter Credentials</small>
                 </div>
                 
-                <div class="alert alert-success mb-3">
-                    <h4 class="mb-2">🛡️ Enhanced Security</h4>
-                    <p>This login form includes advanced security features to protect against automated attacks while maintaining full Tor compatibility.</p>
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}" class="form-label">
+                        Username 
+                        <span class="tooltip" data-tooltip="Your unique marketplace username">ℹ️</span>
+                    </label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="form-error">
+                            {% for error in form.username.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
-    
-    <form method="post">
-        {% csrf_token %}
-        
-        <!-- Display form errors -->
-        {% if form.non_field_errors %}
-            <div class="alert alert-danger">
-                {% for error in form.non_field_errors %}
-                    <p>{{ error }}</p>
+                
+                <div class="form-group">
+                    <label for="{{ form.password.id_for_label }}" class="form-label">
+                        Password
+                        <span class="tooltip" data-tooltip="Your secure password">ℹ️</span>
+                    </label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <div class="form-error">
+                            {% for error in form.password.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Security CAPTCHA field -->
+                {% if form.math_challenge %}
+                <div class="form-group">
+                    <label for="{{ form.math_challenge.id_for_label }}" class="form-label">
+                        {{ form.math_challenge.label }}
+                        <span class="tooltip" data-tooltip="Prove you're human">ℹ️</span>
+                    </label>
+                    <div class="card card-elevation-1 p-3 mb-2">
+                        {{ form.math_challenge }}
+                    </div>
+                    {% if form.math_challenge.errors %}
+                        <div class="form-error">
+                            {% for error in form.math_challenge.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Hidden security fields -->
+                {% for field in form.hidden_fields %}
+                    {{ field }}
                 {% endfor %}
+                
+                <!-- Remember Me Option -->
+                <label class="checkbox-label mb-4">
+                    <input type="checkbox" name="remember_me">
+                    Remember me for 30 days (use only on secure devices)
+                </label>
+                
+                <button type="submit" class="cta-primary w-full btn-touch">
+                    🔓 Login Securely
+                </button>
+            </form>
+            
+            <!-- Section Divider -->
+            <div class="section-divider with-text mt-4 mb-4">
+                <span class="section-divider-text">Security Tips</span>
             </div>
-        {% endif %}
-        
-        <!-- Username field -->
-        <div class="form-group">
-            <label for="{{ form.username.id_for_label }}">Username:</label>
-            {{ form.username }}
-            {% if form.username.errors %}
-                <div class="text-danger">
-                    {% for error in form.username.errors %}
-                        <small>{{ error }}</small>
-                    {% endfor %}
+            
+            <!-- Security Tips Accordion -->
+            <div class="accordion mb-4">
+                <div class="accordion-item">
+                    <input type="checkbox" id="security-tip-1" class="accordion-toggle">
+                    <label for="security-tip-1" class="accordion-header">
+                        Verify .onion Address
+                    </label>
+                    <div class="accordion-content">
+                        <p>Always ensure you're on the correct .onion address. Bookmark it and never access through search engines.</p>
+                    </div>
                 </div>
-            {% endif %}
-        </div>
-        
-        <!-- Password field -->
-        <div class="form-group">
-            <label for="{{ form.password.id_for_label }}">Password:</label>
-            {{ form.password }}
-            {% if form.password.errors %}
-                <div class="text-danger">
-                    {% for error in form.password.errors %}
-                        <small>{{ error }}</small>
-                    {% endfor %}
+                
+                <div class="accordion-item">
+                    <input type="checkbox" id="security-tip-2" class="accordion-toggle">
+                    <label for="security-tip-2" class="accordion-header">
+                        Use Strong Passwords
+                    </label>
+                    <div class="accordion-content">
+                        <p>Create a unique password with at least 12 characters including uppercase, lowercase, numbers, and symbols.</p>
+                    </div>
                 </div>
-            {% endif %}
-        </div>
-        
-        <!-- Security CAPTCHA field -->
-        <div class="form-group">
-            <label for="{{ form.math_challenge.id_for_label }}">{{ form.math_challenge.label }}</label>
-            {{ form.math_challenge }}
-            {% if form.math_challenge.errors %}
-                <div class="text-danger">
-                    {% for error in form.math_challenge.errors %}
-                        <small>{{ error }}</small>
-                    {% endfor %}
+                
+                <div class="accordion-item">
+                    <input type="checkbox" id="security-tip-3" class="accordion-toggle">
+                    <label for="security-tip-3" class="accordion-header">
+                        Enable 2FA Protection
+                    </label>
+                    <div class="accordion-content">
+                        <p>Two-factor authentication adds an extra security layer. Enable it immediately after logging in.</p>
+                    </div>
                 </div>
-            {% endif %}
-        </div>
-        
-        <!-- Hidden security fields -->
-        {% for field in form.hidden_fields %}
-            {{ field }}
-        {% endfor %}
-        
-        <button type="submit" class="btn">🔓 Login</button>
-    </form>
-    
-    <p><a href="{% url 'accounts:register' %}">Don't have an account? Register here</a></p>
-    
-    <div class="alert alert-info mt-4">
-        <h4>🌐 Privacy & Security</h4>
-        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
-            <li>No JavaScript required - fully Tor compatible</li>
-            <li>Advanced bot detection and rate limiting</li>
-            <li>No IP address logging for privacy protection</li>
-            <li>Math challenge prevents automated attacks</li>
-        </ul>
-    </div>
+                
+                <div class="accordion-item">
+                    <input type="checkbox" id="security-tip-4" class="accordion-toggle">
+                    <label for="security-tip-4" class="accordion-header">
+                        Privacy Protection
+                    </label>
+                    <div class="accordion-content">
+                        <p>We don't track IP addresses and all sessions are anonymized for your protection.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <p class="mb-2">
+                    Don't have an account? 
+                    <a href="{% url 'accounts:register' %}" class="text-primary fw-600">
+                        Register here →
+                    </a>
+                </p>
+                <p>
+                    <a href="{% url 'accounts:password_reset' %}" class="text-muted">
+                        Forgot password?
+                    </a>
+                </p>
+            </div>
+            
+            <!-- Trust Indicators -->
+            <div class="mt-4 text-center">
+                <div class="pgp-indicator verified">
+                    🔐 PGP Support Available
+                </div>
             </div>
         </div>
     </div>
