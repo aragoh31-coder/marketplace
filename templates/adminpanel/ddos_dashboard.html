@@ -18,8 +18,8 @@
         <div class="col-md-3">
             <div class="card text-center">
                 <div class="card-body">
-                    <h5 class="card-title">Blacklisted IPs</h5>
-                    <h2 class="text-danger">{{ stats.blacklisted_ips }}</h2>
+                    <h5 class="card-title">Blacklisted Sessions</h5>
+                    <h2 class="text-danger">{{ stats.blacklisted_sessions }}</h2>
                 </div>
             </div>
         </div>
@@ -57,11 +57,11 @@
                     </ul>
                 </div>
                 <div class="col-md-4">
-                    <h5>Per IP Limits</h5>
+                    <h5>Per Session Limits</h5>
                     <ul>
-                        <li>Per Second: {{ rate_limits.per_ip.requests_per_second }}</li>
-                        <li>Per Minute: {{ rate_limits.per_ip.requests_per_minute }}</li>
-                        <li>Per Hour: {{ rate_limits.per_ip.requests_per_hour }}</li>
+                        <li>Per Second: {{ rate_limits.per_session.requests_per_second }}</li>
+                        <li>Per Minute: {{ rate_limits.per_session.requests_per_minute }}</li>
+                        <li>Per Hour: {{ rate_limits.per_session.requests_per_hour }}</li>
                     </ul>
                 </div>
                 <div class="col-md-4">
@@ -99,19 +99,19 @@
         </div>
     </div>
     
-    <!-- Manual IP Management -->
+    <!-- Manual Session Management -->
     <div class="card mt-4">
         <div class="card-header">
-            <h4>IP Management</h4>
+            <h4>Session Management</h4>
         </div>
         <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <h5>Block IP Address</h5>
-                    <form method="post" action="{% url 'adminpanel:ddos_block_ip' %}">
+                    <h5>Block Session</h5>
+                    <form method="post" action="{% url 'adminpanel:ddos_block_session' %}">
                         {% csrf_token %}
                         <div class="form-group">
-                            <input type="text" name="ip" class="form-control" placeholder="IP Address" required>
+                            <input type="text" name="session_id" class="form-control" placeholder="Session ID" required>
                         </div>
                         <div class="form-group">
                             <select name="duration" class="form-control">
@@ -121,49 +121,49 @@
                                 <option value="2592000">30 Days</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-danger">Block IP</button>
+                        <button type="submit" class="btn btn-danger">Block Session</button>
                     </form>
                 </div>
                 <div class="col-md-6">
-                    <h5>Unblock IP Address</h5>
-                    <form method="post" action="{% url 'adminpanel:ddos_unblock_ip' %}">
+                    <h5>Unblock Session</h5>
+                    <form method="post" action="{% url 'adminpanel:ddos_unblock_session' %}">
                         {% csrf_token %}
                         <div class="form-group">
-                            <input type="text" name="ip" class="form-control" placeholder="IP Address" required>
+                            <input type="text" name="session_id" class="form-control" placeholder="Session ID" required>
                         </div>
-                        <button type="submit" class="btn btn-success">Unblock IP</button>
+                        <button type="submit" class="btn btn-success">Unblock Session</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Recent Blocked IPs -->
-    {% if blocked_ips %}
+    <!-- Recent Blocked Sessions -->
+    {% if blocked_sessions %}
     <div class="card mt-4">
         <div class="card-header">
-            <h4>Recently Blocked IPs</h4>
+            <h4>Recently Blocked Sessions</h4>
         </div>
         <div class="card-body">
             <table class="table">
                 <thead>
                     <tr>
-                        <th>IP Address</th>
+                        <th>Session ID</th>
                         <th>Blocked At</th>
                         <th>Reason</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for blocked in blocked_ips %}
+                    {% for blocked in blocked_sessions %}
                     <tr>
-                        <td>{{ blocked.ip }}</td>
+                        <td>{{ blocked.session_id|slice:":8" }}...</td>
                         <td>{{ blocked.timestamp }}</td>
                         <td>{{ blocked.reason }}</td>
                         <td>
-                            <form method="post" action="{% url 'adminpanel:ddos_unblock_ip' %}" style="display:inline;">
+                            <form method="post" action="{% url 'adminpanel:ddos_unblock_session' %}" style="display:inline;">
                                 {% csrf_token %}
-                                <input type="hidden" name="ip" value="{{ blocked.ip }}">
+                                <input type="hidden" name="session_id" value="{{ blocked.session_id }}">
                                 <button type="submit" class="btn btn-sm btn-success">Unblock</button>
                             </form>
                         </td>

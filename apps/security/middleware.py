@@ -32,8 +32,7 @@ class WalletSecurityMiddleware(MiddlewareMixin):
         if self._is_advanced_bot(request):
             return self._handle_bot_detection(request)
 
-        if not self._check_ip_consistency(request):
-            return self._handle_ip_inconsistency(request)
+        # IP consistency check removed for Tor compatibility
 
         if not self._check_session_timeout(request):
             return self._handle_session_timeout(request)

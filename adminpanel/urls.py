@@ -33,9 +33,9 @@ from .views import (
 )
 from .views_ddos import (
     ddos_dashboard,
-    unblock_ip,
-    block_ip,
-    get_ip_history,
+    unblock_session,
+    block_session,
+    get_session_history,
     update_rate_limits,
 )
 
@@ -73,8 +73,8 @@ urlpatterns = [
     path("withdrawal-notes/<int:withdrawal_id>/", withdrawal_add_notes, name="withdrawal_add_notes"),
     # DDoS Protection Management
     path("ddos/", ddos_dashboard, name="ddos_dashboard"),
-    path("ddos/unblock/", unblock_ip, name="ddos_unblock_ip"),
-    path("ddos/block/", block_ip, name="ddos_block_ip"),
-    path("ddos/ip/<str:ip>/", get_ip_history, name="ddos_ip_history"),
+    path("ddos/unblock/", unblock_session, name="ddos_unblock_session"),
+    path("ddos/block/", block_session, name="ddos_block_session"),
+    path("ddos/session/<str:session_id>/", get_session_history, name="ddos_session_history"),
     path("ddos/update-limits/", update_rate_limits, name="ddos_update_limits"),
 ]

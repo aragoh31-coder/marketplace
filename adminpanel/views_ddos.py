@@ -15,13 +15,13 @@ def ddos_dashboard(request):
     """DDoS protection monitoring dashboard"""
     stats = DDoSProtection.get_protection_stats()
     
-    # Get recent blocked IPs
-    blocked_ips = []
+    # Get recent blocked sessions
+    blocked_sessions = []
     # This is a simplified version - in production, maintain a proper log
     
     context = {
         'stats': stats,
-        'blocked_ips': blocked_ips,
+        'blocked_sessions': blocked_sessions,
         'rate_limits': DDoSProtection.RATE_LIMITS,
         'suspicious_patterns': DDoSProtection.SUSPICIOUS_PATTERNS,
     }
@@ -31,52 +31,52 @@ def ddos_dashboard(request):
 
 @staff_member_required
 @require_http_methods(["POST"])
-def unblock_ip(request):
-    """Manually unblock an IP address"""
-    ip = request.POST.get('ip')
-    if ip:
-        blacklist_key = f"ddos:blacklist:{ip}"
+def unblock_session(request):
+    """Manually unblock a session"""
+    session_id = request.POST.get('session_id')
+    if session_id:
+        blacklist_key = f"ddos:blacklist:{session_id}"
         cache.delete(blacklist_key)
         
         # Also reset violation score
-        score_key = f"ddos:violation_score:{ip}"
+        score_key = f"ddos:violation_score:{session_id}"
         cache.delete(score_key)
         
-        return JsonResponse({'success': True, 'message': f'IP {ip} has been unblocked'})
+        return JsonResponse({'success': True, 'message': f'Session {session_id} has been unblocked'})
     
-    return JsonResponse({'success': False, 'message': 'No IP provided'})
+    return JsonResponse({'success': False, 'message': 'No session ID provided'})
 
 
 @staff_member_required
 @require_http_methods(["POST"])
-def block_ip(request):
-    """Manually block an IP address"""
-    ip = request.POST.get('ip')
+def block_session(request):
+    """Manually block a session"""
+    session_id = request.POST.get('session_id')
     duration = int(request.POST.get('duration', 3600))  # Default 1 hour
     
-    if ip:
-        DDoSProtection._blacklist_ip(ip, duration)
-        return JsonResponse({'success': True, 'message': f'IP {ip} has been blocked for {duration} seconds'})
+    if session_id:
+        DDoSProtection._blacklist_session(session_id, duration)
+        return JsonResponse({'success': True, 'message': f'Session {session_id} has been blocked for {duration} seconds'})
     
-    return JsonResponse({'success': False, 'message': 'No IP provided'})
+    return JsonResponse({'success': False, 'message': 'No session ID provided'})
 
 
 @staff_member_required
-def get_ip_history(request, ip):
-    """Get request history for a specific IP"""
-    history_key = f"ddos:history:{ip}"
+def get_session_history(request, session_id):
+    """Get request history for a specific session"""
+    history_key = f"ddos:history:{session_id}"
     history = cache.get(history_key, [])
     
     # Get current violation score
-    score_key = f"ddos:violation_score:{ip}"
+    score_key = f"ddos:violation_score:{session_id}"
     violation_score = cache.get(score_key, 0)
     
     # Check if currently blacklisted
-    blacklist_key = f"ddos:blacklist:{ip}"
+    blacklist_key = f"ddos:blacklist:{session_id}"
     is_blacklisted = cache.get(blacklist_key, False)
     
     return JsonResponse({
-        'ip': ip,
+        'session_id': session_id,
         'violation_score': violation_score,
         'is_blacklisted': is_blacklisted,
         'history': history[-50:],  # Last 50 requests

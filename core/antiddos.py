@@ -24,6 +24,8 @@ class DDoSProtection:
     - Distributed attack mitigation
     - Automatic blacklisting
     - Challenge-response system
+    
+    NOTE: Designed for Tor - uses session IDs instead of IPs for privacy
     """
     
     # Rate limit configurations
@@ -33,7 +35,7 @@ class DDoSProtection:
             'requests_per_minute': 100,
             'requests_per_hour': 1000,
         },
-        'per_ip': {
+        'per_session': {
             'requests_per_second': 5,
             'requests_per_minute': 50,
             'requests_per_hour': 500,
@@ -65,51 +67,52 @@ class DDoSProtection:
         Check if request should be allowed
         Returns: (is_allowed, block_reason, metadata)
         """
-        ip = cls._get_client_ip(request)
+        # Get or create session ID for Tor compatibility
+        session_id = cls._get_session_id(request)
         user_id = str(request.user.id) if request.user.is_authenticated else None
         
-        # Check if IP is blacklisted
-        if cls._is_blacklisted(ip):
-            logger.warning(f"Blacklisted IP attempted access: {ip}")
-            return False, "blacklisted", {"ip": ip}
+        # Check if session is blacklisted
+        if cls._is_blacklisted(session_id):
+            logger.warning(f"Blacklisted session attempted access: {session_id}")
+            return False, "blacklisted", {"session_id": session_id}
         
         # Check global rate limits
         is_allowed, reason = cls._check_global_limits()
         if not is_allowed:
-            return False, reason, {"ip": ip}
+            return False, reason, {"session_id": session_id}
         
-        # Check per-IP rate limits
-        is_allowed, reason = cls._check_ip_limits(ip)
+        # Check per-session rate limits
+        is_allowed, reason = cls._check_session_limits(session_id)
         if not is_allowed:
-            cls._increment_violation_score(ip, 1)
-            return False, reason, {"ip": ip}
+            cls._increment_violation_score(session_id, 1)
+            return False, reason, {"session_id": session_id}
         
         # Check per-user rate limits (if authenticated)
         if user_id:
             is_allowed, reason = cls._check_user_limits(user_id)
             if not is_allowed:
-                return False, reason, {"ip": ip, "user_id": user_id}
+                return False, reason, {"session_id": session_id, "user_id": user_id}
         
         # Check endpoint-specific limits
-        is_allowed, reason = cls._check_endpoint_limits(request.path, ip)
+        is_allowed, reason = cls._check_endpoint_limits(request.path, session_id)
         if not is_allowed:
-            cls._increment_violation_score(ip, 2)
-            return False, reason, {"ip": ip, "endpoint": request.path}
+            cls._increment_violation_score(session_id, 2)
+            return False, reason, {"session_id": session_id, "endpoint": request.path}
         
         # Check for suspicious patterns
-        is_suspicious, pattern = cls._detect_suspicious_patterns(request, ip)
+        is_suspicious, pattern = cls._detect_suspicious_patterns(request, session_id)
         if is_suspicious:
-            cls._increment_violation_score(ip, 3)
-            return False, f"suspicious_pattern:{pattern}", {"ip": ip, "pattern": pattern}
+            cls._increment_violation_score(session_id, 3)
+            return False, f"suspicious_pattern:{pattern}", {"session_id": session_id, "pattern": pattern}
         
         # Check violation score for auto-blacklisting
-        if cls._should_blacklist(ip):
-            cls._blacklist_ip(ip, duration=3600)  # 1 hour
-            return False, "auto_blacklisted", {"ip": ip}
+        if cls._should_blacklist(session_id):
+            cls._blacklist_session(session_id, duration=3600)  # 1 hour
+            return False, "auto_blacklisted", {"session_id": session_id}
         
         # All checks passed
-        cls._track_request(request, ip)
-        return True, None, {"ip": ip}
+        cls._track_request(request, session_id)
+        return True, None, {"session_id": session_id}
     
     @classmethod
     def _check_global_limits(cls) -> Tuple[bool, Optional[str]]:
@@ -133,32 +136,40 @@ class DDoSProtection:
         return True, None
     
     @classmethod
-    def _check_ip_limits(cls, ip: str) -> Tuple[bool, Optional[str]]:
-        """Check per-IP rate limits"""
+    def _get_session_id(cls, request) -> str:
+        """Get or create session ID for request"""
+        if not hasattr(request, 'session') or not request.session.session_key:
+            # Force session creation if it doesn't exist
+            request.session.create()
+        return request.session.session_key
+    
+    @classmethod
+    def _check_session_limits(cls, session_id: str) -> Tuple[bool, Optional[str]]:
+        """Check per-session rate limits"""
         current_time = time.time()
         
         # Check requests per second
-        second_key = f"ddos:ip:{ip}:second:{int(current_time)}"
+        second_key = f"ddos:session:{session_id}:second:{int(current_time)}"
         second_count = cache.get(second_key, 0)
-        if second_count >= cls.RATE_LIMITS['per_ip']['requests_per_second']:
-            logger.warning(f"IP {ip} exceeded per-second limit")
-            return False, "ip_rate_limit_second"
+        if second_count >= cls.RATE_LIMITS['per_session']['requests_per_second']:
+            logger.warning(f"Session {session_id} exceeded per-second limit")
+            return False, "session_rate_limit_second"
         cache.set(second_key, second_count + 1, 2)
         
         # Check requests per minute
-        minute_key = f"ddos:ip:{ip}:minute:{int(current_time / 60)}"
+        minute_key = f"ddos:session:{session_id}:minute:{int(current_time / 60)}"
         minute_count = cache.get(minute_key, 0)
-        if minute_count >= cls.RATE_LIMITS['per_ip']['requests_per_minute']:
-            logger.warning(f"IP {ip} exceeded per-minute limit")
-            return False, "ip_rate_limit_minute"
+        if minute_count >= cls.RATE_LIMITS['per_session']['requests_per_minute']:
+            logger.warning(f"Session {session_id} exceeded per-minute limit")
+            return False, "session_rate_limit_minute"
         cache.set(minute_key, minute_count + 1, 65)
         
         # Check requests per hour
-        hour_key = f"ddos:ip:{ip}:hour:{int(current_time / 3600)}"
+        hour_key = f"ddos:session:{session_id}:hour:{int(current_time / 3600)}"
         hour_count = cache.get(hour_key, 0)
-        if hour_count >= cls.RATE_LIMITS['per_ip']['requests_per_hour']:
-            logger.warning(f"IP {ip} exceeded per-hour limit")
-            return False, "ip_rate_limit_hour"
+        if hour_count >= cls.RATE_LIMITS['per_session']['requests_per_hour']:
+            logger.warning(f"Session {session_id} exceeded per-hour limit")
+            return False, "session_rate_limit_hour"
         cache.set(hour_key, hour_count + 1, 3650)
         
         return True, None
@@ -179,7 +190,7 @@ class DDoSProtection:
         return True, None
     
     @classmethod
-    def _check_endpoint_limits(cls, path: str, ip: str) -> Tuple[bool, Optional[str]]:
+    def _check_endpoint_limits(cls, path: str, session_id: str) -> Tuple[bool, Optional[str]]:
         """Check endpoint-specific rate limits"""
         # Check if this endpoint has specific limits
         for endpoint, limits in cls.RATE_LIMITS['sensitive_endpoints'].items():
@@ -188,71 +199,71 @@ class DDoSProtection:
                 
                 # Check per-minute limit
                 if 'requests_per_minute' in limits:
-                    minute_key = f"ddos:endpoint:{endpoint}:{ip}:minute:{int(current_time / 60)}"
+                    minute_key = f"ddos:endpoint:{endpoint}:{session_id}:minute:{int(current_time / 60)}"
                     minute_count = cache.get(minute_key, 0)
                     if minute_count >= limits['requests_per_minute']:
-                        logger.warning(f"IP {ip} exceeded endpoint {endpoint} per-minute limit")
+                        logger.warning(f"Session {session_id} exceeded endpoint {endpoint} per-minute limit")
                         return False, f"endpoint_rate_limit:{endpoint}"
                     cache.set(minute_key, minute_count + 1, 65)
                 
                 # Check per-hour limit
                 if 'requests_per_hour' in limits:
-                    hour_key = f"ddos:endpoint:{endpoint}:{ip}:hour:{int(current_time / 3600)}"
+                    hour_key = f"ddos:endpoint:{endpoint}:{session_id}:hour:{int(current_time / 3600)}"
                     hour_count = cache.get(hour_key, 0)
                     if hour_count >= limits['requests_per_hour']:
-                        logger.warning(f"IP {ip} exceeded endpoint {endpoint} per-hour limit")
+                        logger.warning(f"Session {session_id} exceeded endpoint {endpoint} per-hour limit")
                         return False, f"endpoint_rate_limit:{endpoint}"
                     cache.set(hour_key, hour_count + 1, 3650)
         
         return True, None
     
     @classmethod
-    def _detect_suspicious_patterns(cls, request, ip: str) -> Tuple[bool, Optional[str]]:
+    def _detect_suspicious_patterns(cls, request, session_id: str) -> Tuple[bool, Optional[str]]:
         """Detect suspicious request patterns"""
         current_time = time.time()
         minute_window = int(current_time / 60)
         
         # Track endpoint access pattern
-        endpoint_key = f"ddos:pattern:endpoints:{ip}:{minute_window}"
+        endpoint_key = f"ddos:pattern:endpoints:{session_id}:{minute_window}"
         endpoints = cache.get(endpoint_key, set())
         endpoints.add(request.path)
         cache.set(endpoint_key, endpoints, 65)
         
         if len(endpoints) > cls.SUSPICIOUS_PATTERNS['rapid_endpoint_switching']:
-            logger.warning(f"IP {ip} accessing too many endpoints: {len(endpoints)}")
+            logger.warning(f"Session {session_id} accessing too many endpoints: {len(endpoints)}")
             return True, "rapid_endpoint_switching"
         
         # Track identical requests
         request_hash = cls._hash_request(request)
-        identical_key = f"ddos:pattern:identical:{ip}:{request_hash}:{minute_window}"
+        identical_key = f"ddos:pattern:identical:{session_id}:{request_hash}:{minute_window}"
         identical_count = cache.get(identical_key, 0)
         cache.set(identical_key, identical_count + 1, 65)
         
         if identical_count > cls.SUSPICIOUS_PATTERNS['identical_requests']:
-            logger.warning(f"IP {ip} sending too many identical requests")
+            logger.warning(f"Session {session_id} sending too many identical requests")
             return True, "identical_requests"
         
         # Track error rate
-        error_key = f"ddos:pattern:errors:{ip}:{minute_window}"
+        error_key = f"ddos:pattern:errors:{session_id}:{minute_window}"
         error_data = cache.get(error_key, {'total': 0, 'errors': 0})
         
         # This will be updated by the response middleware
         if error_data['total'] > 10:  # Minimum requests before checking error rate
             error_rate = error_data['errors'] / error_data['total']
             if error_rate > cls.SUSPICIOUS_PATTERNS['error_rate']:
-                logger.warning(f"IP {ip} has high error rate: {error_rate:.2%}")
+                logger.warning(f"Session {session_id} has high error rate: {error_rate:.2%}")
                 return True, "high_error_rate"
         
         return False, None
     
     @classmethod
-    def _track_request(cls, request, ip: str):
+    def _track_request(cls, request, session_id: str):
         """Track request for pattern analysis"""
         current_time = time.time()
         minute_window = int(current_time / 60)
         
         # Track total requests for error rate calculation
-        error_key = f"ddos:pattern:errors:{ip}:{minute_window}"
+        error_key = f"ddos:pattern:errors:{session_id}:{minute_window}"
         error_data = cache.get(error_key, {'total': 0, 'errors': 0})
         error_data['total'] += 1
         cache.set(error_key, error_data, 65)
@@ -265,7 +276,7 @@ class DDoSProtection:
             'user_agent': request.META.get('HTTP_USER_AGENT', ''),
         }
         
-        history_key = f"ddos:history:{ip}"
+        history_key = f"ddos:history:{session_id}"
         history = cache.get(history_key, [])
         history.append(request_data)
         # Keep last 100 requests
@@ -273,59 +284,49 @@ class DDoSProtection:
         cache.set(history_key, history, 3600)
     
     @classmethod
-    def track_response_error(cls, request, ip: str, status_code: int):
+    def track_response_error(cls, request, session_id: str, status_code: int):
         """Track error responses for pattern detection"""
         if status_code >= 400:
             current_time = time.time()
             minute_window = int(current_time / 60)
             
-            error_key = f"ddos:pattern:errors:{ip}:{minute_window}"
+            error_key = f"ddos:pattern:errors:{session_id}:{minute_window}"
             error_data = cache.get(error_key, {'total': 0, 'errors': 0})
             error_data['errors'] += 1
             cache.set(error_key, error_data, 65)
     
     @classmethod
-    def _increment_violation_score(cls, ip: str, score: int):
-        """Increment violation score for an IP"""
-        score_key = f"ddos:violation_score:{ip}"
+    def _increment_violation_score(cls, session_id: str, score: int):
+        """Increment violation score for a session"""
+        score_key = f"ddos:violation_score:{session_id}"
         current_score = cache.get(score_key, 0)
         new_score = current_score + score
         cache.set(score_key, new_score, 3600)  # Reset after 1 hour
         
-        logger.info(f"IP {ip} violation score: {new_score}")
+        logger.info(f"Session {session_id} violation score: {new_score}")
     
     @classmethod
-    def _should_blacklist(cls, ip: str) -> bool:
-        """Check if IP should be auto-blacklisted based on violation score"""
-        score_key = f"ddos:violation_score:{ip}"
+    def _should_blacklist(cls, session_id: str) -> bool:
+        """Check if session should be auto-blacklisted based on violation score"""
+        score_key = f"ddos:violation_score:{session_id}"
         score = cache.get(score_key, 0)
         return score >= 10  # Threshold for auto-blacklisting
     
     @classmethod
-    def _blacklist_ip(cls, ip: str, duration: int = 3600):
-        """Add IP to blacklist"""
-        blacklist_key = f"ddos:blacklist:{ip}"
+    def _blacklist_session(cls, session_id: str, duration: int = 3600):
+        """Add session to blacklist"""
+        blacklist_key = f"ddos:blacklist:{session_id}"
         cache.set(blacklist_key, True, duration)
-        logger.warning(f"IP {ip} has been blacklisted for {duration} seconds")
+        logger.warning(f"Session {session_id} has been blacklisted for {duration} seconds")
         
         # Log to persistent storage if needed
-        cls._log_blacklist_event(ip, duration)
+        cls._log_blacklist_event(session_id, duration)
     
     @classmethod
-    def _is_blacklisted(cls, ip: str) -> bool:
-        """Check if IP is blacklisted"""
-        blacklist_key = f"ddos:blacklist:{ip}"
+    def _is_blacklisted(cls, session_id: str) -> bool:
+        """Check if session is blacklisted"""
+        blacklist_key = f"ddos:blacklist:{session_id}"
         return cache.get(blacklist_key, False)
-    
-    @classmethod
-    def _get_client_ip(cls, request) -> str:
-        """Get client IP address"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0].strip()
-        else:
-            ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
-        return ip
     
     @classmethod
     def _hash_request(cls, request) -> str:
@@ -334,10 +335,10 @@ class DDoSProtection:
         return hashlib.md5(data.encode()).hexdigest()
     
     @classmethod
-    def _log_blacklist_event(cls, ip: str, duration: int):
+    def _log_blacklist_event(cls, session_id: str, duration: int):
         """Log blacklist event for analysis"""
         event = {
-            'ip': ip,
+            'session_id': session_id,
             'timestamp': timezone.now(),
             'duration': duration,
             'reason': 'auto_blacklist',
@@ -349,13 +350,13 @@ class DDoSProtection:
     def get_protection_stats(cls) -> Dict:
         """Get current protection statistics"""
         stats = {
-            'blacklisted_ips': 0,
+            'blacklisted_sessions': 0,
             'current_requests_per_minute': 0,
             'blocked_requests_last_hour': 0,
             'top_violators': [],
         }
         
-        # Count blacklisted IPs
+        # Count blacklisted sessions
         # This is a simplified version - in production, use a more efficient method
         blacklist_pattern = "ddos:blacklist:*"
         # Note: cache.keys() is not available in all cache backends
@@ -395,7 +396,7 @@ class DDoSProtectionMiddleware:
             
             # Different responses based on block reason
             if block_reason == "blacklisted":
-                return HttpResponse("Your IP has been blacklisted.", status=403)
+                return HttpResponse("Your session has been blacklisted.", status=403)
             elif "rate_limit" in block_reason:
                 return render(request, 'security/rate_limited_enhanced.html', {
                     'reason': block_reason,
@@ -413,7 +414,7 @@ class DDoSProtectionMiddleware:
         response = self.get_response(request)
         
         # Track response for pattern analysis
-        ip = DDoSProtection._get_client_ip(request)
-        DDoSProtection.track_response_error(request, ip, response.status_code)
+        session_id = DDoSProtection._get_session_id(request)
+        DDoSProtection.track_response_error(request, session_id, response.status_code)
         
         return response

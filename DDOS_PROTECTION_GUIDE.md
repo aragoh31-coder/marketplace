@@ -8,7 +8,7 @@ The marketplace now features a comprehensive, multi-layered DDoS protection syst
 
 ### 1. **Multi-Layer Rate Limiting**
 - **Global limits**: Protect the entire system
-- **Per-IP limits**: Prevent single-source attacks
+- **Per-session limits**: Track by session ID (Tor-compatible)
 - **Per-user limits**: Control authenticated user requests
 - **Endpoint-specific limits**: Extra protection for sensitive endpoints
 
@@ -43,7 +43,7 @@ RATE_LIMITS = {
         'requests_per_minute': 100,
         'requests_per_hour': 1000,
     },
-    'per_ip': {
+    'per_session': {
         'requests_per_second': 5,
         'requests_per_minute': 50,
         'requests_per_hour': 500,
@@ -99,10 +99,10 @@ Access the DDoS protection dashboard at: `/adminpanel/ddos/`
    - Blocked requests count
    - Blacklisted IPs
 
-2. **IP Management**
-   - Block IP with custom duration
-   - Unblock blacklisted IPs
-   - View IP request history
+2. **Session Management**
+   - Block session with custom duration
+   - Unblock blacklisted sessions
+   - View session request history
 
 3. **Configuration**
    - View current rate limits
@@ -115,9 +115,10 @@ The system is designed with Tor in mind:
 
 - ✅ No JavaScript required
 - ✅ Works with Tor Browser safest mode
-- ✅ Doesn't rely on IP for user tracking
+- ✅ Uses session IDs instead of IPs (perfect for Tor)
 - ✅ Challenge system uses simple math (no CAPTCHA)
 - ✅ Graceful degradation for .onion addresses
+- ✅ No IP tracking anywhere in the system
 
 ## Handling Attacks
 
