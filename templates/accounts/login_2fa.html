@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block title %}Two-Factor Authentication - Secure Marketplace{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>🔐 Two-Factor Authentication</h1>
+            
+            <div class="info-text">
+                Please enter your 6-digit authenticator code to complete login.
+            </div>
+
+            {% if error %}
+            <div class="error-message">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'accounts:login' %}">
+                {% csrf_token %}
+                
+                <!-- Hidden fields to preserve login data -->
+                <input type="hidden" name="username" value="{{ username }}">
+                <input type="hidden" name="password" value="{{ password }}">
+                
+                <!-- Honeypot fields -->
+                <input type="text" name="website" style="display: none !important;" tabindex="-1" autocomplete="off">
+                <input type="email" name="email_address" style="display: none !important;" tabindex="-1" autocomplete="off">
+                
+                <div class="form-group">
+                    <label class="form-label" for="totp_code">Authenticator Code:</label>
+                    <input type="text" 
+                           name="totp_code" 
+                           id="totp_code" 
+                           class="form-input" 
+                           pattern="[0-9]{6}" 
+                           maxlength="6" 
+                           required 
+                           placeholder="123456"
+                           autocomplete="one-time-code">
+                    <div class="help-text">
+                        Enter the 6-digit code from your authenticator app
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">
+                        ✅ Verify & Login
+                    </button>
+                    <a href="{% url 'accounts:login' %}" class="btn btn-secondary">
+                        ← Back to Login
+                    </a>
+                </div>
+            </form>
+
+            <div class="info-text">
+                <strong>Security Notice:</strong> Your TOTP code expires every 30 seconds. 
+                If the code fails, wait for a new code and try again.
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.auth-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 20px;
+}
+
+.auth-card {
+    background-color: var(--bg-card);
+    border: 2px solid var(--primary);
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--primary);
+    font-weight: bold;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--bg-tertiary);
+    border: 2px solid var(--bg-tertiary);
+    color: var(--text-primary);
+    border-radius: 4px;
+    font-size: 16px;
+    font-family: monospace;
+    text-align: center;
+    letter-spacing: 2px;
+}
+
+.form-input:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    margin: 8px;
+    border: 2px solid;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: var(--bg-primary);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dim);
+    border-color: var(--primary-dim);
+}
+
+.btn-secondary {
+    background-color: transparent;
+    border-color: var(--text-muted);
+    color: var(--text-muted);
+}
+
+.btn-secondary:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.info-text {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: 20px 0;
+    line-height: 1.6;
+}
+
+.help-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.error-message {
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid #ef4444;
+    color: #ef4444;
+    padding: 12px;
+    border-radius: 4px;
+    margin: 16px 0;
+}
+</style>
+{% endblock %}

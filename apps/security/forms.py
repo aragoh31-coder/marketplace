@@ -210,6 +210,18 @@ class NoJSCaptchaMixin:
 
 class SecureLoginForm(NoJSCaptchaMixin, AuthenticationForm):
     """Enhanced login form with security features"""
+    
+    totp_code = forms.CharField(
+        max_length=6,
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "form-control", 
+            "placeholder": "2FA Code (if enabled)",
+            "pattern": "[0-9]{6}",
+            "autocomplete": "one-time-code"
+        }),
+        help_text="Enter your 6-digit authenticator code if you have 2FA enabled"
+    )
 
     def __init__(self, request=None, *args, **kwargs):
         kwargs["request"] = request

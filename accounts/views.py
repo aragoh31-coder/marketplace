@@ -145,9 +145,34 @@ def login_view(request):
         if form.is_valid():
             username = form.cleaned_data.get("username")
             password = form.cleaned_data.get("password")
+            totp_code = form.cleaned_data.get("totp_code", "")
+            
             user = authenticate(request, username=username, password=password)
 
             if user:
+                # Check if user has 2FA enabled
+                if hasattr(user, 'wallet') and user.wallet and user.wallet.two_fa_enabled:
+                    # Verify TOTP code
+                    import pyotp
+                    totp = pyotp.TOTP(user.wallet.two_fa_secret)
+                    
+                    if not totp_code:
+                        # Show 2FA form
+                        return render(request, "accounts/login_2fa.html", {
+                            "username": username,
+                            "password": password,
+                            "require_2fa": True
+                        })
+                    
+                    if not totp.verify(totp_code, valid_window=1):
+                        messages.error(request, "Invalid 2FA code. Please try again.")
+                        return render(request, "accounts/login_2fa.html", {
+                            "username": username,
+                            "password": password,
+                            "require_2fa": True,
+                            "error": "Invalid 2FA code"
+                        })
+
                 from wallets.models import AuditLog
 
                 AuditLog.objects.create(
@@ -156,9 +181,10 @@ def login_view(request):
                     ip_address="privacy_protected",  # No IP logging for privacy
                     user_agent=request.META.get("HTTP_USER_AGENT", "")[:200],
                     details={
-                        "login_method": "pgp_2fa" if (user.pgp_login_enabled and user.pgp_public_key) else "standard",
+                        "login_method": "pgp_2fa" if (user.pgp_login_enabled and user.pgp_public_key) else "totp_2fa" if (hasattr(user, 'wallet') and user.wallet and user.wallet.two_fa_enabled) else "standard",
                         "username": username,
                         "pgp_enabled": bool(user.pgp_public_key),
+                        "totp_enabled": bool(hasattr(user, 'wallet') and user.wallet and user.wallet.two_fa_enabled),
                     },
                     risk_score=0,
                 )

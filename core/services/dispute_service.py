@@ -5,6 +5,7 @@ Handles all dispute-related business logic and operations.
 
 import logging
 from typing import Any, Dict, List, Optional, Tuple
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -499,3 +500,229 @@ class DisputeService(BaseService):
         except Exception as e:
             logger.error(f"Failed to get service health: {e}")
             return {"error": str(e)}
+
+    def auto_resolve_dispute(self, dispute_id: str) -> Dict[str, Any]:
+        """Automated dispute resolution based on evidence weight and patterns"""
+        try:
+            dispute = self.get_dispute_by_id(dispute_id)
+            if not dispute:
+                return {"success": False, "error": "Dispute not found"}
+            
+            if dispute.status != "INVESTIGATING":
+                return {"success": False, "error": "Dispute not in investigating status"}
+            
+            # Get all evidence
+            evidence_list = dispute.evidence.all()
+            if len(evidence_list) < 2:
+                return {"success": False, "error": "Insufficient evidence for automated resolution"}
+            
+            # Score evidence for both parties
+            buyer_score = 0
+            vendor_score = 0
+            
+            for evidence in evidence_list:
+                score = self._score_evidence(evidence)
+                if evidence.submitted_by == dispute.complainant:
+                    buyer_score += score
+                elif evidence.submitted_by == dispute.respondent:
+                    vendor_score += score
+            
+            # Analyze order patterns
+            order_analysis = self._analyze_order_patterns(dispute.order)
+            buyer_score += order_analysis.get("buyer_bonus", 0)
+            vendor_score += order_analysis.get("vendor_bonus", 0)
+            
+            # Determine winner based on evidence strength
+            confidence_threshold = 1.5  # Winner must have 50% more evidence
+            winner = None
+            resolution = ""
+            
+            if buyer_score > vendor_score * confidence_threshold:
+                winner = dispute.complainant
+                resolution = f"Automated resolution: Buyer evidence significantly stronger (Score: {buyer_score} vs {vendor_score}). Refund granted."
+                # Release funds from escrow back to buyer
+                self._handle_buyer_victory(dispute)
+                
+            elif vendor_score > buyer_score * confidence_threshold:
+                winner = dispute.respondent  
+                resolution = f"Automated resolution: Vendor evidence significantly stronger (Score: {vendor_score} vs {buyer_score}). Funds released to vendor."
+                # Release funds from escrow to vendor
+                self._handle_vendor_victory(dispute)
+                
+            else:
+                resolution = f"Automated resolution: Evidence inconclusive (Buyer: {buyer_score}, Vendor: {vendor_score}). Manual review required."
+                # Flag for manual review
+                dispute.status = "MANUAL_REVIEW"
+                dispute.save()
+                
+                return {
+                    "success": True,
+                    "auto_resolved": False,
+                    "manual_review": True,
+                    "buyer_score": buyer_score,
+                    "vendor_score": vendor_score,
+                    "resolution": resolution
+                }
+            
+            # Update dispute with resolution
+            if winner:
+                dispute.status = "RESOLVED"
+                dispute.winner_id = winner.id
+                dispute.resolution = resolution
+                dispute.resolved_at = timezone.now()
+                dispute.save()
+                
+                # Update order status
+                dispute.order.status = "disputed_resolved"
+                dispute.order.save()
+            
+            logger.info(f"Dispute {dispute_id} auto-resolved: Winner={winner.id if winner else 'None'}")
+            
+            return {
+                "success": True,
+                "auto_resolved": winner is not None,
+                "winner_id": winner.id if winner else None,
+                "buyer_score": buyer_score,
+                "vendor_score": vendor_score,
+                "resolution": resolution
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to auto-resolve dispute {dispute_id}: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def _score_evidence(self, evidence) -> float:
+        """Score individual evidence based on type, quality, and timing"""
+        score = 0.0
+        
+        # Base score for evidence submission
+        score += 10.0
+        
+        # Bonus for detailed descriptions
+        if len(evidence.description) > 100:
+            score += 5.0
+        if len(evidence.description) > 300:
+            score += 10.0
+        
+        # Bonus for file attachments
+        if evidence.file_attachment:
+            score += 15.0
+        
+        # Bonus for early submission (within first 24 hours)
+        if evidence.created_at <= evidence.dispute.created_at + timedelta(hours=24):
+            score += 8.0
+        
+        # Penalty for very late submission (after 7 days)
+        if evidence.created_at > evidence.dispute.created_at + timedelta(days=7):
+            score -= 5.0
+        
+        # Bonus for structured evidence (contains keywords)
+        description_lower = evidence.description.lower()
+        structured_keywords = [
+            'tracking', 'receipt', 'screenshot', 'conversation', 'transaction',
+            'proof', 'evidence', 'documentation', 'record', 'timestamp'
+        ]
+        
+        for keyword in structured_keywords:
+            if keyword in description_lower:
+                score += 3.0
+        
+        return max(score, 0.0)  # Ensure non-negative score
+    
+    def _analyze_order_patterns(self, order) -> Dict[str, float]:
+        """Analyze order and user patterns for additional context"""
+        analysis = {"buyer_bonus": 0.0, "vendor_bonus": 0.0}
+        
+        try:
+            # Buyer history analysis
+            buyer = order.buyer
+            buyer_orders = Order.objects.filter(buyer=buyer, status="completed").count()
+            buyer_disputes = Dispute.objects.filter(complainant=buyer).count()
+            
+            # Bonus for established buyers with good history
+            if buyer_orders >= 5 and buyer_disputes <= 1:
+                analysis["buyer_bonus"] += 10.0
+            elif buyer_orders >= 10 and buyer_disputes == 0:
+                analysis["buyer_bonus"] += 20.0
+            
+            # Penalty for dispute-heavy buyers
+            if buyer_orders > 0 and (buyer_disputes / buyer_orders) > 0.3:
+                analysis["buyer_bonus"] -= 15.0
+            
+            # Vendor history analysis
+            vendor = order.items.first().product.vendor if order.items.exists() else None
+            if vendor:
+                vendor_orders = Order.objects.filter(
+                    items__product__vendor=vendor, 
+                    status="completed"
+                ).distinct().count()
+                vendor_disputes = Dispute.objects.filter(respondent=vendor.user).count()
+                
+                # Bonus for established vendors with good history
+                if vendor_orders >= 10 and vendor_disputes <= 2:
+                    analysis["vendor_bonus"] += 15.0
+                elif vendor_orders >= 50 and vendor_disputes <= 5:
+                    analysis["vendor_bonus"] += 25.0
+                
+                # Penalty for dispute-heavy vendors
+                if vendor_orders > 0 and (vendor_disputes / vendor_orders) > 0.2:
+                    analysis["vendor_bonus"] -= 20.0
+            
+            # Order value considerations
+            order_value = float(order.total_amount or 0)
+            if order_value > 1000:  # High-value orders get more scrutiny
+                analysis["buyer_bonus"] += 5.0
+                analysis["vendor_bonus"] += 5.0
+            
+        except Exception as e:
+            logger.error(f"Error analyzing order patterns: {e}")
+        
+        return analysis
+    
+    def _handle_buyer_victory(self, dispute):
+        """Handle escrow release when buyer wins dispute"""
+        try:
+            from core.services.wallet_service import WalletService
+            wallet_service = WalletService()
+            
+            order = dispute.order
+            # Release funds from escrow back to buyer
+            for item in order.items.all():
+                amount = item.quantity * item.price
+                currency = "btc"  # Default, should be determined by order
+                
+                success, msg = wallet_service.release_from_escrow(
+                    str(order.buyer.id), currency, amount, str(order.id)
+                )
+                
+                if not success:
+                    logger.error(f"Failed to release escrow to buyer: {msg}")
+                    
+        except Exception as e:
+            logger.error(f"Error handling buyer victory: {e}")
+    
+    def _handle_vendor_victory(self, dispute):
+        """Handle escrow release when vendor wins dispute"""
+        try:
+            from core.services.wallet_service import WalletService
+            wallet_service = WalletService()
+            
+            order = dispute.order
+            # Release funds from escrow to vendor
+            vendor = order.items.first().product.vendor.user if order.items.exists() else None
+            
+            if vendor:
+                for item in order.items.all():
+                    amount = item.quantity * item.price
+                    currency = "btc"  # Default, should be determined by order
+                    
+                    # Release from buyer's escrow
+                    wallet_service.release_from_escrow(
+                        str(order.buyer.id), currency, amount, str(order.id)
+                    )
+                    
+                    # Add to vendor's balance
+                    wallet_service.add_balance(str(vendor.id), currency, amount)
+                    
+        except Exception as e:
+            logger.error(f"Error handling vendor victory: {e}")
