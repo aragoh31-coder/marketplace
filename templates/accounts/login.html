@@ -36,13 +36,18 @@
 {% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2>🔐 Secure Login</h2>
-    
-    <div class="security-notice">
-        <h3>🛡️ Enhanced Security</h3>
-        <p>This login form includes advanced security features to protect against automated attacks while maintaining full Tor compatibility.</p>
-    </div>
+<div class="container">
+    <div class="grid">
+        <div style="grid-column: 1/-1; max-width: 500px; margin: 0 auto;">
+            <div class="box-glow">
+                <div class="box-header">
+                    <h2>🔐 Secure Login</h2>
+                </div>
+                
+                <div class="alert alert-success mb-3">
+                    <h4 class="mb-2">🛡️ Enhanced Security</h4>
+                    <p>This login form includes advanced security features to protect against automated attacks while maintaining full Tor compatibility.</p>
+                </div>
     
     <form method="post">
         {% csrf_token %}
@@ -105,14 +110,17 @@
     
     <p><a href="{% url 'accounts:register' %}">Don't have an account? Register here</a></p>
     
-    <div class="security-notice mt-4">
-        <h3>🌐 Privacy & Security</h3>
-        <ul>
+    <div class="alert alert-info mt-4">
+        <h4>🌐 Privacy & Security</h4>
+        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
             <li>No JavaScript required - fully Tor compatible</li>
             <li>Advanced bot detection and rate limiting</li>
             <li>No IP address logging for privacy protection</li>
             <li>Math challenge prevents automated attacks</li>
         </ul>
+    </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

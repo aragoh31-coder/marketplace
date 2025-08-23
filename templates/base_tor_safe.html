@@ -10,8 +10,11 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';">
     <title>{% block title %}Secure Marketplace - Tor Safe{% endblock %}>
     
+    <!-- Load external CSS file -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
     <style>
-        /* Tor-Safe Minimal CSS - No JavaScript, No Animations, No External Dependencies */
+        /* Additional Tor-Safe Inline CSS - Overrides for maximum compatibility */
         :root {
             --primary: #00ff88;
             --primary-dim: #00cc6a;
@@ -427,9 +430,9 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
+    <!-- Header with Smooth Toolbar -->
+    <header class="header toolbar">
+        <div class="header-content toolbar-inner container">
             <a href="{% url 'home' %}" class="logo">🔒 SecureMarket</a>
             
             <!-- Desktop Navigation -->
@@ -470,30 +473,44 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
-    <footer class="card text-center mt-4">
-        <p><strong>🔒 Tor-Safe Marketplace</strong></p>
-        <p>This marketplace is designed to work perfectly with Tor Browser in safest mode.</p>
-        <p>No JavaScript • No External Dependencies • Maximum Privacy</p>
-        <p class="mt-2">
-            <small>
-                Built with Django • Optimized for Tor • 
-                <a href="{% url 'admin:index' %}" style="color: var(--primary);">Admin</a>
-            </small>
-        </p>
+    <!-- Footer with Smooth Design -->
+    <footer class="section">
+        <div class="container">
+            <div class="card text-center">
+                <div class="card-header">
+                    <h3 class="text-primary">🔒 Tor-Safe Marketplace</h3>
+                </div>
+                <p>This marketplace is designed to work perfectly with Tor Browser in safest mode.</p>
+                <p class="text-muted">No JavaScript • No External Dependencies • Maximum Privacy</p>
+                <p class="mt-3">
+                    <small class="text-muted">
+                        Built with Django • Optimized for Tor • 
+                        <a href="{% url 'admin:index' %}" class="text-primary">Admin Panel</a>
+                    </small>
+                </p>
+            </div>
+        </div>
     </footer>
 
-    <!-- Tor Safety Notice -->
-    <div class="card mt-4" style="background: rgba(0, 255, 136, 0.1); border-color: var(--primary);">
-        <h3>🕵️ Tor Browser Compatibility</h3>
-        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
-            <li>✅ No JavaScript required - works in safest mode</li>
-            <li>✅ No external CDNs or external requests</li>
-            <li>✅ No tracking or analytics</li>
-            <li>✅ No cookies or local storage</li>
-            <li>✅ No animations or transitions</li>
-            <li>✅ Maximum privacy and security</li>
-        </ul>
+    <!-- Tor Safety Notice with Smooth Box -->
+    <div class="container mb-4">
+        <div class="box-glow">
+            <div class="box-header">
+                <h3>🕵️ Tor Browser Compatibility</h3>
+            </div>
+            <div class="grid grid-2">
+                <div>
+                    <p class="text-success">✅ No JavaScript required - works in safest mode</p>
+                    <p class="text-success">✅ No external CDNs or external requests</p>
+                    <p class="text-success">✅ No tracking or analytics</p>
+                </div>
+                <div>
+                    <p class="text-success">✅ No cookies or local storage</p>
+                    <p class="text-success">✅ No animations or transitions</p>
+                    <p class="text-success">✅ Maximum privacy and security</p>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>
