@@ -13,6 +13,7 @@
     <!-- Load external CSS files -->
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/enhancements.css">
+    <link rel="stylesheet" href="/static/css/tor_safe_enhanced.css">
     
     <style>
         /* Additional Tor-Safe Inline CSS - Overrides for maximum compatibility */
@@ -374,6 +375,28 @@
                 display: block;
             }
             
+            /* CSS-only mobile menu functionality */
+            #mobile-menu-toggle:checked ~ .nav {
+                display: flex !important;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--bg-secondary);
+                flex-direction: column;
+                padding: 1rem;
+                border-top: 2px solid var(--primary);
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                z-index: 1000;
+            }
+            
+            #mobile-menu-toggle:checked ~ .nav a {
+                padding: 0.75rem 1rem;
+                margin: 0.25rem 0;
+                width: 100%;
+                text-align: left;
+            }
+            
             .main-content {
                 padding: 1rem;
             }
@@ -433,8 +456,12 @@
 <body>
     <!-- Header with Smooth Toolbar -->
     <header class="header toolbar">
-        <div class="header-content toolbar-inner container">
+        <div class="header-content toolbar-inner container" style="position: relative;">
             <a href="{% url 'home' %}" class="logo">🔒 SecureMarket</a>
+            
+            <!-- Mobile Navigation Toggle (CSS-only) -->
+            <input type="checkbox" id="mobile-menu-toggle" class="mobile-menu-toggle">
+            <label for="mobile-menu-toggle" class="mobile-nav-toggle" aria-label="Toggle navigation">☰</label>
             
             <!-- Desktop Navigation -->
             <nav class="nav">
@@ -451,9 +478,6 @@
                     <a href="{% url 'accounts:register' %}">📝 Register</a>
                 {% endif %}
             </nav>
-            
-            <!-- Mobile Navigation Toggle -->
-            <button class="mobile-nav-toggle" aria-label="Toggle navigation">☰</button>
         </div>
     </header>
 

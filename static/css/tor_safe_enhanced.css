@@ -1,0 +1,271 @@
+/* Enhanced Tor-Safe CSS with Mobile Menu and Gradient Boxes */
+
+/* CSS-Only Mobile Menu */
+.mobile-menu-toggle {
+    display: none;
+}
+
+.mobile-menu-toggle:checked ~ .nav {
+    display: flex !important;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-secondary);
+    flex-direction: column;
+    padding: 1rem;
+    border-top: 2px solid var(--primary);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-menu-toggle:checked ~ .nav a {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Enhanced Card/Box Styles - Matching Register Page */
+.card,
+.box,
+.box-glow,
+.card-elevation-1,
+.card-elevation-2,
+.card-elevation-3 {
+    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)) !important;
+    border: 1px solid var(--primary) !important;
+    border-radius: 12px !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+/* Gradient border effect on hover */
+.card:hover,
+.box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 255, 136, 0.1);
+}
+
+/* Add subtle gradient overlay */
+.card::before,
+.box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    transition: left 0.5s ease;
+}
+
+.card:hover::before,
+.box:hover::before {
+    left: 100%;
+}
+
+/* Input wrapper styles from register page */
+.input-wrapper,
+.form-group > div {
+    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.input-wrapper:hover,
+.form-group > div:hover {
+    border-color: var(--primary) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 255, 136, 0.1);
+}
+
+/* Progress steps styling */
+.progress-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.progress-step {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border: 2px solid var(--border);
+    background: var(--bg-tertiary);
+}
+
+.progress-step.active {
+    background: var(--primary);
+    color: var(--bg-primary);
+    border-color: var(--primary);
+}
+
+.progress-line {
+    height: 2px;
+    flex: 1;
+    margin: 0 0.5rem;
+    background: linear-gradient(to right, var(--primary), var(--border));
+    position: relative;
+    overflow: hidden;
+}
+
+/* Section headers with gradient text */
+.card h1, .card h2, .card h3,
+.box h1, .box h2, .box h3 {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+    margin-bottom: 1rem;
+}
+
+/* Button enhancements */
+.btn {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    color: var(--bg-primary);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-block;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
+}
+
+.btn:hover::before {
+    width: 100%;
+    height: 100%;
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Secondary button style */
+.btn-secondary {
+    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+    border: 2px solid var(--primary);
+    color: var(--primary);
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: var(--bg-primary);
+}
+
+/* Grid improvements */
+.grid {
+    gap: 1.5rem;
+}
+
+/* Alert styling */
+.alert {
+    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+    border-left: 4px solid var(--primary);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.alert-danger {
+    border-left-color: #ef4444;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+}
+
+.alert-success {
+    border-left-color: #10b981;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+}
+
+/* Table styling */
+table {
+    width: 100%;
+    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--primary);
+}
+
+th {
+    background: var(--primary);
+    color: var(--bg-primary);
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+}
+
+td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+tr:hover {
+    background: rgba(0, 255, 136, 0.05);
+}
+
+/* Form elements */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+textarea,
+select {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75rem;
+    border-radius: 8px;
+    color: var(--text-primary);
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.1);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .card,
+    .box {
+        padding: 1rem !important;
+    }
+    
+    .grid {
+        grid-template-columns: 1fr !important;
+    }
+}
