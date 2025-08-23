@@ -30,10 +30,10 @@ class DDoSProtection:
     
     # Rate limit configurations
     RATE_LIMITS = {
-        'global': {  # Total requests across ALL users/sessions combined
-            'requests_per_second': 30,
-            'requests_per_minute': 100,
-            'requests_per_hour': 1000,
+        'global': {  # No global limits - unlimited total capacity
+            'requests_per_second': None,
+            'requests_per_minute': None,
+            'requests_per_hour': None,
         },
         'per_session': {  # Limits for each individual session
             'requests_per_second': 20,
@@ -117,21 +117,29 @@ class DDoSProtection:
     @classmethod
     def _check_global_limits(cls) -> Tuple[bool, Optional[str]]:
         """Check global rate limits across all requests"""
+        # If global limits are disabled (None), allow all requests
+        if (cls.RATE_LIMITS['global']['requests_per_second'] is None and
+            cls.RATE_LIMITS['global']['requests_per_minute'] is None and
+            cls.RATE_LIMITS['global']['requests_per_hour'] is None):
+            return True, None
+        
         current_time = time.time()
         
         # Check requests per second
-        second_key = f"ddos:global:second:{int(current_time)}"
-        second_count = cache.get(second_key, 0)
-        if second_count >= cls.RATE_LIMITS['global']['requests_per_second']:
-            return False, "global_rate_limit_second"
-        cache.set(second_key, second_count + 1, 2)
+        if cls.RATE_LIMITS['global']['requests_per_second'] is not None:
+            second_key = f"ddos:global:second:{int(current_time)}"
+            second_count = cache.get(second_key, 0)
+            if second_count >= cls.RATE_LIMITS['global']['requests_per_second']:
+                return False, "global_rate_limit_second"
+            cache.set(second_key, second_count + 1, 2)
         
         # Check requests per minute
-        minute_key = f"ddos:global:minute:{int(current_time / 60)}"
-        minute_count = cache.get(minute_key, 0)
-        if minute_count >= cls.RATE_LIMITS['global']['requests_per_minute']:
-            return False, "global_rate_limit_minute"
-        cache.set(minute_key, minute_count + 1, 65)
+        if cls.RATE_LIMITS['global']['requests_per_minute'] is not None:
+            minute_key = f"ddos:global:minute:{int(current_time / 60)}"
+            minute_count = cache.get(minute_key, 0)
+            if minute_count >= cls.RATE_LIMITS['global']['requests_per_minute']:
+                return False, "global_rate_limit_minute"
+            cache.set(minute_key, minute_count + 1, 65)
         
         return True, None
     

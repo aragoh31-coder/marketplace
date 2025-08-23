@@ -38,16 +38,16 @@ Current default limits are optimized for Tor usage:
 
 **What is "Global"?**
 - Global limits apply to the ENTIRE marketplace across ALL users and sessions combined
-- It's the total capacity limit for your server
-- Even if individual sessions are within their limits, global limits prevent server overload
-- Example: If global limit is 30 req/sec, that's the max for everyone together
+- Currently DISABLED (set to None) - no limit on total server requests
+- When enabled, it prevents server overload by limiting total capacity
+- With no global limits, only per-session and per-user limits apply
 
 ```python
 RATE_LIMITS = {
-    'global': {  # Total requests across ALL users/sessions combined
-        'requests_per_second': 30,
-        'requests_per_minute': 100,
-        'requests_per_hour': 1000,
+    'global': {  # No global limits - unlimited total capacity
+        'requests_per_second': None,
+        'requests_per_minute': None,
+        'requests_per_hour': None,
     },
     'per_session': {  # Limits for each individual session
         'requests_per_second': 20,
