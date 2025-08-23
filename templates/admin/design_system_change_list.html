@@ -367,25 +367,9 @@
 
     <!-- Action Buttons -->
     <div class="action-buttons">
-        <a href="reset-theme/" class="btn btn-danger" onclick="return confirm('Are you sure you want to reset to default theme? This action cannot be undone.')">🔄 Reset to Default</a>
+        <a href="reset-theme/" class="btn btn-danger">🔄 Reset to Default</a>
         <a href="{% url 'admin:index' %}" class="btn btn-warning">← Back to Admin</a>
     </div>
 </div>
 
-<script>
-// Auto-submit file upload when file is selected
-document.getElementById('theme_file').addEventListener('change', function() {
-    if (this.files.length > 0) {
-        this.form.submit();
-    }
-});
-
-// Add color preview update on input change
-document.querySelectorAll('.color-input').forEach(input => {
-    input.addEventListener('input', function() {
-        const preview = this.previousElementSibling;
-        preview.style.backgroundColor = this.value;
-    });
-});
-</script>
 {% endblock %}

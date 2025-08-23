@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base_tor_safe.html' %}
 
 {% block title %}Security Challenge Failed - Secure Marketplace{% endblock %}
 
@@ -74,7 +74,7 @@
     </div>
     
     <div class="actions">
-        <a href="javascript:history.back()" class="btn">🔙 Try Again</a>
+        <a href="{{ request.META.HTTP_REFERER|default:'/' }}" class="btn">🔙 Try Again</a>
         <a href="/" class="btn">🏠 Return to Homepage</a>
         <a href="/support/" class="btn">📞 Contact Support</a>
     </div>

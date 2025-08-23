@@ -1,0 +1,47 @@
+{% extends "base_tor_safe.html" %}
+{% block title %}Confirm Withdrawal Cancellation{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h1>⚠️ Cancel Withdrawal Request</h1>
+        
+        <div class="alert alert-warning">
+            <h3>Are you sure you want to cancel this withdrawal?</h3>
+            
+            <div class="withdrawal-details">
+                <p><strong>Amount:</strong> {{ withdrawal.amount }} {{ withdrawal.currency }}</p>
+                <p><strong>Status:</strong> {{ withdrawal.status }}</p>
+                <p><strong>Created:</strong> {{ withdrawal.created_at }}</p>
+            </div>
+            
+            <p class="mt-3">⚠️ <strong>Note:</strong> The funds will be returned to your wallet balance immediately.</p>
+        </div>
+        
+        <form method="post" action="{% url 'wallets:cancel_withdrawal' withdrawal.id %}">
+            {% csrf_token %}
+            
+            <div class="button-group">
+                <button type="submit" class="btn btn-danger">
+                    ✅ Yes, Cancel Withdrawal
+                </button>
+                <a href="{% url 'wallets:withdrawal_status' %}" class="btn btn-secondary">
+                    ❌ Keep Withdrawal
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.withdrawal-details {
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 4px;
+    margin: 1rem 0;
+}
+
+.withdrawal-details p {
+    margin: 0.5rem 0;
+}
+</style>
+{% endblock %}

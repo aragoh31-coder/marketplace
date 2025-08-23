@@ -18,7 +18,7 @@ ALLOWED_HOSTS = env.list(
         "localhost",
         "127.0.0.1",
         "[::1]",
-        "*.onion",
+        # Specific .onion addresses only - no wildcards for security
         "uw3va4m7ryfl26bfdywucyw2bxorelmzc3g46d7sbmgbycvynz4ylxid.onion",
         "fcmxauihkxovvkjgaysocxpapwmqkxxqvd5m6xaqbwuzohklunjpaead.onion",
         "ifx3c72qzfkriijkr3sljmqnagtbtaw3ynvqzr5sxv72rum4ob3cvbqd.onion",
@@ -139,17 +139,8 @@ SECURE_SSL_REDIRECT = False
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
-# Tor Security Settings - Add these at the end of the file
+# Tor Security Settings
 # ======================================================
-
-# Security Headers for Tor
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_REFERRER_POLICY = 'no-referrer'
-X_FRAME_OPTIONS = 'DENY'
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
 
 # Content Security Policy - STRICT for Tor
 CSP_DEFAULT_SRC = ("'self'",)
@@ -225,47 +216,48 @@ TOR_SAFE_CONTEXT = {
     'analytics_disabled': True,
 }
 
-CELERY_BROKER_URL = env("CELERY_BROKER_URL")
-CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND")
-CELERY_ACCEPT_CONTENT = ["application/json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = "UTC"
+# Celery is disabled for Tor compatibility
+# CELERY_BROKER_URL = env("CELERY_BROKER_URL")
+# CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND")
+# CELERY_ACCEPT_CONTENT = ["application/json"]
+# CELERY_TASK_SERIALIZER = "json"
+# CELERY_RESULT_SERIALIZER = "json"
+# CELERY_TIMEZONE = "UTC"
 
-CELERY_BEAT_SCHEDULE = {
-    "update-vendor-metrics": {
-        "task": "vendors.tasks.update_vendor_metrics",
-        "schedule": 3600.0,  # Every hour
-    },
-    "cleanup-old-notifications": {
-        "task": "vendors.tasks.cleanup_old_notifications",
-        "schedule": 86400.0,  # Daily
-    },
-    "refresh-tor-descriptors": {
-        "task": "vendors.tasks.refresh_tor_descriptors",
-        "schedule": 43200.0,  # Every 12 hours
-    },
-    "reconcile-wallet-balances": {
-        "task": "wallets.tasks.reconcile_wallet_balances",
-        "schedule": 21600.0,  # Every 6 hours
-    },
-    "cleanup-old-audit-logs": {
-        "task": "wallets.tasks.cleanup_old_audit_logs",
-        "schedule": 86400.0,  # Daily
-    },
-    "check-suspicious-activity": {
-        "task": "wallets.tasks.check_suspicious_activity",
-        "schedule": 1800.0,  # Every 30 minutes
-    },
-    "update-conversion-rates": {
-        "task": "wallets.tasks.update_conversion_rates",
-        "schedule": 300.0,  # Every 5 minutes
-    },
-    "monitor-wallet-security": {
-        "task": "wallets.tasks.monitor_wallet_security",
-        "schedule": 86400.0,  # Daily
-    },
-}
+# CELERY_BEAT_SCHEDULE = {
+#     "update-vendor-metrics": {
+#         "task": "vendors.tasks.update_vendor_metrics",
+#         "schedule": 3600.0,  # Every hour
+#     },
+#     "cleanup-old-notifications": {
+#         "task": "vendors.tasks.cleanup_old_notifications",
+#         "schedule": 86400.0,  # Daily
+#     },
+#     "refresh-tor-descriptors": {
+#         "task": "vendors.tasks.refresh_tor_descriptors",
+#         "schedule": 43200.0,  # Every 12 hours
+#     },
+#     "reconcile-wallet-balances": {
+#         "task": "wallets.tasks.reconcile_wallet_balances",
+#         "schedule": 21600.0,  # Every 6 hours
+#     },
+#     "cleanup-old-audit-logs": {
+#         "task": "wallets.tasks.cleanup_old_audit_logs",
+#         "schedule": 86400.0,  # Daily
+#     },
+#     "check-suspicious-activity": {
+#         "task": "wallets.tasks.check_suspicious_activity",
+#         "schedule": 1800.0,  # Every 30 minutes
+#     },
+#     "update-conversion-rates": {
+#         "task": "wallets.tasks.update_conversion_rates",
+#         "schedule": 300.0,  # Every 5 minutes
+#     },
+#     "monitor-wallet-security": {
+#         "task": "wallets.tasks.monitor_wallet_security",
+#         "schedule": 86400.0,  # Daily
+#     },
+# }
 
 BTC_USD_RATE = 118905.27
 XMR_USD_RATE = 340.67
@@ -448,7 +440,7 @@ ADMIN_EMAIL = env("ADMIN_EMAIL", default="admin@marketplace.local")
 
 ADMIN_SECURITY = {
     "REQUIRE_TRIPLE_AUTH": True,
-    "SECONDARY_PASSWORD": "admin_secure_2024!",
+    "SECONDARY_PASSWORD": env("ADMIN_SECONDARY_PASSWORD", default="changeme"),
     "PGP_REQUIRED": True,
     "SESSION_TIMEOUT_MINUTES": 30,
     "MAX_FAILED_ATTEMPTS": 3,
@@ -462,7 +454,7 @@ try:
     from config.admin_config import ADMIN_PANEL_CONFIG, ADMIN_PGP_CONFIG
 except ImportError:
     ADMIN_PANEL_CONFIG = {
-        "SECONDARY_PASSWORD": "admin_secure_2024!",
+        "SECONDARY_PASSWORD": env("ADMIN_SECONDARY_PASSWORD", default="changeme"),
         "REQUIRE_PGP_AFTER_AUTH": True,
         "MAX_FAILED_ATTEMPTS": 3,
         "LOCKOUT_DURATION": 900,  # 15 minutes

@@ -4,7 +4,10 @@ This file contains sensitive admin panel settings.
 Keep this file secure and do not commit to version control.
 """
 
-ADMIN_SECONDARY_PASSWORD = "SecureAdmin2024!"
+import os
+
+# Get from environment variable - NEVER hardcode passwords
+ADMIN_SECONDARY_PASSWORD = os.environ.get("ADMIN_SECONDARY_PASSWORD", "changeme")
 
 ALLOWED_ADMIN_PGP_FINGERPRINTS = []
 

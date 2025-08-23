@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_tor_safe.html" %}
 {% block title %}PGP Settings{% endblock %}
 {% block content %}
 <div class="container">
@@ -21,17 +21,9 @@
             </div>
             
             <div class="current-key-actions">
-                <form method="post" action="{% url 'accounts:pgp_remove' %}" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="button" onclick="confirmRemoval(this)" class="btn btn-danger">
-                        Remove Key
-                    </button>
-                    <div class="confirm-removal" style="display:none;">
-                        <input type="password" name="password" placeholder="Enter password to confirm" required>
-                        <button type="submit" class="btn btn-danger">Confirm Removal</button>
-                        <button type="button" onclick="cancelRemoval(this)" class="btn btn-secondary">Cancel</button>
-                    </div>
-                </form>
+                <a href="{% url 'accounts:pgp_remove' %}" class="btn btn-danger">
+                    Remove Key
+                </a>
             </div>
         </div>
         {% endif %}
@@ -317,18 +309,4 @@ gpg --armor --export your-email@example.com</pre>
         border: 1px solid #f44336;
     }
 </style>
-
-<script>
-function confirmRemoval(btn) {
-    btn.style.display = 'none';
-    btn.nextElementSibling.style.display = 'block';
-}
-
-function cancelRemoval(btn) {
-    const confirmDiv = btn.parentElement;
-    confirmDiv.style.display = 'none';
-    confirmDiv.previousElementSibling.style.display = 'inline-block';
-    confirmDiv.querySelector('input[type="password"]').value = '';
-}
-</script>
 {% endblock %}

@@ -774,9 +774,28 @@ def admin_user_action(request, username):
         return redirect("adminpanel:login")
 
     user = get_object_or_404(User, username=username)
+    
+    if request.method == "GET":
+        # Show confirmation page for dangerous actions
+        action = request.GET.get("action")
+        if action in ["ban", "make_staff", "remove_staff", "reset_2fa"]:
+            action_descriptions = {
+                "ban": "ban this user",
+                "make_staff": "grant staff privileges",
+                "remove_staff": "remove staff privileges",
+                "reset_2fa": "reset 2FA"
+            }
+            context = {
+                "target_user": user,
+                "action": action,
+                "action_description": action_descriptions.get(action, action)
+            }
+            return render(request, "adminpanel/user_action_confirm.html", context)
+    
     action = request.POST.get("action")
-
-    if request.method == "POST":
+    confirmed = request.POST.get("confirmed") == "true"
+    
+    if request.method == "POST" and (confirmed or action == "unban"):
         if action == "ban":
             user.is_active = False
             user.save()

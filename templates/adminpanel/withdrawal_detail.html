@@ -1,4 +1,4 @@
-{% extends 'adminpanel/base.html' %}
+{% extends 'base_tor_safe.html' %}
 
 {% block title %}Withdrawal Detail - Admin Panel{% endblock %}
 
@@ -74,14 +74,12 @@
                         </div>
                         
                         <div class="btn-group" role="group">
-                            <button type="submit" name="action" value="approve" class="btn btn-success" 
-                                    onclick="return confirm('Are you sure you want to approve this withdrawal?')">
+                            <a href="{% url 'adminpanel:withdrawal_approve' withdrawal.id %}" class="btn btn-success">
                                 Approve Withdrawal
-                            </button>
-                            <button type="submit" name="action" value="reject" class="btn btn-danger"
-                                    onclick="return confirm('Are you sure you want to reject this withdrawal?')">
+                            </a>
+                            <a href="{% url 'adminpanel:withdrawal_reject' withdrawal.id %}" class="btn btn-danger">
                                 Reject Withdrawal
-                            </button>
+                            </a>
                         </div>
                     </form>
                 </div>

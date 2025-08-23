@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_tor_safe.html" %}
 
 {% block title %}User Details - {{ user.username }} - Admin Panel{% endblock %}
 
@@ -7,32 +7,33 @@
     <div class="admin-header">
         <h1>👤 User Details: {{ user.username }}</h1>
         <div class="user-actions">
-            <form method="post" action="{% url 'adminpanel:user_action' user.username %}" style="display: inline;">
-                {% csrf_token %}
-                {% if user.is_active %}
-                    <button type="submit" name="action" value="ban" class="btn btn-danger" onclick="return confirm('Are you sure you want to ban this user?')">
-                        🚫 Ban User
-                    </button>
-                {% else %}
-                    <button type="submit" name="action" value="unban" class="btn btn-success">
+            {% if user.is_active %}
+                <a href="{% url 'adminpanel:user_action' user.username %}?action=ban" class="btn btn-danger">
+                    🚫 Ban User
+                </a>
+            {% else %}
+                <form method="post" action="{% url 'adminpanel:user_action' user.username %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="unban">
+                    <button type="submit" class="btn btn-success">
                         ✅ Unban User
                     </button>
-                {% endif %}
-                
-                {% if not user.is_staff %}
-                    <button type="submit" name="action" value="make_staff" class="btn btn-warning" onclick="return confirm('Grant staff privileges to this user?')">
-                        ⭐ Make Staff
-                    </button>
-                {% else %}
-                    <button type="submit" name="action" value="remove_staff" class="btn btn-secondary" onclick="return confirm('Remove staff privileges from this user?')">
-                        ❌ Remove Staff
-                    </button>
-                {% endif %}
-                
-                <button type="submit" name="action" value="reset_2fa" class="btn btn-warning" onclick="return confirm('Reset 2FA for this user?')">
-                    🔄 Reset 2FA
-                </button>
-            </form>
+                </form>
+            {% endif %}
+            
+            {% if not user.is_staff %}
+                <a href="{% url 'adminpanel:user_action' user.username %}?action=make_staff" class="btn btn-warning">
+                    ⭐ Make Staff
+                </a>
+            {% else %}
+                <a href="{% url 'adminpanel:user_action' user.username %}?action=remove_staff" class="btn btn-secondary">
+                    ❌ Remove Staff
+                </a>
+            {% endif %}
+            
+            <a href="{% url 'adminpanel:user_action' user.username %}?action=reset_2fa" class="btn btn-warning">
+                🔄 Reset 2FA
+            </a>
         </div>
     </div>
 

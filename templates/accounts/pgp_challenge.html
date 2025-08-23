@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_tor_safe.html" %}
 {% block title %}PGP Authentication Challenge{% endblock %}
 {% block content %}
 <div class="container">
@@ -7,7 +7,7 @@
         
         <!-- Timer Display -->
         <div class="timer-display">
-            <p>Time remaining: <span id="timer" class="timer">{{ time_remaining|default:15 }} minutes</span></p>
+            <p>Time remaining: <span class="timer">{{ time_remaining|default:15 }} minutes</span></p>
         </div>
         
         <div class="info-box">
@@ -27,9 +27,7 @@
             
             <div class="pgp-message-container">
                 <textarea id="encrypted-challenge" class="pgp-textarea" readonly>{{ encrypted_challenge }}</textarea>
-                <button onclick="copyChallenge()" class="btn btn-secondary">
-                    📋 Copy Encrypted Challenge
-                </button>
+                <p class="help-text">📋 Select the text above and copy it manually (Ctrl+C or Cmd+C)</p>
             </div>
         </div>
         
@@ -47,7 +45,7 @@
                        autocomplete="off"
                        value="{{ request.POST.decrypted_response }}"
                        required>
-                <small class="form-hint">Your input is automatically saved locally</small>
+                <small class="form-hint">Remember to save your decrypted response before submitting</small>
             </div>
             
             <div class="button-group">
@@ -63,12 +61,10 @@
         <!-- Quick Actions -->
         <div class="quick-actions">
             <h3>Quick Actions</h3>
-            <button onclick="saveToFile()" class="btn btn-secondary">
-                💾 Save Challenge to File
-            </button>
-            <button onclick="refreshPage()" class="btn btn-secondary">
+            <p class="help-text">💾 Copy the challenge text and save it to a file manually</p>
+            <a href="{% url 'accounts:pgp_challenge' %}" class="btn btn-secondary">
                 🔄 Refresh Page
-            </button>
+            </a>
         </div>
         
         <div class="help-section">
@@ -397,95 +393,4 @@ gpg --decrypt challenge.asc
         color: #4CAF50;
     }
 </style>
-
-<script>
-// Auto-save input to sessionStorage
-const inputField = document.getElementById('decrypted-response');
-const savedValue = sessionStorage.getItem('pgp_2fa_response');
-
-if (savedValue && inputField.value === '') {
-    inputField.value = savedValue;
-}
-
-inputField.addEventListener('input', function() {
-    sessionStorage.setItem('pgp_2fa_response', this.value);
-});
-
-// Clear saved value on successful submit
-document.getElementById('challenge-form').addEventListener('submit', function() {
-    sessionStorage.removeItem('pgp_2fa_response');
-});
-
-// Copy challenge function
-function copyChallenge() {
-    const textarea = document.getElementById('encrypted-challenge');
-    textarea.select();
-    document.execCommand('copy');
-    
-    const btn = event.target;
-    const originalText = btn.textContent;
-    btn.textContent = '✓ Copied!';
-    btn.style.background = '#4CAF50';
-    
-    setTimeout(() => {
-        btn.textContent = originalText;
-        btn.style.background = '';
-    }, 2000);
-}
-
-// Save to file function
-function saveToFile() {
-    const challenge = document.getElementById('encrypted-challenge').value;
-    const blob = new Blob([challenge], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'pgp_challenge.asc';
-    a.click();
-    window.URL.revokeObjectURL(url);
-}
-
-// Refresh page function
-function refreshPage() {
-    window.location.reload();
-}
-
-// Timer countdown
-let timeRemaining = {{ time_remaining|default:15 }} * 60; // Convert to seconds
-const timerElement = document.getElementById('timer');
-
-function updateTimer() {
-    const minutes = Math.floor(timeRemaining / 60);
-    const seconds = timeRemaining % 60;
-    
-    timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    
-    if (timeRemaining <= 300) { // 5 minutes
-        timerElement.classList.add('warning');
-    }
-    if (timeRemaining <= 60) { // 1 minute
-        timerElement.classList.remove('warning');
-        timerElement.classList.add('danger');
-    }
-    
-    if (timeRemaining <= 0) {
-        timerElement.textContent = 'Session expired';
-        inputField.disabled = true;
-        document.querySelector('button[type="submit"]').disabled = true;
-    } else {
-        timeRemaining--;
-    }
-}
-
-// Update timer every second
-setInterval(updateTimer, 1000);
-
-// Prevent page unload if there's input
-window.addEventListener('beforeunload', function(e) {
-    if (inputField.value && inputField.value.length > 0) {
-        e.preventDefault();
-        e.returnValue = '';
-    }
-});
-</script>
 {% endblock %}
