@@ -93,9 +93,7 @@ class Migration(migrations.Migration):
                         fields=["session_key", "success"],
                         name="security_ca_session_af77e0_idx",
                     ),
-                    models.Index(
-                        fields=["created_at"], name="security_ca_created_44e54e_idx"
-                    ),
+                    models.Index(fields=["created_at"], name="security_ca_created_44e54e_idx"),
                 ],
             },
         ),
@@ -140,9 +138,7 @@ class Migration(migrations.Migration):
                         fields=["session_key", "limit_type"],
                         name="security_ra_session_0a9ff8_idx",
                     ),
-                    models.Index(
-                        fields=["triggered_at"], name="security_ra_trigger_d48375_idx"
-                    ),
+                    models.Index(fields=["triggered_at"], name="security_ra_trigger_d48375_idx"),
                 ],
             },
         ),
@@ -213,9 +209,7 @@ class Migration(migrations.Migration):
                         fields=["risk_level", "timestamp"],
                         name="security_se_risk_le_5fac2e_idx",
                     ),
-                    models.Index(
-                        fields=["timestamp"], name="security_se_timesta_9d7fd4_idx"
-                    ),
+                    models.Index(fields=["timestamp"], name="security_se_timesta_9d7fd4_idx"),
                 ],
             },
         ),
@@ -288,9 +282,7 @@ class Migration(migrations.Migration):
                         fields=["risk_score", "resolved"],
                         name="security_se_risk_sc_5994b8_idx",
                     ),
-                    models.Index(
-                        fields=["created_at"], name="security_se_created_841554_idx"
-                    ),
+                    models.Index(fields=["created_at"], name="security_se_created_841554_idx"),
                 ],
             },
         ),
@@ -330,9 +322,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "indexes": [
-                    models.Index(
-                        fields=["session_key"], name="security_se_session_27ea9c_idx"
-                    ),
+                    models.Index(fields=["session_key"], name="security_se_session_27ea9c_idx"),
                     models.Index(
                         fields=["user", "last_activity"],
                         name="security_se_user_id_9cf596_idx",

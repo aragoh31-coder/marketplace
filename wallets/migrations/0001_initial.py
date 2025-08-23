@@ -33,9 +33,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "currency",
-                    models.CharField(
-                        choices=[("BTC", "Bitcoin"), ("XMR", "Monero")], max_length=3
-                    ),
+                    models.CharField(choices=[("BTC", "Bitcoin"), ("XMR", "Monero")], max_length=3),
                 ),
                 ("address", models.CharField(max_length=255, unique=True)),
                 ("private_key", models.TextField()),
@@ -86,9 +84,7 @@ class Migration(migrations.Migration):
                 ("amount", models.DecimalField(decimal_places=8, max_digits=20)),
                 (
                     "txid",
-                    models.CharField(
-                        blank=True, max_length=255, null=True, unique=True
-                    ),
+                    models.CharField(blank=True, max_length=255, null=True, unique=True),
                 ),
                 ("confirmations", models.IntegerField(default=0)),
                 (

@@ -132,9 +132,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="vendor",
-            index=models.Index(
-                fields=["trust_level"], name="vendors_ven_trust_l_c6d6eb_idx"
-            ),
+            index=models.Index(fields=["trust_level"], name="vendors_ven_trust_l_c6d6eb_idx"),
         ),
         migrations.AddIndex(
             model_name="vendor",
@@ -178,9 +176,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="feedback",
-            index=models.Index(
-                fields=["vendor", "is_public"], name="vendors_fee_vendor__748d82_idx"
-            ),
+            index=models.Index(fields=["vendor", "is_public"], name="vendors_fee_vendor__748d82_idx"),
         ),
         migrations.AddIndex(
             model_name="feedback",
@@ -188,9 +184,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="feedback",
-            index=models.Index(
-                fields=["-created_at"], name="vendors_fee_created_1d959a_idx"
-            ),
+            index=models.Index(fields=["-created_at"], name="vendors_fee_created_1d959a_idx"),
         ),
         migrations.AddIndex(
             model_name="promotion",
@@ -198,32 +192,22 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="promotion",
-            index=models.Index(
-                fields=["vendor", "is_active"], name="vendors_pro_vendor__dfe3bd_idx"
-            ),
+            index=models.Index(fields=["vendor", "is_active"], name="vendors_pro_vendor__dfe3bd_idx"),
         ),
         migrations.AddIndex(
             model_name="promotion",
-            index=models.Index(
-                fields=["start_date", "end_date"], name="vendors_pro_start_d_8f53f8_idx"
-            ),
+            index=models.Index(fields=["start_date", "end_date"], name="vendors_pro_start_d_8f53f8_idx"),
         ),
         migrations.AddIndex(
             model_name="vendornotification",
-            index=models.Index(
-                fields=["vendor", "is_read"], name="vendors_ven_vendor__246df2_idx"
-            ),
+            index=models.Index(fields=["vendor", "is_read"], name="vendors_ven_vendor__246df2_idx"),
         ),
         migrations.AddIndex(
             model_name="vendornotification",
-            index=models.Index(
-                fields=["notification_type"], name="vendors_ven_notific_f51178_idx"
-            ),
+            index=models.Index(fields=["notification_type"], name="vendors_ven_notific_f51178_idx"),
         ),
         migrations.AddIndex(
             model_name="vendornotification",
-            index=models.Index(
-                fields=["-created_at"], name="vendors_ven_created_999ab5_idx"
-            ),
+            index=models.Index(fields=["-created_at"], name="vendors_ven_created_999ab5_idx"),
         ),
     ]

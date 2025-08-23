@@ -85,9 +85,7 @@ class Migration(migrations.Migration):
                 ("is_active", models.BooleanField(default=True)),
                 (
                     "rating",
-                    models.IntegerField(
-                        choices=[(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)]
-                    ),
+                    models.IntegerField(choices=[(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)]),
                 ),
                 ("comment", models.TextField(blank=True)),
                 (

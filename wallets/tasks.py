@@ -1,63 +1,53 @@
-from celery import shared_task
-from django.utils import timezone
-from django.conf import settings
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.db.models import Sum, Count, Q
+import logging
 from datetime import timedelta
 from decimal import Decimal
-import logging
 
-logger = logging.getLogger('wallet.tasks')
+from celery import shared_task
+from django.conf import settings
+from django.core.mail import send_mail
+from django.db.models import Count, Q, Sum
+from django.template.loader import render_to_string
+from django.utils import timezone
+
+logger = logging.getLogger("wallet.tasks")
 
 
 @shared_task
 def reconcile_wallet_balances():
     """Enhanced periodic task to reconcile wallet balances"""
-    from .models import Wallet, Transaction, WalletBalanceCheck
-    
+    from .models import Transaction, Wallet, WalletBalanceCheck
+
     logger.info("Starting comprehensive wallet balance reconciliation")
-    
+
     wallets = Wallet.objects.all()
     discrepancies_found = 0
-    
+
     for wallet in wallets:
         try:
             btc_deposits = Transaction.objects.filter(
-                user=wallet.user,
-                currency='btc',
-                type__in=['deposit', 'escrow_release', 'conversion']
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-            
+                user=wallet.user, currency="btc", type__in=["deposit", "escrow_release", "conversion"]
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
             btc_withdrawals = Transaction.objects.filter(
-                user=wallet.user,
-                currency='btc',
-                type__in=['withdrawal', 'escrow_lock', 'fee']
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-            
+                user=wallet.user, currency="btc", type__in=["withdrawal", "escrow_lock", "fee"]
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
             xmr_deposits = Transaction.objects.filter(
-                user=wallet.user,
-                currency='xmr',
-                type__in=['deposit', 'escrow_release', 'conversion']
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-            
+                user=wallet.user, currency="xmr", type__in=["deposit", "escrow_release", "conversion"]
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
             xmr_withdrawals = Transaction.objects.filter(
-                user=wallet.user,
-                currency='xmr',
-                type__in=['withdrawal', 'escrow_lock', 'fee']
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-            
+                user=wallet.user, currency="xmr", type__in=["withdrawal", "escrow_lock", "fee"]
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
             expected_btc = btc_deposits - btc_withdrawals
             expected_xmr = xmr_deposits - xmr_withdrawals
-            
+
             btc_diff = abs(wallet.balance_btc - expected_btc)
             xmr_diff = abs(wallet.balance_xmr - expected_xmr)
-            
-            discrepancy_found = (
-                btc_diff > Decimal('0.00000001') or 
-                xmr_diff > Decimal('0.000000000001')
-            )
-            
+
+            discrepancy_found = btc_diff > Decimal("0.00000001") or xmr_diff > Decimal("0.000000000001")
+
             check = WalletBalanceCheck.objects.create(
                 wallet=wallet,
                 expected_btc=expected_btc,
@@ -69,28 +59,32 @@ def reconcile_wallet_balances():
                 actual_escrow_btc=wallet.escrow_btc,
                 actual_escrow_xmr=wallet.escrow_xmr,
                 discrepancy_found=discrepancy_found,
-                discrepancy_details={
-                    'btc_diff': str(btc_diff),
-                    'xmr_diff': str(xmr_diff),
-                    'btc_expected': str(expected_btc),
-                    'xmr_expected': str(expected_xmr),
-                    'btc_deposits': str(btc_deposits),
-                    'btc_withdrawals': str(btc_withdrawals),
-                    'xmr_deposits': str(xmr_deposits),
-                    'xmr_withdrawals': str(xmr_withdrawals)
-                } if discrepancy_found else {}
+                discrepancy_details=(
+                    {
+                        "btc_diff": str(btc_diff),
+                        "xmr_diff": str(xmr_diff),
+                        "btc_expected": str(expected_btc),
+                        "xmr_expected": str(expected_xmr),
+                        "btc_deposits": str(btc_deposits),
+                        "btc_withdrawals": str(btc_withdrawals),
+                        "xmr_deposits": str(xmr_deposits),
+                        "xmr_withdrawals": str(xmr_withdrawals),
+                    }
+                    if discrepancy_found
+                    else {}
+                ),
             )
-            
+
             if discrepancy_found:
                 discrepancies_found += 1
                 logger.warning(f"Balance discrepancy found for wallet {wallet.id}")
-                
-                if btc_diff > Decimal('0.001') or xmr_diff > Decimal('0.1'):
+
+                if btc_diff > Decimal("0.001") or xmr_diff > Decimal("0.1"):
                     send_discrepancy_alert.delay(wallet.id, check.id)
-        
+
         except Exception as e:
             logger.error(f"Error reconciling wallet {wallet.id}: {str(e)}")
-    
+
     logger.info(f"Reconciliation complete. Found {discrepancies_found} discrepancies")
     return discrepancies_found
 
@@ -99,30 +93,25 @@ def reconcile_wallet_balances():
 def cleanup_old_audit_logs():
     """Enhanced cleanup of old audit logs with archival"""
     from .models import AuditLog
-    
-    retention_days = getattr(settings, 'WALLET_SECURITY', {}).get('AUDIT_LOG_RETENTION_DAYS', 365)
+
+    retention_days = getattr(settings, "WALLET_SECURITY", {}).get("AUDIT_LOG_RETENTION_DAYS", 365)
     cutoff_date = timezone.now() - timedelta(days=retention_days)
-    
-    important_logs = AuditLog.objects.filter(
-        created_at__lt=cutoff_date,
-        flagged=True
-    )
-    
+
+    important_logs = AuditLog.objects.filter(created_at__lt=cutoff_date, flagged=True)
+
     important_count = important_logs.count()
     if important_count > 0:
         logger.info(f"Archiving {important_count} important flagged logs")
-        
+
         for log in important_logs[:100]:  # Limit to prevent memory issues
             logger.warning(
                 f"Archiving important audit log: User {log.user.username}, "
                 f"Action {log.action}, Risk {log.risk_score}, "
                 f"Details {log.details}"
             )
-    
-    deleted_count = AuditLog.objects.filter(
-        created_at__lt=cutoff_date
-    ).delete()[0]
-    
+
+    deleted_count = AuditLog.objects.filter(created_at__lt=cutoff_date).delete()[0]
+
     logger.info(f"Deleted {deleted_count} old audit logs")
     return deleted_count
 
@@ -132,10 +121,10 @@ def send_discrepancy_alert(wallet_id, check_id):
     """Enhanced alert for balance discrepancy"""
     try:
         from .models import Wallet, WalletBalanceCheck
-        
+
         wallet = Wallet.objects.get(id=wallet_id)
         check = WalletBalanceCheck.objects.get(id=check_id)
-        
+
         subject = f"URGENT: Balance Discrepancy Alert - Wallet {wallet.id}"
         message = f"""
         URGENT: Balance discrepancy detected for user {wallet.user.username} (ID: {wallet.user.id})
@@ -162,11 +151,11 @@ def send_discrepancy_alert(wallet_id, check_id):
         3. Verify wallet integrity
         4. Contact user if necessary
         """
-        
+
         admin_emails = [email for name, email in settings.ADMINS]
         if not admin_emails:
-            admin_emails = [getattr(settings, 'ADMIN_EMAIL', 'admin@example.com')]
-        
+            admin_emails = [getattr(settings, "ADMIN_EMAIL", "admin@example.com")]
+
         send_mail(
             subject,
             message,
@@ -174,9 +163,9 @@ def send_discrepancy_alert(wallet_id, check_id):
             admin_emails,
             fail_silently=False,
         )
-        
+
         logger.info(f"Discrepancy alert sent for wallet {wallet_id}")
-        
+
     except Exception as e:
         logger.error(f"Error sending discrepancy alert: {str(e)}")
 
@@ -184,109 +173,95 @@ def send_discrepancy_alert(wallet_id, check_id):
 @shared_task
 def check_suspicious_activity():
     """Enhanced suspicious activity detection"""
-    from .models import WithdrawalRequest, AuditLog
     from django.contrib.auth import get_user_model
-    
+
+    from .models import AuditLog, WithdrawalRequest
+
     User = get_user_model()
     alerts_created = 0
-    
-    recent_failed = WithdrawalRequest.objects.filter(
-        status='rejected',
-        created_at__gte=timezone.now() - timedelta(hours=1)
-    ).values('user').annotate(
-        count=Count('id')
-    ).filter(count__gte=3)
-    
-    for item in recent_failed:
-        user = User.objects.get(id=item['user'])
-        AuditLog.objects.create(
-            user=user,
-            action='security_alert',
-            ip_address='127.0.0.1',  # System generated, no real IP logging
-            user_agent='system',
-            details={
-                'alert_type': 'multiple_failed_withdrawals',
-                'count': item['count'],
-                'timeframe': '1_hour'
-            },
-            flagged=True,
-            risk_score=60
-        )
-        alerts_created += 1
-    
-    rapid_withdrawals = WithdrawalRequest.objects.filter(
-        created_at__gte=timezone.now() - timedelta(minutes=30)
-    ).values('user').annotate(
-        count=Count('id')
-    ).filter(count__gte=5)
-    
-    for item in rapid_withdrawals:
-        user = User.objects.get(id=item['user'])
-        AuditLog.objects.create(
-            user=user,
-            action='security_alert',
-            ip_address='127.0.0.1',
-            user_agent='system',
-            details={
-                'alert_type': 'rapid_withdrawal_velocity',
-                'count': item['count'],
-                'timeframe': '30_minutes'
-            },
-            flagged=True,
-            risk_score=40
-        )
-        alerts_created += 1
-    
-    large_withdrawals = WithdrawalRequest.objects.filter(
-        created_at__gte=timezone.now() - timedelta(hours=24),
-        status__in=['pending', 'approved']
-    ).filter(
-        Q(currency='btc', amount__gte=Decimal('0.5')) |
-        Q(currency='xmr', amount__gte=Decimal('50'))
+
+    recent_failed = (
+        WithdrawalRequest.objects.filter(status="rejected", created_at__gte=timezone.now() - timedelta(hours=1))
+        .values("user")
+        .annotate(count=Count("id"))
+        .filter(count__gte=3)
     )
-    
+
+    for item in recent_failed:
+        user = User.objects.get(id=item["user"])
+        AuditLog.objects.create(
+            user=user,
+            action="security_alert",
+            ip_address="127.0.0.1",  # System generated, no real IP logging
+            user_agent="system",
+            details={"alert_type": "multiple_failed_withdrawals", "count": item["count"], "timeframe": "1_hour"},
+            flagged=True,
+            risk_score=60,
+        )
+        alerts_created += 1
+
+    rapid_withdrawals = (
+        WithdrawalRequest.objects.filter(created_at__gte=timezone.now() - timedelta(minutes=30))
+        .values("user")
+        .annotate(count=Count("id"))
+        .filter(count__gte=5)
+    )
+
+    for item in rapid_withdrawals:
+        user = User.objects.get(id=item["user"])
+        AuditLog.objects.create(
+            user=user,
+            action="security_alert",
+            ip_address="127.0.0.1",
+            user_agent="system",
+            details={"alert_type": "rapid_withdrawal_velocity", "count": item["count"], "timeframe": "30_minutes"},
+            flagged=True,
+            risk_score=40,
+        )
+        alerts_created += 1
+
+    large_withdrawals = WithdrawalRequest.objects.filter(
+        created_at__gte=timezone.now() - timedelta(hours=24), status__in=["pending", "approved"]
+    ).filter(Q(currency="btc", amount__gte=Decimal("0.5")) | Q(currency="xmr", amount__gte=Decimal("50")))
+
     for wr in large_withdrawals:
         AuditLog.objects.create(
             user=wr.user,
-            action='security_alert',
-            ip_address='127.0.0.1',
-            user_agent='system',
+            action="security_alert",
+            ip_address="127.0.0.1",
+            user_agent="system",
             details={
-                'alert_type': 'large_withdrawal_amount',
-                'amount': str(wr.amount),
-                'currency': wr.currency,
-                'withdrawal_id': wr.id,
-                'risk_score': wr.risk_score
+                "alert_type": "large_withdrawal_amount",
+                "amount": str(wr.amount),
+                "currency": wr.currency,
+                "withdrawal_id": wr.id,
+                "risk_score": wr.risk_score,
             },
             flagged=True,
-            risk_score=30
+            risk_score=30,
         )
         alerts_created += 1
-    
-    recent_logins = AuditLog.objects.filter(
-        action='login',
-        created_at__gte=timezone.now() - timedelta(minutes=15)
-    ).values('user').annotate(
-        count=Count('id')
-    ).filter(count__gte=5)
-    
+
+    recent_logins = (
+        AuditLog.objects.filter(action="login", created_at__gte=timezone.now() - timedelta(minutes=15))
+        .values("user")
+        .annotate(count=Count("id"))
+        .filter(count__gte=5)
+    )
+
     for item in recent_logins:
-        user = User.objects.get(id=item['user'])
+        user = User.objects.get(id=item["user"])
         AuditLog.objects.create(
             user=user,
-            action='security_alert',
-            ip_address='127.0.0.1',
-            user_agent='system',
-            details={
-                'alert_type': 'rapid_login_attempts',
-                'count': item['count'],
-                'timeframe': '15_minutes'
-            },
+            action="security_alert",
+            ip_address="127.0.0.1",
+            user_agent="system",
+            details={"alert_type": "rapid_login_attempts", "count": item["count"], "timeframe": "15_minutes"},
             flagged=True,
-            risk_score=25
+            risk_score=25,
         )
         alerts_created += 1
-    
+
     logger.info(f"Suspicious activity check completed. Created {alerts_created} alerts")
     return alerts_created
 
@@ -296,9 +271,9 @@ def send_withdrawal_notification(withdrawal_id):
     """Enhanced notification for withdrawal requests"""
     try:
         from .models import WithdrawalRequest
-        
+
         wr = WithdrawalRequest.objects.get(id=withdrawal_id)
-        
+
         user_subject = f"Withdrawal Request #{wr.id} Submitted"
         user_message = f"""
         Your withdrawal request has been submitted successfully.
@@ -318,7 +293,7 @@ def send_withdrawal_notification(withdrawal_id):
         
         If you did not request this withdrawal, please contact support immediately.
         """
-        
+
         if wr.user.email:
             send_mail(
                 user_subject,
@@ -327,7 +302,7 @@ def send_withdrawal_notification(withdrawal_id):
                 [wr.user.email],
                 fail_silently=True,
             )
-        
+
         if wr.risk_score >= 40 or wr.manual_review_required:
             admin_subject = f"High-Risk Withdrawal Request #{wr.id} - Manual Review Required"
             admin_message = f"""
@@ -355,11 +330,11 @@ def send_withdrawal_notification(withdrawal_id):
             
             Admin Panel: /admin/wallets/withdrawalrequest/{wr.id}/change/
             """
-            
+
             admin_emails = [email for name, email in settings.ADMINS]
             if not admin_emails:
-                admin_emails = [getattr(settings, 'ADMIN_EMAIL', 'admin@example.com')]
-            
+                admin_emails = [getattr(settings, "ADMIN_EMAIL", "admin@example.com")]
+
             send_mail(
                 admin_subject,
                 admin_message,
@@ -367,9 +342,9 @@ def send_withdrawal_notification(withdrawal_id):
                 admin_emails,
                 fail_silently=True,
             )
-        
+
         logger.info(f"Withdrawal notification sent for request {withdrawal_id}")
-        
+
     except Exception as e:
         logger.error(f"Error sending withdrawal notification: {str(e)}")
 
@@ -378,49 +353,47 @@ def send_withdrawal_notification(withdrawal_id):
 def update_exchange_rates():
     """Update cryptocurrency exchange rates"""
     from .models import ConversionRate
-    
+
     try:
-        
-        ConversionRate.objects.filter(is_active=True).update(
-            is_active=False,
-            valid_until=timezone.now()
-        )
-        
+
+        ConversionRate.objects.filter(is_active=True).update(is_active=False, valid_until=timezone.now())
+
         import random
-        base_btc_xmr = Decimal('350.0')
+
+        base_btc_xmr = Decimal("350.0")
         variation = Decimal(str(random.uniform(-5.0, 5.0)))  # ±5 XMR variation
         btc_to_xmr_rate = base_btc_xmr + variation
-        
+
         ConversionRate.objects.create(
-            from_currency='btc',
-            to_currency='xmr',
+            from_currency="btc",
+            to_currency="xmr",
             rate=btc_to_xmr_rate,
-            source='api_update',
+            source="api_update",
             source_data={
-                'provider': 'internal_simulation',
-                'timestamp': timezone.now().isoformat(),
-                'base_rate': str(base_btc_xmr),
-                'variation': str(variation)
-            }
+                "provider": "internal_simulation",
+                "timestamp": timezone.now().isoformat(),
+                "base_rate": str(base_btc_xmr),
+                "variation": str(variation),
+            },
         )
-        
-        xmr_to_btc_rate = Decimal('1') / btc_to_xmr_rate
-        
+
+        xmr_to_btc_rate = Decimal("1") / btc_to_xmr_rate
+
         ConversionRate.objects.create(
-            from_currency='xmr',
-            to_currency='btc',
+            from_currency="xmr",
+            to_currency="btc",
             rate=xmr_to_btc_rate,
-            source='api_update',
+            source="api_update",
             source_data={
-                'provider': 'internal_simulation',
-                'timestamp': timezone.now().isoformat(),
-                'calculated_from': str(btc_to_xmr_rate)
-            }
+                "provider": "internal_simulation",
+                "timestamp": timezone.now().isoformat(),
+                "calculated_from": str(btc_to_xmr_rate),
+            },
         )
-        
+
         logger.info(f"Exchange rates updated: 1 BTC = {btc_to_xmr_rate} XMR, 1 XMR = {xmr_to_btc_rate} BTC")
         return True
-        
+
     except Exception as e:
         logger.error(f"Error updating exchange rates: {str(e)}")
         return False
@@ -429,69 +402,72 @@ def update_exchange_rates():
 @shared_task
 def monitor_wallet_security():
     """Enhanced security monitoring for wallet operations"""
-    from .models import AuditLog, WithdrawalRequest
     from django.contrib.auth import get_user_model
-    
+
+    from .models import AuditLog, WithdrawalRequest
+
     User = get_user_model()
     alerts_created = 0
-    
-    high_risk_users = AuditLog.objects.filter(
-        created_at__gte=timezone.now() - timedelta(hours=24),
-        risk_score__gte=40
-    ).values('user').annotate(
-        risk_count=Count('id'),
-        avg_risk=Sum('risk_score') / Count('id')
-    ).filter(risk_count__gte=3)
-    
-    for item in high_risk_users:
-        user = User.objects.get(id=item['user'])
-        AuditLog.objects.create(
-            user=user,
-            action='security_alert',
-            ip_address='privacy_protected',  # Privacy protection
-            user_agent='system',
-            details={
-                'alert_type': 'high_risk_user_pattern',
-                'risk_events_count': item['risk_count'],
-                'average_risk_score': float(item['avg_risk']),
-                'timeframe': '24_hours'
-            },
-            flagged=True,
-            risk_score=70
-        )
-        alerts_created += 1
-    
-    unusual_patterns = WithdrawalRequest.objects.filter(
-        created_at__gte=timezone.now() - timedelta(hours=6)
-    ).values('user').annotate(
-        withdrawal_count=Count('id'),
-        total_amount_btc=Sum('amount', filter=Q(currency='btc')),
-        total_amount_xmr=Sum('amount', filter=Q(currency='xmr'))
-    ).filter(
-        Q(withdrawal_count__gte=10) |
-        Q(total_amount_btc__gte=Decimal('2.0')) |
-        Q(total_amount_xmr__gte=Decimal('200.0'))
+
+    high_risk_users = (
+        AuditLog.objects.filter(created_at__gte=timezone.now() - timedelta(hours=24), risk_score__gte=40)
+        .values("user")
+        .annotate(risk_count=Count("id"), avg_risk=Sum("risk_score") / Count("id"))
+        .filter(risk_count__gte=3)
     )
-    
-    for item in unusual_patterns:
-        user = User.objects.get(id=item['user'])
+
+    for item in high_risk_users:
+        user = User.objects.get(id=item["user"])
         AuditLog.objects.create(
             user=user,
-            action='security_alert',
-            ip_address='privacy_protected',
-            user_agent='system',
+            action="security_alert",
+            ip_address="privacy_protected",  # Privacy protection
+            user_agent="system",
             details={
-                'alert_type': 'unusual_withdrawal_pattern',
-                'withdrawal_count': item['withdrawal_count'],
-                'total_btc': str(item['total_amount_btc'] or 0),
-                'total_xmr': str(item['total_amount_xmr'] or 0),
-                'timeframe': '6_hours'
+                "alert_type": "high_risk_user_pattern",
+                "risk_events_count": item["risk_count"],
+                "average_risk_score": float(item["avg_risk"]),
+                "timeframe": "24_hours",
             },
             flagged=True,
-            risk_score=50
+            risk_score=70,
         )
         alerts_created += 1
-    
+
+    unusual_patterns = (
+        WithdrawalRequest.objects.filter(created_at__gte=timezone.now() - timedelta(hours=6))
+        .values("user")
+        .annotate(
+            withdrawal_count=Count("id"),
+            total_amount_btc=Sum("amount", filter=Q(currency="btc")),
+            total_amount_xmr=Sum("amount", filter=Q(currency="xmr")),
+        )
+        .filter(
+            Q(withdrawal_count__gte=10)
+            | Q(total_amount_btc__gte=Decimal("2.0"))
+            | Q(total_amount_xmr__gte=Decimal("200.0"))
+        )
+    )
+
+    for item in unusual_patterns:
+        user = User.objects.get(id=item["user"])
+        AuditLog.objects.create(
+            user=user,
+            action="security_alert",
+            ip_address="privacy_protected",
+            user_agent="system",
+            details={
+                "alert_type": "unusual_withdrawal_pattern",
+                "withdrawal_count": item["withdrawal_count"],
+                "total_btc": str(item["total_amount_btc"] or 0),
+                "total_xmr": str(item["total_amount_xmr"] or 0),
+                "timeframe": "6_hours",
+            },
+            flagged=True,
+            risk_score=50,
+        )
+        alerts_created += 1
+
     logger.info(f"Security monitoring completed. Created {alerts_created} alerts")
     return alerts_created
 
@@ -499,17 +475,17 @@ def monitor_wallet_security():
 @shared_task
 def cleanup_expired_sessions():
     """Clean up expired security sessions and cache entries"""
-    from django.core.cache import cache
     from django.contrib.sessions.models import Session
-    
+    from django.core.cache import cache
+
     expired_sessions = Session.objects.filter(expire_date__lt=timezone.now())
     expired_count = expired_sessions.count()
     expired_sessions.delete()
-    
+
     logger.info(f"Cleaned up {expired_count} expired sessions")
-    
+
     logger.info("Session cleanup completed")
-    
+
     return expired_count
 
 

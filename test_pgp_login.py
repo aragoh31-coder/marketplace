@@ -1,22 +1,21 @@
 #!/usr/bin/env python
 import os
+
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'marketplace.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "marketplace.settings")
 django.setup()
+
+import gnupg
 
 from accounts.models import User
 from accounts.pgp_service import PGPService
-import gnupg
 
 print("=== Testing Complete PGP 2FA Login Flow ===")
 
 print("\n1. Generating test keypair...")
 gpg = gnupg.GPG()
-input_data = gpg.gen_key_input(
-    name_email='testpgp@marketplace.local',
-    passphrase='testpass123'
-)
+input_data = gpg.gen_key_input(name_email="testpgp@marketplace.local", passphrase="testpass123")
 key = gpg.gen_key(input_data)
 
 if not key:
@@ -30,14 +29,10 @@ print(f"✓ Public key exported ({len(public_key)} bytes)")
 
 print("\n2. Creating test user...")
 try:
-    test_user = User.objects.get(username='pgptest')
+    test_user = User.objects.get(username="pgptest")
     print("✓ Using existing test user")
 except User.DoesNotExist:
-    test_user = User.objects.create_user(
-        username='pgptest',
-        email='pgptest@marketplace.local',
-        password='testpass123'
-    )
+    test_user = User.objects.create_user(username="pgptest", email="pgptest@marketplace.local", password="testpass123")
     print("✓ Created new test user")
 
 test_user.pgp_public_key = public_key
@@ -50,7 +45,7 @@ print("\n3. Testing PGP service...")
 pgp_service = PGPService()
 
 import_result = pgp_service.import_public_key(public_key)
-if not import_result['success']:
+if not import_result["success"]:
     print(f"✗ Key import failed: {import_result['error']}")
     exit(1)
 print("✓ Key imported successfully")
@@ -65,22 +60,22 @@ Challenge Code: {challenge}
 Please sign this entire message with your PGP key."""
 
 encrypt_result = pgp_service.encrypt_message(challenge_message, key.fingerprint)
-if not encrypt_result['success']:
+if not encrypt_result["success"]:
     print(f"✗ Encryption failed: {encrypt_result['error']}")
     exit(1)
 
-encrypted_message = encrypt_result['encrypted_message']
+encrypted_message = encrypt_result["encrypted_message"]
 print("✓ Challenge encrypted successfully")
 print(f"✓ Encrypted message format: {encrypted_message[:50]}...")
 
-if encrypted_message.startswith('-----BEGIN PGP MESSAGE-----'):
+if encrypted_message.startswith("-----BEGIN PGP MESSAGE-----"):
     print("✓ Valid PGP message format confirmed")
 else:
     print("✗ Invalid PGP message format!")
     exit(1)
 
 print("\n4. Simulating user decryption and signing...")
-decrypted = gpg.decrypt(encrypted_message, passphrase='testpass123')
+decrypted = gpg.decrypt(encrypted_message, passphrase="testpass123")
 if not decrypted.ok:
     print(f"✗ Decryption failed: {decrypted.stderr}")
     exit(1)
@@ -88,7 +83,7 @@ if not decrypted.ok:
 decrypted_text = str(decrypted)
 print("✓ Message decrypted successfully")
 
-signed = gpg.sign(decrypted_text, passphrase='testpass123', clearsign=True)
+signed = gpg.sign(decrypted_text, passphrase="testpass123", clearsign=True)
 if not signed:
     print("✗ Signing failed")
     exit(1)
@@ -98,16 +93,16 @@ print("✓ Message signed successfully")
 
 print("\n5. Testing signature verification...")
 verify_result = pgp_service.extract_message_from_signature(signed_message)
-if not verify_result['success']:
+if not verify_result["success"]:
     print(f"✗ Signature verification failed: {verify_result['error']}")
     exit(1)
 
-extracted_message = verify_result['message']
+extracted_message = verify_result["message"]
 print("✓ Signature verified and message extracted")
 
 if challenge in extracted_message:
     print("✓ Challenge code found in extracted message")
-    
+
     if test_user.verify_pgp_challenge(challenge):
         print("✓ Challenge verification successful")
     else:

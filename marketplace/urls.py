@@ -16,23 +16,23 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path, include
-from core.views import serve_secure_image
 from django.contrib.auth import views as auth_views
+from django.urls import include, path
+
+from core.views import serve_secure_image
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('accounts.urls')),
-    path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
-    path('products/', include('products.urls')),
-    path('orders/', include('orders.urls')),
-    path('wallets/', include('wallets.urls')),
-    path('vendors/', include('vendors.urls')),
-    path('messaging/', include('messaging.urls')),
-    path('support/', include('support.urls')),
-    path('adminpanel/', include('adminpanel.urls')),
-    path('disputes/', include('disputes.urls')),
-    path('security/', include('apps.security.urls')),
-    
-    path('secure-images/<path:path>', serve_secure_image, name='secure_image'),
+    path("admin/", admin.site.urls),
+    path("", include("accounts.urls")),
+    path("logout/", auth_views.LogoutView.as_view(next_page="home"), name="logout"),
+    path("products/", include("products.urls")),
+    path("orders/", include("orders.urls")),
+    path("wallets/", include("wallets.urls")),
+    path("vendors/", include("vendors.urls")),
+    path("messaging/", include("messaging.urls")),
+    path("support/", include("support.urls")),
+    path("adminpanel/", include("adminpanel.urls")),
+    path("disputes/", include("disputes.urls")),
+    path("security/", include("apps.security.urls")),
+    path("secure-images/<path:path>", serve_secure_image, name="secure_image"),
 ]

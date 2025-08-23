@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.utils import timezone
 
 User = get_user_model()
@@ -11,35 +11,25 @@ class BroadcastMessage(models.Model):
     active = models.BooleanField(default=True)
     priority = models.CharField(
         max_length=20,
-        choices=[
-            ('low', 'Low'),
-            ('medium', 'Medium'),
-            ('high', 'High'),
-            ('critical', 'Critical')
-        ],
-        default='medium'
+        choices=[("low", "Low"), ("medium", "Medium"), ("high", "High"), ("critical", "Critical")],
+        default="medium",
     )
     target_audience = models.CharField(
         max_length=20,
-        choices=[
-            ('all', 'All Users'),
-            ('vendors', 'Vendors Only'),
-            ('buyers', 'Buyers Only'),
-            ('staff', 'Staff Only')
-        ],
-        default='all'
+        choices=[("all", "All Users"), ("vendors", "Vendors Only"), ("buyers", "Buyers Only"), ("staff", "Staff Only")],
+        default="all",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     expires_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    
+
     class Meta:
-        ordering = ['-priority', '-created_at']
-    
+        ordering = ["-priority", "-created_at"]
+
     def __str__(self):
         return f"{self.title} ({self.priority})"
-    
+
     def is_active(self):
         if not self.active:
             return False
@@ -54,10 +44,10 @@ class SystemSettings(models.Model):
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def __str__(self):
         return f"{self.key}: {self.value[:50]}"
-    
+
     class Meta:
         verbose_name_plural = "System Settings"
 
@@ -71,17 +61,12 @@ class SecurityLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     severity = models.CharField(
         max_length=20,
-        choices=[
-            ('info', 'Info'),
-            ('warning', 'Warning'),
-            ('error', 'Error'),
-            ('critical', 'Critical')
-        ],
-        default='info'
+        choices=[("info", "Info"), ("warning", "Warning"), ("error", "Error"), ("critical", "Critical")],
+        default="info",
     )
-    
+
     class Meta:
-        ordering = ['-timestamp']
-    
+        ordering = ["-timestamp"]
+
     def __str__(self):
         return f"{self.action} - {self.user or self.ip_address} - {self.timestamp}"

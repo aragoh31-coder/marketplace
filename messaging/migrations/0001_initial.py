@@ -84,9 +84,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "participants",
-                    models.ManyToManyField(
-                        related_name="message_threads", to=settings.AUTH_USER_MODEL
-                    ),
+                    models.ManyToManyField(related_name="message_threads", to=settings.AUTH_USER_MODEL),
                 ),
             ],
             options={

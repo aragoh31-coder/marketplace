@@ -105,9 +105,7 @@ class Migration(migrations.Migration):
                 ("steganographic_data", models.TextField(blank=True, null=True)),
                 (
                     "file_attachment",
-                    models.FileField(
-                        blank=True, null=True, upload_to="dispute_evidence/"
-                    ),
+                    models.FileField(blank=True, null=True, upload_to="dispute_evidence/"),
                 ),
                 (
                     "dispute",

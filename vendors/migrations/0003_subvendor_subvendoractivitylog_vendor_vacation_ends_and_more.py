@@ -104,9 +104,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="vendor",
-            index=models.Index(
-                fields=["vacation_mode"], name="vendors_ven_vacatio_037ffd_idx"
-            ),
+            index=models.Index(fields=["vacation_mode"], name="vendors_ven_vacatio_037ffd_idx"),
         ),
         migrations.AddField(
             model_name="subvendor",

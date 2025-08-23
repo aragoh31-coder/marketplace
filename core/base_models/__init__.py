@@ -1,3 +1,3 @@
 from .privacy_model import PrivacyModel
 
-__all__ = ['PrivacyModel']
+__all__ = ["PrivacyModel"]

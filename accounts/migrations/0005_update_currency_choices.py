@@ -5,8 +5,8 @@ from django.db import migrations, models
 
 def migrate_currency_choices(apps, schema_editor):
     """Migrate existing users with LTC/USDT to BTC"""
-    User = apps.get_model('accounts', 'User')
-    User.objects.filter(default_currency__in=['LTC', 'USDT']).update(default_currency='BTC')
+    User = apps.get_model("accounts", "User")
+    User.objects.filter(default_currency__in=["LTC", "USDT"]).update(default_currency="BTC")
 
 
 def reverse_migrate_currency_choices(apps, schema_editor):
