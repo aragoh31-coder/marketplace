@@ -78,7 +78,10 @@ def test_modules():
         from core.modules import DesignSystemModule, AccountsModule
         
         design_module = DesignSystemModule()
-        accounts_module = AccountsModule()
+        accounts_module = AccountsModule(
+            max_login_attempts=5,
+            lockout_duration=900
+        )
         
         print("✓ Design system and accounts modules instantiated successfully")
         return True
@@ -93,8 +96,15 @@ def test_services():
     try:
         from core.services import UserService, WalletService
         
-        user_service = UserService()
-        wallet_service = WalletService()
+        # Pass required configuration
+        user_service = UserService(
+            max_login_attempts=5,
+            lockout_duration=900
+        )
+        wallet_service = WalletService(
+            max_daily_withdrawal=1000,
+            withdrawal_cooldown=3600
+        )
         
         print("✓ User and wallet services instantiated successfully")
         return True

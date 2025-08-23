@@ -115,7 +115,7 @@ class DesignSystemModule(BaseModule, ModelInterface, ViewInterface, TemplateInte
             path('design-system/admin/', self.get_admin_models()['design_system'].as_view(), name='design_system_admin'),
         ]
     
-    def get_views(self) -> Dict[str, Type[View]]:
+    def get_views(self) -> Dict[str, Type]:
         """Get views provided by this module."""
         from ..views import ThemePreviewView
         from ..admin import DesignSystemAdmin

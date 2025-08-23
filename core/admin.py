@@ -151,5 +151,5 @@ class DesignSystemAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context)
 
 
-# Register the design system admin
-admin.site.register(DesignSystemAdmin)
+# Note: DesignSystemAdmin is not a model, so we don't register it directly
+# It's used as a custom admin interface for the design system

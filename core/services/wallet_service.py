@@ -3,7 +3,8 @@ Wallet Service
 Handles all wallet-related business logic and operations.
 """
 
-from typing import Dict, List, Any, Optional, Tuple, Decimal
+from typing import Dict, List, Any, Optional, Tuple
+from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone

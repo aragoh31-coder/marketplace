@@ -150,14 +150,18 @@ class DesignSystem:
     }
     
     def __init__(self):
-        self.theme = self.load_theme()
         self.cache_key = 'design_system_theme'
+        self.theme = self.load_theme()
     
     def load_theme(self):
         """Load theme from cache or file, fallback to default."""
-        cached_theme = cache.get(self.cache_key)
-        if cached_theme:
-            return cached_theme
+        try:
+            cached_theme = cache.get(self.cache_key)
+            if cached_theme:
+                return cached_theme
+        except Exception:
+            # If cache is unavailable, continue without caching
+            pass
         
         # Try to load custom theme file
         custom_theme_path = Path(settings.BASE_DIR) / 'core' / 'themes' / 'custom_theme.json'
@@ -167,13 +171,19 @@ class DesignSystem:
                     custom_theme = json.load(f)
                     # Merge with default theme
                     merged_theme = self.merge_themes(self.DEFAULT_THEME, custom_theme)
-                    cache.set(self.cache_key, merged_theme, 3600)  # Cache for 1 hour
+                    try:
+                        cache.set(self.cache_key, merged_theme, 3600)  # Cache for 1 hour
+                    except Exception:
+                        pass  # Continue without caching if Redis is unavailable
                     return merged_theme
             except Exception:
                 pass
         
         # Fallback to default theme
-        cache.set(self.cache_key, self.DEFAULT_THEME, 3600)
+        try:
+            cache.set(self.cache_key, self.DEFAULT_THEME, 3600)
+        except Exception:
+            pass  # Continue without caching if Redis is unavailable
         return self.DEFAULT_THEME
     
     def merge_themes(self, base_theme, custom_theme):
