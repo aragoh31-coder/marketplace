@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';">
+    <title>{% block title %}Secure Marketplace - Tor Safe{% endblock %}>
+    
+    <style>
+        /* Tor-Safe Minimal CSS - No JavaScript, No Animations, No External Dependencies */
+        :root {
+            --primary: #00ff88;
+            --primary-dim: #00cc6a;
+            --secondary: #7c3aed;
+            --accent: #06b6d4;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            
+            --bg-primary: #0a0f1b;
+            --bg-secondary: #0f172a;
+            --bg-tertiary: #1e293b;
+            --bg-card: rgba(15, 23, 42, 0.9);
+            
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-dim: #64748b;
+            
+            --border: rgba(148, 163, 184, 0.2);
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: auto; /* Disable smooth scrolling for Tor */
+        }
+        
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Liberation Sans", Arial, sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            font-size: 16px; /* Ensure readable text in Tor */
+        }
+        
+        /* Static Background - No Animations */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
+            z-index: -1;
+        }
+        
+        /* Header - Static, No Animations */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(10, 15, 27, 0.95);
+            backdrop-filter: none; /* Disable for Tor compatibility */
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .logo:hover {
+            color: var(--primary-dim);
+        }
+        
+        /* Navigation */
+        .nav {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+        
+        .nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: none; /* No transitions for Tor */
+        }
+        
+        .nav a:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        .nav a.active {
+            background: var(--primary);
+            color: var(--bg-primary);
+        }
+        
+        /* Mobile Navigation - CSS-only, No JavaScript */
+        .mobile-nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-top: 80px;
+            padding: 2rem 1rem;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        
+        .card-header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.2);
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: none; /* No transitions for Tor */
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: var(--bg-primary);
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dim);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: #6d28d9;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: var(--text-primary);
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: var(--bg-primary);
+        }
+        
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .btn-large {
+            padding: 1rem 2rem;
+            font-size: 1.125rem;
+        }
+        
+        /* Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+        }
+        
+        .alert-success {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+        
+        .alert-info {
+            background: rgba(6, 182, 212, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        /* Tables */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+        
+        .table th,
+        .table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .table tr:hover {
+            background: var(--bg-secondary);
+        }
+        
+        /* Grid System */
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+        
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+        
+        .grid-4 {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+        
+        /* Utilities */
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-3 { margin-top: 1.5rem; }
+        .mt-4 { margin-top: 2rem; }
+        
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mb-3 { margin-bottom: 1.5rem; }
+        .mb-4 { margin-bottom: 2rem; }
+        
+        .p-1 { padding: 0.5rem; }
+        .p-2 { padding: 1rem; }
+        .p-3 { padding: 1.5rem; }
+        .p-4 { padding: 2rem; }
+        
+        .hidden { display: none; }
+        .visible { display: block; }
+        
+        /* Tor Browser Specific Optimizations */
+        @media (max-width: 768px) {
+            .nav {
+                display: none;
+            }
+            
+            .mobile-nav-toggle {
+                display: block;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+            
+            .grid-2,
+            .grid-3,
+            .grid-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* High Contrast Mode Support */
+        @media (prefers-contrast: high) {
+            :root {
+                --border: rgba(148, 163, 184, 0.5);
+                --shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            }
+            
+            .card {
+                border-width: 2px;
+            }
+            
+            .btn {
+                border: 2px solid currentColor;
+            }
+        }
+        
+        /* Reduced Motion Support */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        /* Print Styles */
+        @media print {
+            .header,
+            .nav,
+            .btn {
+                display: none;
+            }
+            
+            body {
+                background: white;
+                color: black;
+            }
+            
+            .card {
+                border: 1px solid #ccc;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="{% url 'home' %}" class="logo">🔒 SecureMarket</a>
+            
+            <!-- Desktop Navigation -->
+            <nav class="nav">
+                <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">🏠 Home</a>
+                <a href="{% url 'products:product_list' %}" class="{% if 'products' in request.resolver_match.namespace %}active{% endif %}">📦 Products</a>
+                <a href="{% url 'vendors:vendor_list' %}" class="{% if 'vendors' in request.resolver_match.namespace %}active{% endif %}">🏪 Vendors</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'orders:order_list' %}" class="{% if 'orders' in request.resolver_match.namespace %}active{% endif %}">📋 Orders</a>
+                    <a href="{% url 'wallets:wallet_detail' %}" class="{% if 'wallets' in request.resolver_match.namespace %}active{% endif %}">💰 Wallet</a>
+                    <a href="{% url 'accounts:profile' %}" class="{% if 'accounts' in request.resolver_match.namespace %}active{% endif %}">👤 Profile</a>
+                    <a href="{% url 'accounts:logout' %}">🚪 Logout</a>
+                {% else %}
+                    <a href="{% url 'accounts:login' %}">🔑 Login</a>
+                    <a href="{% url 'accounts:register' %}">📝 Register</a>
+                {% endif %}
+            </nav>
+            
+            <!-- Mobile Navigation Toggle -->
+            <button class="mobile-nav-toggle" aria-label="Toggle navigation">☰</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Messages -->
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Page Content -->
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="card text-center mt-4">
+        <p><strong>🔒 Tor-Safe Marketplace</strong></p>
+        <p>This marketplace is designed to work perfectly with Tor Browser in safest mode.</p>
+        <p>No JavaScript • No External Dependencies • Maximum Privacy</p>
+        <p class="mt-2">
+            <small>
+                Built with Django • Optimized for Tor • 
+                <a href="{% url 'admin:index' %}" style="color: var(--primary);">Admin</a>
+            </small>
+        </p>
+    </footer>
+
+    <!-- Tor Safety Notice -->
+    <div class="card mt-4" style="background: rgba(0, 255, 136, 0.1); border-color: var(--primary);">
+        <h3>🕵️ Tor Browser Compatibility</h3>
+        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+            <li>✅ No JavaScript required - works in safest mode</li>
+            <li>✅ No external CDNs or external requests</li>
+            <li>✅ No tracking or analytics</li>
+            <li>✅ No cookies or local storage</li>
+            <li>✅ No animations or transitions</li>
+            <li>✅ Maximum privacy and security</li>
+        </ul>
+    </div>
+</body>
+</html>
