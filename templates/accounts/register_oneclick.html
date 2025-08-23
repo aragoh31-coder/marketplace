@@ -64,11 +64,9 @@
                 <div class="progress-steps mb-4">
                     <div class="progress-step active">1</div>
                     <div class="progress-step">2</div>
-                    <div class="progress-step">3</div>
-                    <div class="progress-step">4</div>
                 </div>
                 <div class="text-center mb-4">
-                    <small class="text-muted">Step 1: Account Details | Step 2: Security | Step 3: Verification | Step 4: Complete</small>
+                    <small class="text-muted">Step 1: Enter Details | Step 2: Click Captcha to Create Account</small>
                 </div>
                 
                 <!-- Username Field -->
@@ -146,8 +144,8 @@
                 <!-- One-Click CAPTCHA -->
                 <div class="form-group">
                     <div class="card card-elevation-1 p-3">
-                        <h4 class="mb-3">🎯 Human Verification</h4>
-                        <p class="text-muted mb-3">Click on the circle with the missing slice (like Pac-Man):</p>
+                        <h4 class="mb-3">🎯 Click to Create Account</h4>
+                        <p class="text-muted mb-3">Click on the circle with the missing slice (like Pac-Man) to create your account:</p>
                         
                         <div class="captcha-container text-center">
                             <input type="image" 
@@ -165,7 +163,7 @@
                         
                         <p class="text-center mt-3">
                             <small class="text-muted">
-                                This simple test helps us maintain a bot-free marketplace.
+                                <strong>Clicking the correct circle will create your account instantly.</strong>
                                 <br>Look for the circle that looks like it has a bite taken out.
                             </small>
                         </p>
@@ -178,21 +176,8 @@
                 {{ form.form_timestamp }}
                 {{ form.form_hash }}
                 
-                <!-- Terms Acceptance -->
-                <div class="alert alert-info mb-4">
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="accept_terms" required>
-                        I understand this is an anonymous marketplace and I agree to:
-                    </label>
-                    <ul class="mt-2 text-small">
-                        <li>Follow all marketplace rules and guidelines</li>
-                        <li>Maintain operational security at all times</li>
-                        <li>Use PGP encryption for sensitive communications</li>
-                        <li>Never share account credentials</li>
-                    </ul>
-                </div>
-                
-                <button type="submit" class="cta-primary w-full btn-touch">
+                <!-- Hidden submit button - form will auto-submit on correct CAPTCHA click -->
+                <button type="submit" class="cta-primary w-full btn-touch" style="display: none;">
                     🚀 Create Account
                 </button>
             </form>
