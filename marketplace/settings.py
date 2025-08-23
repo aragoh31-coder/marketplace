@@ -33,18 +33,18 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
-    "django_ratelimit",
+    # "django_ratelimit",  # Temporarily disabled due to cache backend issue
     "django_redis",
+    "core",
     "accounts",
     "wallets",
-    "vendors",
     "products",
     "orders",
-    "disputes",
+    "vendors",
     "messaging",
     "support",
     "adminpanel",
-    "core",
+    "disputes",
     "apps.security",
 ]
 
@@ -56,7 +56,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django_ratelimit.middleware.RatelimitMiddleware",
+    # "django_ratelimit.middleware.RatelimitMiddleware",  # Temporarily disabled due to cache backend issue
     "apps.security.middleware.EnhancedSecurityMiddleware",
     # "apps.security.middleware.WalletSecurityMiddleware",
     # "apps.security.middleware.RateLimitMiddleware",
@@ -124,8 +124,8 @@ CACHES = {
     }
 }
 
-RATELIMIT_CACHE_BACKEND = "default"
-RATELIMIT_ENABLE = True
+# RATELIMIT_CACHE_BACKEND = "default"  # Temporarily disabled
+# RATELIMIT_ENABLE = True  # Temporarily disabled
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
@@ -192,7 +192,6 @@ TOR_SAFE_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    'django_ratelimit',
     'django_redis',
     'core',
     'accounts',

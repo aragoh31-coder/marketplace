@@ -299,13 +299,8 @@ class EnhancedSecurityMiddleware:
             self._add_security_headers(response)
             return response
         
-        # Handle challenge completion directly in middleware
-        if request.method == 'POST' and 'challenge_answer' in request.POST:
-            print("🔍 Handling challenge completion")
-            return self._handle_challenge_completion(request)
-        
         # Check if this is a bot request
-        if False:  # Temporarily disabled bot detection
+        if self._is_bot_request(request):
             print("🔍 Bot detected, redirecting to challenge")
             logger.warning(f"Bot detected: {request.META.get('HTTP_USER_AGENT', '')}")
             
@@ -465,91 +460,3 @@ class EnhancedSecurityMiddleware:
                 response['X-Security-Challenge'] = 'completed'
         
         return response
-
-    def _handle_challenge_completion(self, request):
-        """Handle security challenge completion directly in middleware"""
-        challenge_answer = request.POST.get('challenge_answer')
-        challenge_id = request.POST.get('challenge_id')
-        timestamp = request.POST.get('timestamp')
-        
-        if not challenge_answer or not challenge_id:
-            # Invalid submission, show challenge again
-            return render(
-                request,
-                "security/bot_challenge.html",
-                {
-                    "challenge_question": "What is 2 + 2?",
-                    "challenge_id": "bot_challenge",
-                    "timestamp": time.time(),
-                    "expected_answer": 4,
-                    "error_message": "Invalid challenge submission"
-                },
-            )
-        
-        # Validate the challenge answer
-        expected_answer = request.session.get('bot_challenge_answer')
-        if not expected_answer:
-            # Challenge expired, show new challenge
-            return render(
-                request,
-                "security/bot_challenge.html",
-                {
-                    "challenge_question": "What is 2 + 2?",
-                    "challenge_id": "bot_challenge",
-                    "timestamp": time.time(),
-                    "expected_answer": 4,
-                    "error_message": "Challenge expired. Please try again."
-                },
-            )
-        
-        try:
-            user_answer = int(challenge_answer)
-            if user_answer == expected_answer:
-                # Challenge completed successfully - issue token
-                current_time = time.time()
-                
-                # Store challenge completion in session
-                request.session['security_challenge_completed'] = True
-                request.session['security_challenge_timestamp'] = current_time
-                request.session['security_challenge_id'] = challenge_id
-                
-                # Clear the challenge answer
-                request.session.pop('bot_challenge_answer', None)
-                request.session.pop('bot_challenge_timestamp', None)
-                
-                # Set challenge completion expiry (24 hours)
-                request.session['security_challenge_expires'] = current_time + (24 * 60 * 60)
-                
-                # Log successful completion
-                logger.info(f"Security challenge completed successfully for IP: {self._get_client_ip(request)}")
-                
-                # Redirect to home page
-                from django.shortcuts import redirect
-                return redirect('/')
-            else:
-                # Incorrect answer, show challenge again
-                return render(
-                    request,
-                    "security/bot_challenge.html",
-                    {
-                        "challenge_question": "What is 2 + 2?",
-                        "challenge_id": "bot_challenge",
-                        "timestamp": time.time(),
-                        "expected_answer": 4,
-                        "error_message": "Incorrect answer. Please try again."
-                    },
-                )
-                
-        except (ValueError, TypeError):
-            # Invalid answer format, show challenge again
-            return render(
-                request,
-                "security/bot_challenge.html",
-                {
-                    "challenge_question": "What is 2 + 2?",
-                    "challenge_id": "bot_challenge",
-                    "timestamp": time.time(),
-                    "expected_answer": 4,
-                    "error_message": "Invalid answer format. Please enter a number."
-                },
-            )
