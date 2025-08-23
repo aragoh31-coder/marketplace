@@ -18,6 +18,33 @@ captcha_service = OneClickCaptcha(
 def generate_captcha_image(request):
     """Generate and return a CAPTCHA image."""
     try:
+        # Check if we should use a specific token
+        token = request.GET.get('token')
+        
+        # If token provided but no data exists, generate new CAPTCHA with this token
+        if token and f'captcha_{token}' not in request.session:
+            # Generate new CAPTCHA but use the provided token
+            from captcha.utils.captcha_generator import OneClickCaptcha
+            temp_service = OneClickCaptcha()
+            img_bytes, _ = temp_service.generate(request)
+            
+            # Now update the stored data to use the provided token
+            if 'current_captcha_token' in request.session:
+                old_token = request.session['current_captcha_token']
+                if f'captcha_{old_token}' in request.session:
+                    # Move the data to the new token
+                    request.session[f'captcha_{token}'] = request.session[f'captcha_{old_token}']
+                    del request.session[f'captcha_{old_token}']
+                    request.session['current_captcha_token'] = token
+                    request.session.modified = True
+            
+            response = HttpResponse(img_bytes, content_type='image/png')
+            response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            response['X-Captcha-Token'] = token
+            return response
+            
         # Check if we should reuse existing CAPTCHA (e.g., after form error)
         reuse_token = request.GET.get('token')
         if reuse_token and f'captcha_{reuse_token}' in request.session:

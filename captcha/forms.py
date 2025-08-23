@@ -28,13 +28,27 @@ class OneClickCaptchaMixin:
         )
         
         if self.request and hasattr(self.request, 'session'):
-            # Get current token from session
-            token = self.request.session.get('current_captcha_token', '')
+            # Generate a new token for this form instance
+            import hashlib
+            import time
+            token_data = f"{time.time()}-{id(self)}-{self.request.session.session_key or 'anon'}"
+            token = hashlib.sha256(token_data.encode()).hexdigest()[:16]
+            
+            # Store it in session so the image generator can find it
+            self.request.session['current_captcha_token'] = token
+            self.request.session.modified = True
+            
             if 'captcha_token' in self.fields:
                 self.fields['captcha_token'].initial = token
     
     def clean(self):
         cleaned_data = super().clean()
+        
+        # Debug logging
+        import logging
+        logger = logging.getLogger('captcha')
+        logger.info(f"CAPTCHA Form data: {dict(self.data)}")
+        logger.info(f"CAPTCHA Cleaned data: {cleaned_data}")
         
         if self.request:
             # Get click coordinates

@@ -138,7 +138,7 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = "same-origin"
 USE_X_FORWARDED_HOST = False
 SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True  # Not needed when using CSRF_USE_SESSIONS
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_SSL_REDIRECT = False
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
@@ -389,7 +389,6 @@ SESSION_SAVE_EVERY_REQUEST = False  # Don't refresh on every request for better 
 SESSION_COOKIE_SAMESITE = "Lax"
 
 CSRF_COOKIE_AGE = 3600  # 1 hour for CSRF tokens
-CSRF_USE_SESSIONS = True  # Store CSRF in session instead of cookie
 
 IMAGE_UPLOAD_SETTINGS = {
     "MAX_FILE_SIZE": 2 * 1024 * 1024,  # 2MB max (reduced from 5MB)

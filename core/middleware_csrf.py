@@ -14,7 +14,11 @@ class TorSafeCsrfMiddleware(CsrfViewMiddleware):
         """
         Override to allow null origin for Tor Browser
         """
+        import logging
+        logger = logging.getLogger('csrf')
+        
         request_origin = request.META.get('HTTP_ORIGIN')
+        logger.info(f"CSRF check - Origin: {request_origin}, Host: {request.META.get('HTTP_HOST')}, Referer: {request.META.get('HTTP_REFERER')}")
         
         # If origin is null (Tor Browser in strict mode), check referer instead
         if request_origin == 'null' or request_origin is None:

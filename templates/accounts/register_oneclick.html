@@ -129,15 +129,15 @@
                         <div class="captcha-container text-center">
                             <input type="image" 
                                    name="captcha" 
-                                   src="{% url 'captcha:generate' %}{% if form.captcha_token.value %}?token={{ form.captcha_token.value }}{% endif %}" 
+                                   src="{% url 'captcha:generate' %}?token={{ form.captcha_token.value|default:form.captcha_token.initial }}" 
                                    alt="Click the circle with the gap"
                                    class="captcha-image"
                                    style="border: 2px solid var(--border); border-radius: 8px; cursor: pointer; max-width: 100%;">
                             
                             <!-- Hidden fields for captcha -->
-                            {% if form.captcha_x %}{{ form.captcha_x }}{% endif %}
-                            {% if form.captcha_y %}{{ form.captcha_y }}{% endif %}
-                            {% if form.captcha_token %}{{ form.captcha_token }}{% endif %}
+                            <input type="hidden" name="captcha_x" value="{{ form.captcha_x.value|default:'' }}" id="id_captcha_x">
+                            <input type="hidden" name="captcha_y" value="{{ form.captcha_y.value|default:'' }}" id="id_captcha_y">
+                            <input type="hidden" name="captcha_token" value="{{ form.captcha_token.value|default:form.captcha_token.initial }}" id="id_captcha_token">
                         </div>
                         
                         <p class="text-center mt-3">

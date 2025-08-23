@@ -74,6 +74,11 @@ def register_view_oneclick(request):
         return redirect('core:home')
     
     if request.method == 'POST':
+        # Debug: Log POST data
+        import logging
+        logger = logging.getLogger('accounts')
+        logger.info(f"Registration POST data: {dict(request.POST)}")
+        
         form = SecureRegistrationFormOneClick(data=request.POST, request=request)
         if form.is_valid():
             user = form.save()
