@@ -30,21 +30,23 @@
 .card-elevation-1,
 .card-elevation-2,
 .card-elevation-3 {
-    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)) !important;
-    border: 1px solid var(--primary) !important;
-    border-radius: 12px !important;
+    background: linear-gradient(135deg, rgba(30, 27, 75, 0.4), rgba(26, 26, 26, 0.8)) !important;
+    border: 1px solid rgba(139, 92, 246, 0.2) !important;
+    border-radius: 16px !important;
     padding: 1.5rem !important;
     margin-bottom: 1.5rem;
     position: relative;
     overflow: hidden;
     transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
 }
 
 /* Gradient border effect on hover */
 .card:hover,
 .box:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(168, 85, 247, 0.2);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 40px rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.4) !important;
 }
 
 /* Add subtle gradient overlay */
@@ -68,13 +70,14 @@
 /* Input wrapper styles from register page */
 .input-wrapper,
 .form-group > div {
-    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+    background: rgba(26, 26, 26, 0.6);
     padding: 1rem;
     border-radius: 12px;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(139, 92, 246, 0.1);
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    backdrop-filter: blur(5px);
 }
 
 .input-wrapper:hover,
@@ -105,44 +108,53 @@
 }
 
 .progress-step.active {
-    background: var(--primary);
-    color: var(--bg-primary);
-    border-color: var(--primary);
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: #ffffff;
+    border-color: #8b5cf6;
+    box-shadow: 0 2px 10px rgba(139, 92, 246, 0.3);
 }
 
 .progress-line {
     height: 2px;
     flex: 1;
     margin: 0 0.5rem;
-    background: linear-gradient(to right, var(--primary), var(--border));
+    background: linear-gradient(to right, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
     position: relative;
     overflow: hidden;
 }
 
 /* Section headers with gradient text */
-.card h1, .card h2, .card h3,
-.box h1, .box h2, .box h3 {
-    background: linear-gradient(135deg, var(--primary), var(--accent));
+.card h1, .card h2,
+.box h1, .box h2 {
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     text-fill-color: transparent;
     margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.card h3, .box h3 {
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
 }
 
 /* Button enhancements */
 .btn {
-    background: linear-gradient(135deg, var(--primary), var(--accent));
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
     border: none;
     padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    color: var(--bg-primary);
+    border-radius: 10px;
+    color: #ffffff;
     font-weight: 600;
     transition: all 0.3s ease;
     display: inline-block;
     text-decoration: none;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
 }
 
 .btn::before {
@@ -174,14 +186,16 @@
 
 /* Secondary button style */
 .btn-secondary {
-    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
-    border: 2px solid var(--primary);
-    color: var(--primary);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    color: #8b5cf6;
+    box-shadow: none;
 }
 
 .btn-secondary:hover {
-    background: linear-gradient(135deg, var(--primary), var(--accent));
-    color: var(--bg-primary);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
+    border-color: #8b5cf6;
+    color: #a78bfa;
 }
 
 /* Grid improvements */
@@ -191,38 +205,41 @@
 
 /* Alert styling */
 .alert {
-    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
-    border-left: 4px solid var(--primary);
+    background: rgba(26, 26, 26, 0.6);
+    border-left: 4px solid rgba(139, 92, 246, 0.5);
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1rem;
+    backdrop-filter: blur(5px);
 }
 
 .alert-danger {
     border-left-color: #ef4444;
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+    background: rgba(239, 68, 68, 0.1);
 }
 
 .alert-success {
     border-left-color: #10b981;
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+    background: rgba(16, 185, 129, 0.1);
 }
 
 /* Table styling */
 table {
     width: 100%;
-    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+    background: rgba(26, 26, 26, 0.6);
     border-radius: 12px;
     overflow: hidden;
-    border: 1px solid var(--primary);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    backdrop-filter: blur(5px);
 }
 
 th {
-    background: var(--primary);
-    color: var(--bg-primary);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
+    color: var(--text-primary);
     padding: 1rem;
     text-align: left;
     font-weight: 600;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 td {

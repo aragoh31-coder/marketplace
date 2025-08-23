@@ -18,24 +18,24 @@
     <style>
         /* Additional Tor-Safe Inline CSS - Overrides for maximum compatibility */
         :root {
-            --primary: #a855f7;  /* Purple */
-            --primary-dim: #9333ea;  /* Darker purple */
-            --secondary: #e879f9;  /* Pink-purple */
-            --accent: #f0abfc;  /* Light pink-purple */
+            --primary: #8b5cf6;  /* Medium purple */
+            --primary-dim: #7c3aed;  /* Darker purple */
+            --secondary: #ec4899;  /* Pink accent */
+            --accent: #3b82f6;  /* Blue accent */
             --danger: #ef4444;
             --warning: #f59e0b;
             
-            --bg-primary: #0a0a0a;  /* Very dark */
-            --bg-secondary: #1a0f1f;  /* Dark with purple tint */
-            --bg-tertiary: #2e1065;  /* Dark purple */
-            --bg-card: rgba(46, 16, 101, 0.9);
+            --bg-primary: #0f0f0f;  /* Very dark */
+            --bg-secondary: #1a1a1a;  /* Dark neutral */
+            --bg-tertiary: #1e1b4b;  /* Dark purple tint */
+            --bg-card: rgba(26, 26, 26, 0.9);
             
             --text-primary: #f1f5f9;
-            --text-secondary: #e9d5ff;  /* Light purple */
-            --text-dim: #c084fc;  /* Medium purple */
+            --text-secondary: #cbd5e1;  /* Light gray */
+            --text-dim: #94a3b8;  /* Medium gray */
             
-            --border: rgba(168, 85, 247, 0.3);  /* Purple border */
-            --shadow: 0 2px 4px rgba(168, 85, 247, 0.2);
+            --border: rgba(139, 92, 246, 0.2);  /* Subtle purple border */
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
         }
         
         /* Reset and Base Styles */
@@ -69,9 +69,9 @@
             width: 100%;
             height: 100%;
             background: 
-                radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(232, 121, 249, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 40% 20%, rgba(147, 51, 234, 0.08) 0%, transparent 50%);
+                radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
             z-index: -1;
         }
         
@@ -124,13 +124,15 @@
         }
         
         .nav a:hover {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
+            background: rgba(139, 92, 246, 0.1);
+            color: #a78bfa;
+            transform: translateX(2px);
         }
         
         .nav a.active {
-            background: var(--primary);
-            color: var(--bg-primary);
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.1));
+            color: #8b5cf6;
+            font-weight: 600;
         }
         
         /* Mobile Navigation - CSS-only, No JavaScript */
