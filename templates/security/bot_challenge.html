@@ -101,6 +101,15 @@
     <div class="container">
         <h1>🤖 Security Verification</h1>
         
+        <!-- Debug Info -->
+        <div style="background: #333; padding: 10px; margin: 10px 0; border-radius: 3px; font-size: 12px;">
+            <strong>Debug Info:</strong><br>
+            Question: {{ question|default:"NOT SET" }}<br>
+            Token: {{ challenge_token|default:"NOT SET" }}<br>
+            Timestamp: {{ timestamp|default:"NOT SET" }}<br>
+            Error: {{ error_message|default:"NONE" }}
+        </div>
+        
         <div class="info-text">
             Our security system has detected automated behavior. Please complete this challenge to verify you are human.
         </div>
@@ -114,7 +123,7 @@
             
             <div class="challenge-section">
                 <div class="challenge-question">
-                    Security Question: {{ challenge_question|default:"What is 5 + 3?" }}
+                    Security Question: {{ question|default:"What is 2 + 2?" }}
                 </div>
                 
                 <div class="form-group">
@@ -124,10 +133,9 @@
                 </div>
             </div>
 
-            <!-- Timing and validation fields -->
-            <input type="hidden" name="challenge_id" value="{{ challenge_id|default:'bot_challenge' }}">
+            <!-- Challenge token for validation -->
+            <input type="hidden" name="challenge_token" value="{{ challenge_token|default:'' }}">
             <input type="hidden" name="timestamp" value="{{ timestamp|default:'' }}">
-            <input type="hidden" name="form_hash" value="{{ form_hash|default:'' }}">
             
             <div class="form-group">
                 <button type="submit" class="btn">✓ Verify I'm Human</button>

@@ -6,13 +6,12 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
 
 from wallets.models import AuditLog
 
@@ -269,6 +268,108 @@ def session_expired(request):
     return render(request, "security/session_expired.html")
 
 
+def generate_challenge_token(session_id):
+    """Generate a unique challenge token"""
+    timestamp = str(int(time.time()))
+    token_data = f"{session_id}:{timestamp}:challenge"
+    return hashlib.sha256(token_data.encode()).hexdigest()[:16]
+
+def security_challenge(request):
+    """Handle security challenge with proper token system"""
+    
+    # Ensure session exists
+    if not request.session.session_key:
+        request.session.create()
+    
+    session_id = request.session.session_key
+    print(f"🔍 Security Challenge - Session ID: {session_id}")
+    
+    if request.method == 'POST':
+        print("🔍 Processing POST request")
+        
+        # Get form data
+        challenge_answer = request.POST.get('challenge_answer')
+        challenge_token = request.POST.get('challenge_token')
+        
+        print(f"🔍 Challenge answer: {challenge_answer}")
+        print(f"🔍 Challenge token: {challenge_token}")
+        
+        # Validate challenge token
+        expected_token = request.session.get('challenge_token')
+        if not expected_token or challenge_token != expected_token:
+            print("🔍 Invalid or expired challenge token")
+            # Generate new challenge
+            return generate_new_challenge(request, session_id)
+        
+        # Validate answer
+        expected_answer = request.session.get('challenge_answer')
+        if not expected_answer:
+            print("🔍 No expected answer in session")
+            return generate_new_challenge(request, session_id)
+        
+        try:
+            user_answer = int(challenge_answer)
+            if user_answer == expected_answer:
+                print("🔍 Challenge completed successfully!")
+                
+                # Mark challenge as completed
+                request.session['security_challenge_completed'] = True
+                request.session['challenge_completed_at'] = time.time()
+                request.session['challenge_expires_at'] = time.time() + (24 * 60 * 60)  # 24 hours
+                
+                # Clear challenge data
+                request.session.pop('challenge_token', None)
+                request.session.pop('challenge_answer', None)
+                request.session.pop('challenge_created_at', None)
+                
+                # Force session save
+                request.session.modified = True
+                
+                print("🔍 Session updated, redirecting to home")
+                return redirect('/')
+            else:
+                print(f"🔍 Incorrect answer: {user_answer} != {expected_answer}")
+                return generate_new_challenge(request, session_id, error="Incorrect answer. Please try again.")
+                
+        except (ValueError, TypeError):
+            print("🔍 Invalid answer format")
+            return generate_new_challenge(request, session_id, error="Invalid answer format. Please enter a number.")
+    
+    else:
+        print("🔍 Processing GET request")
+        return generate_new_challenge(request, session_id)
+
+def generate_new_challenge(request, session_id, error=None):
+    """Generate a new security challenge"""
+    print(f"🔍 Generating new challenge for session: {session_id}")
+    
+    # Generate challenge data
+    num1 = 2
+    num2 = 2
+    answer = num1 + num2
+    question = f"What is {num1} + {num2}?"
+    
+    # Generate challenge token
+    challenge_token = generate_challenge_token(session_id)
+    
+    # Store challenge data in session
+    request.session['challenge_answer'] = answer
+    request.session['challenge_token'] = challenge_token
+    request.session['challenge_created_at'] = time.time()
+    request.session.modified = True
+    
+    print(f"🔍 Challenge data stored - Answer: {answer}, Token: {challenge_token}")
+    
+    # Render challenge page
+    context = {
+        'question': question,
+        'challenge_token': challenge_token,
+        'error_message': error,
+        'timestamp': time.time(),
+    }
+    
+    return render(request, 'security/bot_challenge.html', context)
+
 def test_session(request):
     """Test if sessions are working"""
     if request.method == 'POST':
@@ -285,147 +386,26 @@ def test_view(request):
     """Simple test view to verify routing"""
     return HttpResponse("Test view working!")
 
-@csrf_exempt
-def security_challenge(request):
-    """Handle security challenge - both GET and POST"""
+def challenge_status(request):
+    """Check challenge completion status"""
+    session_id = request.session.session_key
+    completed = request.session.get('security_challenge_completed', False)
+    expires_at = request.session.get('challenge_expires_at', 0)
     
-    if request.method == 'POST':
-        # Handle challenge submission
-        challenge_answer = request.POST.get('challenge_answer')
-        challenge_id = request.POST.get('challenge_id')
-        timestamp = request.POST.get('timestamp')
-        
-        print(f"🔍 POST request - challenge_answer: {challenge_answer}")
-        
-        if not challenge_answer or not challenge_id:
-            # Invalid submission, show challenge again
-            return render(
-                request,
-                "security/bot_challenge.html",
-                {
-                    "challenge_question": "What is 2 + 2?",
-                    "challenge_id": "bot_challenge",
-                    "timestamp": time.time(),
-                    "expected_answer": 4,
-                    "error_message": "Invalid challenge submission"
-                },
-            )
-        
-        # Get challenge answer from cache using session ID
-        session_id = request.session.session_key
-        if not session_id:
-            # Create session if it doesn't exist
-            request.session.create()
-            session_id = request.session.session_key
-        
-        cache_key = f"challenge_answer_{session_id}"
-        expected_answer = cache.get(cache_key)
-        print(f"🔍 Expected answer from cache: {expected_answer}")
-        print(f"🔍 Session ID: {session_id}")
-        print(f"🔍 Cache key: {cache_key}")
-        
-        if not expected_answer:
-            # Challenge expired, show new challenge
-            print("🔍 Challenge expired, setting new challenge")
-            new_answer = 4
-            cache.set(cache_key, new_answer, 300)  # Cache for 5 minutes
-            
-            return render(
-                request,
-                "security/bot_challenge.html",
-                {
-                    "challenge_question": "What is 2 + 2?",
-                    "challenge_id": "bot_challenge",
-                    "timestamp": time.time(),
-                    "expected_answer": 4,
-                    "error_message": "Challenge expired. Please try again."
-                },
-            )
-        
-        try:
-            user_answer = int(challenge_answer)
-            print(f"🔍 User answer: {user_answer}, Expected: {expected_answer}")
-            
-            if user_answer == expected_answer:
-                # Challenge completed successfully - issue token
-                print("🔍 Challenge completed successfully!")
-                current_time = time.time()
-                
-                # Store challenge completion in session
-                request.session['security_challenge_completed'] = True
-                request.session['security_challenge_timestamp'] = current_time
-                request.session['security_challenge_id'] = challenge_id
-                
-                # Clear the challenge answer from cache
-                cache.delete(cache_key)
-                
-                # Set challenge completion expiry (24 hours)
-                request.session['security_challenge_expires'] = current_time + (24 * 60 * 60)
-                
-                # Force session save
-                request.session.modified = True
-                
-                # Log successful completion
-                # logger.info(f"Security challenge completed successfully for IP: {request.META.get('REMOTE_ADDR')}")
-                
-                # Redirect to home page
-                from django.shortcuts import redirect
-                return redirect('/')
-            else:
-                # Incorrect answer, show challenge again
-                print("🔍 Incorrect answer")
-                return render(
-                    request,
-                    "security/bot_challenge.html",
-                    {
-                        "challenge_question": "What is 2 + 2?",
-                        "challenge_id": "bot_challenge",
-                        "timestamp": time.time(),
-                        "expected_answer": 4,
-                        "error_message": "Incorrect answer. Please try again."
-                    },
-                )
-                
-        except (ValueError, TypeError):
-            # Invalid answer format, show challenge again
-            print("🔍 Invalid answer format")
-            return render(
-                request,
-                "security/bot_challenge.html",
-                {
-                    "challenge_question": "What is 2 + 2?",
-                    "challenge_id": "bot_challenge",
-                    "timestamp": time.time(),
-                    "expected_answer": 4,
-                    "error_message": "Invalid answer format. Please enter a number."
-                },
-            )
+    status = {
+        'session_id': session_id,
+        'completed': completed,
+        'expires_at': expires_at,
+        'current_time': time.time(),
+        'valid': completed and time.time() < expires_at
+    }
     
-    else:
-        # GET request - show the challenge
-        print("🔍 GET request - setting challenge")
-        
-        # Ensure session exists
-        if not request.session.session_key:
-            request.session.create()
-        
-        session_id = request.session.session_key
-        cache_key = f"challenge_answer_{session_id}"
-        
-        # Set the challenge answer in cache
-        cache.set(cache_key, 4, 300)  # Cache for 5 minutes
-        
-        print(f"🔍 Session ID: {session_id}")
-        print(f"🔍 Cache key: {cache_key}")
-        print(f"🔍 Challenge answer set in cache")
-        
-        return render(
-            request,
-            "security/bot_challenge.html",
-            {
-                "challenge_question": "What is 2 + 2?",
-                "challenge_id": "bot_challenge",
-                "timestamp": time.time(),
-                "expected_answer": 4,
-            },
-        )
+    return HttpResponse(f"Challenge Status: {status}")
+
+def reset_challenge(request):
+    """Reset challenge completion (for testing)"""
+    request.session.pop('security_challenge_completed', None)
+    request.session.pop('challenge_completed_at', None)
+    request.session.pop('challenge_expires_at', None)
+    request.session.modified = True
+    return HttpResponse("Challenge reset successfully")

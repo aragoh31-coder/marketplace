@@ -327,35 +327,34 @@ class EnhancedSecurityMiddleware:
 
     def _is_challenge_completed(self, request):
         """Check if security challenge is completed and valid"""
+        print(f"🔍 Checking challenge completion for session: {request.session.session_key}")
+        
         # Check if challenge completion flag exists
         if not request.session.get('security_challenge_completed'):
+            print("🔍 Challenge not completed")
             return False
         
         # Check if challenge has expired
-        expires = request.session.get('security_challenge_expires', 0)
-        if expires and time.time() > expires:
+        expires_at = request.session.get('challenge_expires_at', 0)
+        current_time = time.time()
+        
+        print(f"🔍 Challenge expires at: {expires_at}, Current time: {current_time}")
+        
+        if expires_at and current_time > expires_at:
             # Challenge expired, clear session data
+            print("🔍 Challenge expired, clearing session data")
             request.session.pop('security_challenge_completed', None)
-            request.session.pop('security_challenge_timestamp', None)
-            request.session.pop('security_challenge_id', None)
-            request.session.pop('security_challenge_expires', None)
+            request.session.pop('challenge_completed_at', None)
+            request.session.pop('challenge_expires_at', None)
             return False
         
-        # Check if challenge was completed recently (within last 24 hours)
-        challenge_time = request.session.get('security_challenge_timestamp', 0)
-        if challenge_time and (time.time() - challenge_time) > (24 * 60 * 60):
-            # Challenge too old, clear session data
-            request.session.pop('security_challenge_completed', None)
-            request.session.pop('security_challenge_timestamp', None)
-            request.session.pop('security_challenge_id', None)
-            request.session.pop('security_challenge_expires', None)
-            return False
-        
+        print("🔍 Challenge is valid and completed")
         return True
 
     def _is_bot_request(self, request):
         """Enhanced bot detection with whitelist for testing"""
         user_agent = request.META.get("HTTP_USER_AGENT", "").lower()
+        print(f"🔍 Checking user agent: {user_agent}")
 
         # Whitelist for legitimate testing tools (can be disabled in production)
         testing_whitelist = [
@@ -369,21 +368,39 @@ class EnhancedSecurityMiddleware:
         # Check if this is a legitimate testing request
         for test_pattern in testing_whitelist:
             if test_pattern in user_agent:
+                print(f"🔍 User agent whitelisted: {test_pattern}")
                 return False
 
-        for pattern in self.BOT_USER_AGENTS:
+        # Only check for obvious bot patterns
+        obvious_bot_patterns = [
+            r".*bot.*",
+            r".*crawler.*",
+            r".*spider.*",
+            r".*scraper.*",
+            r"scrapy",
+            r"selenium",
+            r"phantomjs",
+            r"webdriver",
+        ]
+        
+        for pattern in obvious_bot_patterns:
             if re.search(pattern, user_agent, re.IGNORECASE):
                 if any(legit in user_agent for legit in ["googlebot", "bingbot", "duckduckbot"]):
+                    print("🔍 Legitimate bot detected")
                     return False
+                print(f"🔍 Bot detected by pattern: {pattern}")
                 return True
 
-        if not user_agent or len(user_agent) < 10:
-            return True
+        # Relaxed checks for testing
+        if not user_agent:
+            print("🔍 No user agent - allowing (relaxed for testing)")
+            return False
+            
+        if len(user_agent) < 5:  # Reduced from 10
+            print("🔍 Short user agent - allowing (relaxed for testing)")
+            return False
 
-        # Relaxed check for testing - only check HTTP_ACCEPT_LANGUAGE if user agent is suspicious
-        # if not request.META.get("HTTP_ACCEPT_LANGUAGE"):
-        #     return True
-
+        print("🔍 User agent appears legitimate")
         return False
 
     def _is_suspicious_request(self, request):
