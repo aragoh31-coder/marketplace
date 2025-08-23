@@ -129,7 +129,7 @@
                         <div class="captcha-container text-center">
                             <input type="image" 
                                    name="captcha" 
-                                   src="{% url 'captcha:generate' %}" 
+                                   src="{% url 'captcha:generate' %}{% if form.captcha_token.value %}?token={{ form.captcha_token.value }}{% endif %}" 
                                    alt="Click the circle with the gap"
                                    class="captcha-image"
                                    style="border: 2px solid var(--border); border-radius: 8px; cursor: pointer; max-width: 100%;">

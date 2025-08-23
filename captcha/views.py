@@ -18,7 +18,44 @@ captcha_service = OneClickCaptcha(
 def generate_captcha_image(request):
     """Generate and return a CAPTCHA image."""
     try:
-        img_bytes, token = captcha_service.generate(request)
+        # Check if we should reuse existing CAPTCHA (e.g., after form error)
+        reuse_token = request.GET.get('token')
+        if reuse_token and f'captcha_{reuse_token}' in request.session:
+            # Reuse existing CAPTCHA data
+            token = reuse_token
+            data = request.session[f'captcha_{token}']
+            
+            # Regenerate the same image
+            from PIL import Image, ImageDraw, ImageFilter
+            import random
+            
+            # Create new image with same parameters
+            img = Image.new('RGB', (captcha_service.width, captcha_service.height), (255, 255, 255))
+            draw = ImageDraw.Draw(img)
+            
+            # Draw the target circle (with cut)
+            x, y, r = data['x'], data['y'], data['r']
+            draw.ellipse((x-r, y-r, x+r, y+r), fill=(100, 150, 200))
+            draw.pieslice((x-r, y-r, x+r, y+r), 30, 90, fill=(255, 255, 255))
+            
+            # Add some random circles for distraction
+            for _ in range(4):
+                rx = random.randint(20, captcha_service.width - 20)
+                ry = random.randint(20, captcha_service.height - 20)
+                rr = random.randint(15, 25)
+                draw.ellipse((rx-rr, ry-rr, rx+rr, ry+rr), fill=(150, 200, 150))
+            
+            # Apply some blur
+            img = img.filter(ImageFilter.GaussianBlur(radius=0.5))
+            
+            # Convert to bytes
+            from io import BytesIO
+            buf = BytesIO()
+            img.save(buf, format='PNG')
+            img_bytes = buf.getvalue()
+        else:
+            # Generate new CAPTCHA
+            img_bytes, token = captcha_service.generate(request)
         
         response = HttpResponse(img_bytes, content_type='image/png')
         # Prevent caching

@@ -190,22 +190,32 @@ class OneClickCaptcha:
 
     def validate(self, request, click_x, click_y, token=None):
         """Validate the clicked position against the stored solution."""
+        import logging
+        logger = logging.getLogger('captcha')
+        
         # Get token from session if not provided
         if not token:
             token = request.session.get('current_captcha_token')
         
+        logger.info(f"Validating CAPTCHA - Token: {token}, Click: ({click_x}, {click_y})")
+        
         if not token:
+            logger.warning("No token provided or found in session")
             return False
             
         session_key = f'captcha_{token}'
         data = request.session.get(session_key)
         
         if not data:
+            logger.warning(f"No CAPTCHA data found for token: {token}")
             return False
+
+        logger.info(f"CAPTCHA data - Target: ({data['x']}, {data['y']}), Radius: {data['r']}, Attempts: {data['attempts']}")
 
         # Check timeout
         if time.time() - data['timestamp'] > self.timeout_seconds:
             # Expired
+            logger.warning("CAPTCHA expired")
             if session_key in request.session:
                 del request.session[session_key]
             return False
@@ -213,6 +223,7 @@ class OneClickCaptcha:
         # Check attempt limit (prevent brute force)
         if data['attempts'] >= 3:
             # Too many attempts
+            logger.warning("Too many CAPTCHA attempts")
             if session_key in request.session:
                 del request.session[session_key]
             return False
@@ -224,6 +235,8 @@ class OneClickCaptcha:
         
         # Allow slight margin of error (2 pixels)
         is_valid = dist_sq <= (data['r'] + 2) ** 2
+        
+        logger.info(f"Click validation - Distance squared: {dist_sq}, Required: {(data['r'] + 2) ** 2}, Valid: {is_valid}")
         
         if is_valid:
             # Success - clean up

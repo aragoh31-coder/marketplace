@@ -57,12 +57,6 @@ def login_view_oneclick(request):
                 return redirect(next_url)
             else:
                 messages.error(request, 'Invalid username or password.')
-        else:
-            # Form validation failed
-            if form.errors:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, error)
     else:
         form = SecureLoginFormOneClick(request=request)
     
@@ -100,12 +94,6 @@ def register_view_oneclick(request):
                 'Registration successful! Please login with your credentials.'
             )
             return redirect('accounts:login')
-        else:
-            # Form validation failed
-            if form.errors:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, error)
     else:
         form = SecureRegistrationFormOneClick(request=request)
     
