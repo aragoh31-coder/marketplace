@@ -43,13 +43,39 @@ class MarketplaceConfig(AppConfig):
         """Initialize the modular system components."""
         # Import modules
         from core.modules.design_system_module import DesignSystemModule
+        from core.modules.accounts_module import AccountsModule
+        from core.modules.wallets_module import WalletsModule
+        from core.modules.example_module import ExampleModule
+        
+        # Import services
+        from core.services.user_service import UserService
+        from core.services.wallet_service import WalletService
+        from core.services.vendor_service import VendorService
         
         # Create and register modules
         modules_to_register = [
             DesignSystemModule,
-            # Add other modules here as they're created
+            AccountsModule,
+            WalletsModule,
+            ExampleModule,
         ]
         
+        # Create and register services
+        services_to_register = [
+            UserService,
+            WalletService,
+            VendorService,
+        ]
+        
+        # Register services first
+        for service_class in services_to_register:
+            try:
+                ServiceRegistry.register(service_class)
+                logger.info(f"Service {service_class.service_name} registered successfully")
+            except Exception as e:
+                logger.error(f"Failed to register service {service_class.service_name}: {e}")
+        
+        # Register modules
         for module_class in modules_to_register:
             try:
                 # Register the module class
@@ -171,6 +197,36 @@ class MarketplaceConfig(AppConfig):
             logger.error(f"Error reloading service {service_name}: {e}")
             return False
     
+    def get_module_by_name(self, module_name: str):
+        """Get a specific module by name."""
+        from core.architecture import ModuleRegistry
+        return ModuleRegistry.get_module(module_name)
+    
+    def get_service_by_name(self, service_name: str):
+        """Get a specific service by name."""
+        from core.services import ServiceRegistry
+        return ServiceRegistry.get_service(service_name)
+    
+    def get_all_modules(self) -> dict:
+        """Get all registered modules."""
+        from core.architecture import ModuleRegistry
+        return ModuleRegistry.get_all_modules()
+    
+    def get_all_services(self) -> dict:
+        """Get all registered services."""
+        from core.services import ServiceRegistry
+        return ServiceRegistry.get_all_services()
+    
+    def get_enabled_modules(self) -> dict:
+        """Get all enabled modules."""
+        from core.architecture import ModuleRegistry
+        return ModuleRegistry.get_enabled_modules()
+    
+    def get_available_services(self) -> dict:
+        """Get all available services."""
+        from core.services import ServiceRegistry
+        return ServiceRegistry.get_available_services()
+    
     def shutdown(self):
         """Shutdown the application gracefully."""
         from core.architecture import ModuleRegistry
@@ -192,3 +248,79 @@ class MarketplaceConfig(AppConfig):
             
         except Exception as e:
             logger.error(f"Error during application shutdown: {e}")
+    
+    def get_system_metrics(self) -> dict:
+        """Get comprehensive system metrics."""
+        try:
+            from core.services import service_manager
+            
+            return {
+                'modules': self.get_modules_info(),
+                'services': self.get_services_info(),
+                'health': self.get_system_health(),
+                'service_metrics': service_manager.get_service_metrics_summary(),
+                'architecture_validation': self._validate_system_architecture()
+            }
+        except Exception as e:
+            logger.error(f"Failed to get system metrics: {e}")
+            return {'error': str(e)}
+    
+    def _validate_system_architecture(self) -> dict:
+        """Validate the overall system architecture."""
+        try:
+            from core.services import service_manager
+            
+            return {
+                'service_architecture': service_manager.validate_service_architecture(),
+                'module_dependencies': self._check_module_dependencies(),
+                'service_dependencies': self._check_service_dependencies()
+            }
+        except Exception as e:
+            logger.error(f"Failed to validate system architecture: {e}")
+            return {'error': str(e)}
+    
+    def _check_module_dependencies(self) -> dict:
+        """Check module dependencies and conflicts."""
+        try:
+            from core.architecture import ModuleRegistry
+            
+            modules = ModuleRegistry.get_all_modules()
+            dependency_issues = []
+            circular_deps = []
+            
+            for module_name, module in modules.items():
+                # Check if dependencies are satisfied
+                for dep in module.get_dependencies():
+                    if dep not in modules:
+                        dependency_issues.append(f"Module {module_name} missing dependency: {dep}")
+            
+            return {
+                'total_modules': len(modules),
+                'dependency_issues': dependency_issues,
+                'circular_dependencies': circular_deps,
+                'status': 'HEALTHY' if not dependency_issues else 'ISSUES'
+            }
+        except Exception as e:
+            logger.error(f"Failed to check module dependencies: {e}")
+            return {'error': str(e)}
+    
+    def _check_service_dependencies(self) -> dict:
+        """Check service dependencies and conflicts."""
+        try:
+            from core.services import ServiceRegistry
+            
+            services = ServiceRegistry.get_all_services()
+            health_issues = []
+            
+            for service_name, service in services.items():
+                if not service.is_available():
+                    health_issues.append(f"Service {service_name} is unavailable")
+            
+            return {
+                'total_services': len(services),
+                'health_issues': health_issues,
+                'status': 'HEALTHY' if not health_issues else 'ISSUES'
+            }
+        except Exception as e:
+            logger.error(f"Failed to check service dependencies: {e}")
+            return {'error': str(e)}
