@@ -4,8 +4,7 @@
 
 {% block content %}
 <div class="container">
-    <!-- Skip Link -->
-    <a href="#register-form" class="skip-link">Skip to registration form</a>
+
     
     <!-- Breadcrumb -->
     <nav class="breadcrumb" aria-label="Breadcrumb">
@@ -16,28 +15,13 @@
     
     <div class="grid grid-center">
         <div class="box-glow card-elevation-3" style="max-width: 600px;">
-            <h1 class="text-center mb-5">🚀 Create Your Account</h1>
-            
-            <!-- Security Indicators -->
-            <div class="grid grid-3 mb-4">
-                <div class="text-center">
-                    <div class="security-badge">
-                        <span class="security-badge-icon">🌐</span>
-                        100% Anonymous
-                    </div>
-                </div>
-                <div class="text-center">
-                    <div class="security-badge">
-                        <span class="security-badge-icon">🔒</span>
-                        End-to-End Secure
-                    </div>
-                </div>
-                <div class="text-center">
-                    <div class="security-badge">
-                        <span class="security-badge-icon">🚫</span>
-                        No JavaScript
-                    </div>
-                </div>
+            <!-- Stylized Title -->
+            <div class="title-container mb-5">
+                <h1 class="register-title">
+                    <span class="title-icon">🚀</span>
+                    <span class="title-text">Create Your Account</span>
+                </h1>
+                <div class="title-underline"></div>
             </div>
             
             {% if messages %}
@@ -240,6 +224,70 @@
 </div>
 
 <style>
+/* Stylized Title */
+.title-container {
+    text-align: center;
+    position: relative;
+}
+
+.register-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.title-icon {
+    font-size: 3rem;
+    filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.5));
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.title-text {
+    position: relative;
+    letter-spacing: 1px;
+}
+
+.title-underline {
+    height: 3px;
+    width: 150px;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    margin: 1rem auto 0;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+}
+
+.title-underline::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
 /* Additional styles for One-Click CAPTCHA */
 .captcha-container {
     position: relative;
