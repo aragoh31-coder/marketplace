@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import views
 from . import views_dual_captcha
+from . import views_advanced
 
 app_name = "security"
 
@@ -21,4 +22,11 @@ urlpatterns = [
     path("api/status/", views.security_status_api, name="security_status_api"),
     # path("ip-change/", views.ip_change_detected, name="ip_change_detected"),  # Removed for Tor compatibility
     path("session-expired/", views.session_expired, name="session_expired"),
+    
+    # Advanced DDoS Protection URLs
+    path('challenge/advanced/', views_advanced.advanced_challenge_verify, name='advanced_challenge_verify'),
+    path('pow/verify/', views_advanced.pow_challenge_verify, name='pow_verify'),
+    path('challenge/dual/', views_advanced.dual_challenge_verify, name='dual_challenge_verify'),
+    path('api/token/', views_advanced.get_auth_token, name='get_auth_token'),
+    path('token-usage/', views_advanced.token_usage_example, name='token_usage'),
 ]

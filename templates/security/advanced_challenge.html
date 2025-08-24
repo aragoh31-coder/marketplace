@@ -1,0 +1,156 @@
+{% extends "base_tor_safe.html" %}
+{% block title %}Security Challenge{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card card-elevation-3" style="max-width: 600px; margin: 0 auto;">
+        <div class="card-header">
+            <h2>🔐 Security Challenge</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <h4>⚠️ Rate Limit Reached</h4>
+                <p>Please complete this challenge to continue.</p>
+                <small class="text-muted">This helps protect against automated requests.</small>
+            </div>
+            
+            <form method="post" action="{% url 'security:advanced_challenge_verify' %}">
+                {% csrf_token %}
+                
+                <!-- Store challenge data in hidden fields (stateless) -->
+                <input type="hidden" name="challenge_data" value="{{ challenge.challenge|json_script:'challenge-data'|slice:'36:-9' }}">
+                <input type="hidden" name="challenge_hmac" value="{{ challenge.hmac }}">
+                
+                <div class="challenge-box">
+                    <h3>Math Challenge</h3>
+                    <div class="challenge-question">
+                        <p>Please solve this equation:</p>
+                        <div class="math-display">
+                            {{ challenge.challenge.question }} = ?
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="answer">Your Answer:</label>
+                        <input type="text" 
+                               id="answer" 
+                               name="answer" 
+                               class="form-input" 
+                               placeholder="Enter the answer"
+                               autocomplete="off"
+                               pattern="[0-9-]+"
+                               required>
+                        <small class="form-text text-muted">
+                            Enter numbers only. Negative numbers are allowed.
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="challenge-info">
+                    <p><strong>Challenge ID:</strong> {{ challenge.challenge.nonce|slice:":8" }}...</p>
+                    <p><strong>Expires in:</strong> <span class="countdown">5 minutes</span></p>
+                </div>
+                
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary">
+                        🔓 Verify Answer
+                    </button>
+                    <a href="/" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+            
+            <div class="stateless-info mt-4">
+                <h4>ℹ️ About This Challenge</h4>
+                <ul>
+                    <li>No session storage - challenge verified cryptographically</li>
+                    <li>HMAC signature ensures challenge integrity</li>
+                    <li>Successful completion grants access token</li>
+                    <li>Token valid for 1 hour of normal browsing</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="challenge-data">
+{{ challenge.challenge|json_script:"challenge-json" }}
+</script>
+
+<style>
+.challenge-box {
+    background: var(--bg-secondary);
+    padding: 2rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+    border: 1px solid var(--border);
+}
+
+.math-display {
+    font-size: 2rem;
+    font-weight: bold;
+    text-align: center;
+    padding: 1.5rem;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    margin: 1rem 0;
+    color: var(--primary);
+    font-family: monospace;
+    letter-spacing: 0.2rem;
+}
+
+.challenge-info {
+    background: rgba(139, 92, 246, 0.05);
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+    border-left: 4px solid var(--primary);
+}
+
+.challenge-info p {
+    margin: 0.5rem 0;
+    font-family: monospace;
+}
+
+.countdown {
+    color: var(--warning);
+    font-weight: bold;
+}
+
+.stateless-info {
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.stateless-info h4 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.stateless-info ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+/* Focus styles */
+#answer:focus {
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+}
+
+/* Success animation placeholder */
+.challenge-success {
+    animation: successPulse 0.5s ease;
+}
+
+@keyframes successPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+</style>
+
+<!-- Meta refresh as fallback for expiry -->
+<meta http-equiv="refresh" content="300;url={% url 'security:advanced_challenge_verify' %}">
+{% endblock %}

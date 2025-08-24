@@ -1,0 +1,176 @@
+{% extends "base_tor_safe.html" %}
+{% block title %}Proof of Work Challenge{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card card-elevation-3" style="max-width: 800px; margin: 0 auto;">
+        <div class="card-header">
+            <h2>⚡ Proof of Work Challenge</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <h4>🛡️ Enhanced Security Required</h4>
+                <p>Your circuit has low reputation. Complete this Proof of Work to continue.</p>
+                <small class="text-muted">Circuit ID: {{ metadata.circuit_id|slice:":8" }}...</small>
+            </div>
+            
+            <div class="pow-explanation">
+                <h3>What is Proof of Work?</h3>
+                <p>Proof of Work (PoW) requires computational effort to solve a cryptographic puzzle. This helps protect against automated attacks while allowing legitimate users through.</p>
+            </div>
+            
+            <div class="pow-challenge-box">
+                <h4>Challenge Details:</h4>
+                <div class="challenge-info">
+                    <p><strong>Challenge:</strong> <code>{{ challenge.challenge.pow_data.challenge }}</code></p>
+                    <p><strong>Difficulty:</strong> {{ difficulty }} (find {{ difficulty }} leading zeros)</p>
+                    <p><strong>Expires:</strong> <span id="countdown">5:00</span></p>
+                </div>
+                
+                <div class="pow-instructions">
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Find a nonce that when appended to the challenge produces a SHA-256 hash with {{ difficulty }} leading zeros</li>
+                        <li>The format is: <code>challenge:nonce</code></li>
+                        <li>Example hash: <code>0000abcd1234...</code></li>
+                    </ol>
+                </div>
+                
+                <form method="post" action="{% url 'security:pow_verify' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="pow_challenge" value="{{ challenge.challenge.pow_data.challenge }}">
+                    <input type="hidden" name="pow_signature" value="{{ challenge.challenge.pow_data.signature }}">
+                    
+                    <div class="form-group">
+                        <label for="nonce">Solution Nonce:</label>
+                        <input type="text" 
+                               id="nonce" 
+                               name="nonce" 
+                               class="form-input" 
+                               placeholder="Enter the nonce that solves the puzzle"
+                               autocomplete="off"
+                               required>
+                        <small class="form-text text-muted">
+                            This may take several attempts. You can use external tools to find the solution.
+                        </small>
+                    </div>
+                    
+                    <div class="pow-solver">
+                        <h4>Manual Solver (No JS):</h4>
+                        <p>Since JavaScript is disabled, you'll need to solve this offline. Here's how:</p>
+                        <div class="solver-example">
+                            <pre>
+# Python example:
+import hashlib
+
+challenge = "{{ challenge.challenge.pow_data.challenge }}"
+difficulty = {{ difficulty }}
+target = "0" * difficulty
+
+nonce = 0
+while True:
+    solution = f"{challenge}:{nonce}"
+    hash_result = hashlib.sha256(solution.encode()).hexdigest()
+    if hash_result.startswith(target):
+        print(f"Found solution! Nonce: {nonce}")
+        print(f"Hash: {hash_result}")
+        break
+    nonce += 1</pre>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-primary">
+                            ⚡ Submit Solution
+                        </button>
+                        <a href="/" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="pow-info mt-4">
+                <h4>Why Proof of Work?</h4>
+                <ul>
+                    <li>Prevents automated abuse without compromising privacy</li>
+                    <li>No personal information required</li>
+                    <li>Computational cost deters attackers</li>
+                    <li>Legitimate users only need to solve occasionally</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.pow-challenge-box {
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+    border: 1px solid var(--border);
+}
+
+.challenge-info {
+    background: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 4px;
+    margin: 1rem 0;
+    font-family: monospace;
+}
+
+.challenge-info code {
+    word-break: break-all;
+    background: rgba(139, 92, 246, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+}
+
+.pow-instructions {
+    margin: 1.5rem 0;
+}
+
+.pow-instructions ol {
+    margin-left: 1.5rem;
+}
+
+.solver-example {
+    background: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.solver-example pre {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+#countdown {
+    color: var(--warning);
+    font-weight: bold;
+    font-family: monospace;
+}
+
+.pow-info {
+    padding: 1rem;
+    background: rgba(139, 92, 246, 0.05);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+/* Countdown animation */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+#countdown {
+    animation: pulse 1s infinite;
+}
+</style>
+
+<!-- Simple countdown (no JS) using meta refresh -->
+<meta http-equiv="refresh" content="300;url={% url 'security:pow_verify' %}">
+{% endblock %}
