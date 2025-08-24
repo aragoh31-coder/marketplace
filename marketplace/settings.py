@@ -381,6 +381,11 @@ LOGGING = {
             "level": "DEBUG",
             "propagate": True,
         },
+        "captcha": {
+            "handlers": ["console", "file"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
         "wallet": {
             "handlers": ["file"],
             "level": "INFO",
