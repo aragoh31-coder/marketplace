@@ -15,7 +15,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.security.forms import SecureLoginForm, SecureRegistrationForm
-from core.utils.cache import log_event
+# from core.utils.cache import log_event  # Removed - module doesn't exist
 from products.models import Product
 
 from .forms import CustomPasswordChangeForm, DeleteAccountForm, PGPKeyForm, UserProfileForm, TOTPSetupForm, TOTPVerificationForm
@@ -260,7 +260,7 @@ def login_view(request):
 
 def logout_view(request):
     if request.user.is_authenticated:
-        log_event("user_logout", {"user_id": str(request.user.id), "username": request.user.username})
+        # log_event("user_logout", {"user_id": str(request.user.id), "username": request.user.username})
     logout(request)
     return redirect("/")
 
@@ -589,7 +589,7 @@ def delete_account(request):
             with transaction.atomic():
                 user = request.user
 
-                log_event("account_deleted", {"user_id": str(user.id), "username": user.username})
+                # log_event("account_deleted", {"user_id": str(user.id), "username": user.username})
 
                 logout(request)
 
