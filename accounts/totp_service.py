@@ -40,8 +40,8 @@ class TOTPService:
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
+            box_size=5,  # Reduced from 10 for mobile compatibility
+            border=2,    # Reduced from 4 for smaller overall size
         )
         qr.add_data(uri)
         qr.make(fit=True)
