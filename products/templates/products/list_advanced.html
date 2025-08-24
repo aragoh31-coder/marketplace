@@ -14,7 +14,7 @@
     </div>
 
     <!-- Advanced Search Section -->
-    <div class="box-glow card-elevation-3 mb-4">
+    <div class="box-glow card-elevation-3 mb-4" style="overflow: hidden;">
         <form method="get" action="{% url 'products:list' %}" class="search-form">
             <!-- Main Search Bar -->
             <div class="search-header mb-3">
@@ -365,16 +365,22 @@
     margin-top: 1.5rem;
     padding-top: 1.5rem;
     border-top: 1px solid var(--border);
+    overflow: hidden;
 }
 
 .filter-checkbox:checked ~ .advanced-filters {
     display: block;
 }
 
+/* Ensure all filter content stays within bounds */
+.advanced-filters * {
+    box-sizing: border-box;
+}
+
 .filter-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
     margin-bottom: 1.5rem;
 }
 
@@ -399,16 +405,20 @@
     padding: 0.75rem;
     color: var(--text-primary);
     font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .price-range {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    width: 100%;
 }
 
 .price-input {
     flex: 1;
+    min-width: 0; /* Prevent flex items from overflowing */
 }
 
 .range-separator {
