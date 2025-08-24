@@ -1,0 +1,10 @@
+# Tor configuration for hidden service
+HiddenServiceDir /var/lib/tor/django_onion/
+HiddenServicePort 80 127.0.0.1:8080
+
+# Basic settings
+SocksPort 9050
+RunAsDaemon 1
+
+# Logging
+Log notice file /var/log/tor/notices.log
