@@ -13,6 +13,7 @@ from django_ratelimit.decorators import ratelimit
 
 from .forms import ProductForm, SubVendorForm, VacationModeForm, VendorApplicationForm, VendorSettingsForm
 from .models import SubVendor, SubVendorActivityLog, Vendor
+from marketplace.cache_config import cache_page_tor_safe, CacheTimeouts, invalidate_vendor_caches
 
 
 def get_client_ip(request):
@@ -30,9 +31,20 @@ from products.models import Product
 User = get_user_model()
 
 
+@cache_page_tor_safe(CacheTimeouts.VENDOR_LIST)
 @ratelimit(key="ip", rate="10/m", method="GET")
 def vendor_list(request):
-    vendors = Vendor.objects.filter(is_active=True, user__is_active=True).order_by("-trust_level")
+    # Optimized vendor list query
+    vendors = Vendor.objects.filter(
+        is_active=True, 
+        user__is_active=True,
+        is_approved=True
+    ).select_related(
+        'user'
+    ).annotate(
+        product_count=Count('products', filter=Q(products__is_active=True)),
+        avg_rating=Avg('ratings__rating')
+    ).order_by("-trust_level")
 
     search = request.GET.get("q")
     if search:
@@ -75,61 +87,65 @@ def vendor_dashboard(request):
             'Your store is in vacation mode. Products are visible but marked as "On Vacation Listing" and cannot be purchased.',
         )
 
+    # Check cache first
+    cache_key = f"vendor_dashboard:{vendor.id}"
+    cached_data = cache.get(cache_key)
+    
+    if cached_data is not None:
+        return render(request, "vendors/dashboard.html", cached_data)
+    
+    # Optimized dashboard queries
     today = timezone.now().date()
     week_ago = today - timedelta(days=7)
-
-    vendor_orders = Order.objects.filter(items__product__vendor=vendor).distinct()
-
-    total_sales = vendor_orders.filter(status="completed").count()
-
-    week_sales = vendor_orders.filter(status="completed", created_at__date__gte=week_ago).count()
-
-    revenue_stats = vendor_orders.filter(status="completed").aggregate(
-        total_btc=Sum("total_btc"), total_xmr=Sum("total_xmr")
-    )
-
-    total_revenue_btc = revenue_stats["total_btc"] or Decimal("0")
-    total_revenue_xmr = revenue_stats["total_xmr"] or Decimal("0")
-
-    week_revenue = vendor_orders.filter(status="completed", created_at__date__gte=week_ago).aggregate(
-        btc=Sum("total_btc"), xmr=Sum("total_xmr")
-    )
-
-    pending_orders = vendor_orders.filter(status__in=["paid", "created"]).count()
-
-    active_products = Product.objects.filter(vendor=vendor, is_active=True).count()
-
-    recent_orders = vendor_orders.order_by("-created_at")[:10]
-
-    low_stock = Product.objects.filter(vendor=vendor, is_active=True, stock_quantity__lte=5).order_by("stock_quantity")
-
-    escrow_stats = vendor_orders.filter(status="shipped").aggregate(
-        escrow_btc=Sum("total_btc"), escrow_xmr=Sum("total_xmr")
-    )
-
-    # Get disputed orders
-    disputed_orders = vendor_orders.filter(status="DISPUTED").count()
     
-    # Get average rating and review stats
-    from vendors.models import VendorRating
-    ratings = VendorRating.objects.filter(vendor=vendor)
-    average_rating = ratings.aggregate(avg=Avg('rating'))['avg'] or Decimal('0')
-    total_reviews = ratings.count()
+    # Get vendor orders with optimized query
+    vendor_orders = Order.objects.filter(
+        items__product__vendor=vendor
+    ).distinct().select_related(
+        'user', 'buyer_wallet'
+    ).prefetch_related(
+        'items__product'
+    )
+    
+    # Calculate all stats in a single aggregation query
+    order_stats = vendor_orders.aggregate(
+        total_sales=Count('id', filter=Q(status='completed'), distinct=True),
+        week_sales=Count('id', filter=Q(status='completed', created_at__date__gte=week_ago), distinct=True),
+        pending_orders=Count('id', filter=Q(status__in=['paid', 'created']), distinct=True),
+        disputed_orders=Count('id', filter=Q(status='DISPUTED'), distinct=True),
+        total_btc=Sum('total_btc', filter=Q(status='completed')),
+        total_xmr=Sum('total_xmr', filter=Q(status='completed')),
+        week_btc=Sum('total_btc', filter=Q(status='completed', created_at__date__gte=week_ago)),
+        week_xmr=Sum('total_xmr', filter=Q(status='completed', created_at__date__gte=week_ago)),
+        escrow_btc=Sum('total_btc', filter=Q(status='shipped')),
+        escrow_xmr=Sum('total_xmr', filter=Q(status='shipped'))
+    )
+    
+    # Get recent orders
+    recent_orders = vendor_orders.order_by('-created_at')[:10]
+    
+    # Low stock products
+    low_stock = Product.objects.filter(
+        vendor=vendor, is_active=True, stock_quantity__lte=5
+    ).values('id', 'name', 'stock_quantity').order_by('stock_quantity')
+    
+    # Active products count
+    active_products = Product.objects.filter(vendor=vendor, is_active=True).count()
 
     context = {
         "vendor": vendor,
-        "total_sales": total_sales,
-        "week_sales": week_sales,
-        "total_revenue_btc": total_revenue_btc,
-        "total_revenue_xmr": total_revenue_xmr,
-        "week_revenue_btc": week_revenue["btc"] or Decimal("0"),
-        "week_revenue_xmr": week_revenue["xmr"] or Decimal("0"),
-        "pending_orders": pending_orders,
+        "total_sales": order_stats["total_sales"] or 0,
+        "week_sales": order_stats["week_sales"] or 0,
+        "total_revenue_btc": order_stats["total_btc"] or Decimal("0"),
+        "total_revenue_xmr": order_stats["total_xmr"] or Decimal("0"),
+        "week_revenue_btc": order_stats["week_btc"] or Decimal("0"),
+        "week_revenue_xmr": order_stats["week_xmr"] or Decimal("0"),
+        "pending_orders": order_stats["pending_orders"] or 0,
         "active_products": active_products,
         "recent_orders": recent_orders,
         "low_stock": low_stock,
-        "escrow_btc": escrow_stats["escrow_btc"] or Decimal("0"),
-        "escrow_xmr": escrow_stats["escrow_xmr"] or Decimal("0"),
+        "escrow_btc": order_stats["escrow_btc"] or Decimal("0"),
+        "escrow_xmr": order_stats["escrow_xmr"] or Decimal("0"),
         "stats": {
             "total_orders": vendor.total_orders,
             "completed_orders": vendor.completed_orders,
@@ -140,6 +156,9 @@ def vendor_dashboard(request):
             "trust_level_label": vendor.get_trust_level_display(),
         }
     }
+    
+    # Cache the context
+    cache.set(cache_key, context, CacheTimeouts.VENDOR_DASHBOARD)
 
     return render(request, "vendors/dashboard.html", context)
 

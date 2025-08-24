@@ -5,9 +5,7 @@ from django.db import transaction
 from django.db.models import Q, F, Count, Avg
 from django.core.cache import cache
 from products.models import Product, Category
-from core.optimizations import QueryOptimizer, cache_query
-from core.cache_config import CacheKeys, CacheTimeouts, CacheInvalidation
-from core.error_handlers import ProductNotAvailableError, safe_transaction
+from django.views.decorators.cache import cache_page
 import logging
 from datetime import timedelta
 from django.utils import timezone
@@ -19,21 +17,19 @@ class ProductService:
     """Service layer for product operations"""
     
     @staticmethod
-    @cache_query(timeout=CacheTimeouts.PRODUCT_LIST)
     def get_active_products(category_id=None, vendor_id=None, limit=None):
         """Get active products with optimized queries"""
-        queryset = Product.objects.filter(is_available=True)
+        queryset = Product.objects.filter(is_available=True).select_related(
+            'vendor', 'vendor__user', 'category'
+        )
         
         if category_id:
             queryset = queryset.filter(category_id=category_id)
         if vendor_id:
             queryset = queryset.filter(vendor_id=vendor_id)
             
-        # Apply query optimizations
-        queryset = QueryOptimizer.optimize_product_queryset(queryset)
-        
-        # Order by popularity and recency
-        queryset = queryset.order_by('-total_sales', '-created_at')
+        # Order by created date
+        queryset = queryset.order_by('-created_at')
         
         if limit:
             queryset = queryset[:limit]
@@ -43,25 +39,22 @@ class ProductService:
     @staticmethod
     def get_product_detail(product_id):
         """Get product detail with caching"""
-        cache_key = CacheKeys.get_product_detail_key(product_id)
+        cache_key = f'product_detail_{product_id}'
         product = cache.get(cache_key)
         
         if product is None:
             try:
                 product = Product.objects.select_related(
-                    'vendor', 'category'
-                ).prefetch_related(
-                    'images', 'reviews'
+                    'vendor', 'vendor__user', 'category'
                 ).get(id=product_id, is_available=True)
                 
-                cache.set(cache_key, product, CacheTimeouts.PRODUCT_DETAIL)
+                cache.set(cache_key, product, 300)  # 5 minute cache
             except Product.DoesNotExist:
-                raise ProductNotAvailableError(f"Product {product_id} not found")
+                return None
                 
         return product
     
     @staticmethod
-    @safe_transaction()
     def update_product_stock(product_id, quantity_change):
         """Update product stock with atomic operations"""
         affected = Product.objects.filter(
@@ -72,10 +65,10 @@ class ProductService:
         )
         
         if affected == 0:
-            raise ProductNotAvailableError("Insufficient stock")
+            return False  # Insufficient stock
             
         # Invalidate caches
-        CacheInvalidation.invalidate_product(product_id)
+        cache.delete(f'product_detail_{product_id}')
         
         return True
     
@@ -127,8 +120,9 @@ class ProductService:
                 recent_sales=Count('orderitem')
             ).order_by('-recent_sales')[:limit]
             
-            products = QueryOptimizer.optimize_product_queryset(products)
-            cache.set(cache_key, list(products), CacheTimeouts.SHORT)
+            # Optimize queryset
+            products = products.select_related('vendor', 'vendor__user', 'category')
+            cache.set(cache_key, list(products), 60)  # 1 minute cache
             
         return products
     
@@ -145,7 +139,7 @@ class ProductService:
                 id=product_id
             ).order_by('-avg_rating', '-total_sales')[:limit]
             
-            return QueryOptimizer.optimize_product_queryset(similar)
+            return similar.select_related('vendor', 'vendor__user', 'category')
             
-        except ProductNotAvailableError:
+        except Exception:
             return []

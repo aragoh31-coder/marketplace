@@ -119,19 +119,48 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
+# Static file optimization
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage" if not DEBUG else "django.contrib.staticfiles.storage.StaticFilesStorage"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SITE_ID = 1
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "unique-snowflake",
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": env("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PARSER_CLASS": "redis.connection.HiredisParser",
+            "CONNECTION_POOL_CLASS": "redis.BlockingConnectionPool",
+            "CONNECTION_POOL_CLASS_KWARGS": {
+                "max_connections": 50,
+                "timeout": 20,
+            },
+            "MAX_CONNECTIONS": 1000,
+            "PICKLE_VERSION": -1,
+        },
+        "KEY_PREFIX": "marketplace",
+        "TIMEOUT": 300,  # Default 5 minutes
+    },
+    "session": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": env("REDIS_URL", default="redis://127.0.0.1:6379/2"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "KEY_PREFIX": "session",
+        "TIMEOUT": 86400,  # 24 hours
     }
 }
 
 # RATELIMIT_CACHE_BACKEND = "default"  # Temporarily disabled
 # RATELIMIT_ENABLE = True  # Temporarily disabled
+
+# Session configuration - use Redis for better performance
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "session"
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
@@ -184,9 +213,10 @@ FACEBOOK_PIXEL = None
 SOCIAL_AUTH_DISABLED = True
 
 # Tor-specific context processor
-TEMPLATES[0]['OPTIONS']['context_processors'].append(
-    'core.context_processors.tor_safe_context'
-)
+TEMPLATES[0]['OPTIONS']['context_processors'].extend([
+    'core.context_processors.tor_safe_context',
+    'marketplace.context_processors.static_file_versions'
+])
 
 # Add Tor security middleware
 MIDDLEWARE.append('core.security.middleware.TorSecurityMiddleware')

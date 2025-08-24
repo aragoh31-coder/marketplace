@@ -1,9 +1,13 @@
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, render
+from django.db.models import Prefetch, Count
+from django.views.decorators.cache import cache_page
 
 from .models import Category, Product
+from marketplace.cache_config import cache_page_tor_safe, CacheTimeouts
 
 
+@cache_page_tor_safe(CacheTimeouts.PRODUCT_LIST)
 def product_list(request):
     """Enhanced product list with intelligent search"""
     # Get search parameters
@@ -50,8 +54,10 @@ def product_list(request):
                 search_order=Case(*ordering, output_field=IntegerField())
             ).order_by('search_order')
     else:
-        # Basic filtering without search
-        products = Product.objects.filter(is_available=True).select_related("vendor", "category").order_by('-created_at')
+        # Basic filtering without search - optimized query
+        products = Product.objects.filter(is_available=True).select_related(
+            "vendor", "vendor__user", "category"
+        ).order_by('-created_at')
         
         if category_filter:
             products = products.filter(category_id=category_filter)
@@ -87,8 +93,28 @@ def product_list(request):
 
 
 def product_detail(request, pk):
-    product = get_object_or_404(Product, pk=pk, is_available=True)
-    return render(request, "products/detail.html", {"product": product})
+    # Optimized query to avoid N+1 queries
+    product = get_object_or_404(
+        Product.objects.select_related('vendor', 'vendor__user', 'category'),
+        pk=pk,
+        is_available=True
+    )
+    
+    # Get related products efficiently
+    related_products = Product.objects.filter(
+        category=product.category,
+        is_available=True
+    ).exclude(
+        pk=pk
+    ).select_related(
+        'vendor', 'category'
+    )[:4]
+    
+    context = {
+        "product": product,
+        "related_products": related_products
+    }
+    return render(request, "products/detail.html", context)
 
 
 def products_by_category(request, category_id):

@@ -1,0 +1,78 @@
+{
+  "css/design-system.min.min.css.gz": {
+    "hash": "e9165233",
+    "size": 2603
+  },
+  "css/tor_safe_enhanced.min.min.css.gz": {
+    "hash": "652e5507",
+    "size": 1449
+  },
+  "css/wallet.min.css": {
+    "hash": "01002f52",
+    "size": 1833
+  },
+  "css/wallet.min.min.css.gz": {
+    "hash": "26838978",
+    "size": 707
+  },
+  "css/style.css": {
+    "hash": "699c6ff7",
+    "size": 11084
+  },
+  "css/wallet.css": {
+    "hash": "e93c4574",
+    "size": 2537
+  },
+  "css/design-system.css": {
+    "hash": "29d19221",
+    "size": 15021
+  },
+  "css/tor_safe_enhanced.min.css": {
+    "hash": "03a249b8",
+    "size": 4994
+  },
+  "css/enhancements.min.min.css.gz": {
+    "hash": "13360306",
+    "size": 3787
+  },
+  "css/design-system.min.css": {
+    "hash": "fd3f38a0",
+    "size": 11041
+  },
+  "css/style.min.min.css.gz": {
+    "hash": "c0096495",
+    "size": 2279
+  },
+  "css/variables.css": {
+    "hash": "3ffc60a8",
+    "size": 3375
+  },
+  "css/enhancements.css": {
+    "hash": "fdc0d0f5",
+    "size": 22074
+  },
+  "css/style.min.css": {
+    "hash": "b972d5fc",
+    "size": 8352
+  },
+  "css/variables.min.min.css.gz": {
+    "hash": "20d207d3",
+    "size": 888
+  },
+  "css/enhancements.min.css": {
+    "hash": "5fb8e129",
+    "size": 14752
+  },
+  "css/tor_safe_enhanced.css": {
+    "hash": "3bf3d865",
+    "size": 6916
+  },
+  "css/variables.min.css": {
+    "hash": "188653ff",
+    "size": 2224
+  },
+  "js/main.js": {
+    "hash": "d41d8cd9",
+    "size": 0
+  }
+}
