@@ -1,4 +1,4 @@
-# Tor state file last generated on 2025-08-24 04:38:08 local time
+# Tor state file last generated on 2025-08-24 04:56:23 local time
 # Other times below are in UTC
 # You *do not* need to edit this file.
 
@@ -27,7 +27,7 @@ CircuitBuildTimeBin 555 5
 CircuitBuildTimeBin 565 3
 CircuitBuildTimeBin 575 1
 CircuitBuildTimeBin 585 3
-CircuitBuildTimeBin 595 5
+CircuitBuildTimeBin 595 6
 CircuitBuildTimeBin 605 2
 CircuitBuildTimeBin 615 2
 CircuitBuildTimeBin 625 1
@@ -109,7 +109,7 @@ CircuitBuildTimeBin 10835 1
 CircuitBuildAbandonedCount 1
 Dormant 0
 Guard in=default rsa_id=471CBE632F3F768A82271DF1FC25DF2871E49BEC nickname=SpongeBob sampled_on=2025-08-23T02:46:22 sampled_idx=0 sampled_by=0.4.8.14 listed=1 confirmed_on=2025-08-21T04:38:49 confirmed_idx=1 pb_use_attempts=21.000000 pb_use_successes=21.000000 pb_circ_attempts=49.000000 pb_circ_successes=48.000000 pb_successful_circuits_closed=48.000000
-Guard in=default rsa_id=FFA72BD683BC2FCF988356E6BEC1E490F313FB07 nickname=Lule sampled_on=2025-08-23T17:12:39 sampled_idx=1 sampled_by=0.4.8.14 listed=1 confirmed_on=2025-08-22T10:55:54 confirmed_idx=0 pb_use_attempts=20.000000 pb_use_successes=20.000000 pb_circ_attempts=44.000000 pb_circ_successes=44.000000 pb_successful_circuits_closed=44.000000
+Guard in=default rsa_id=FFA72BD683BC2FCF988356E6BEC1E490F313FB07 nickname=Lule sampled_on=2025-08-23T17:12:39 sampled_idx=1 sampled_by=0.4.8.14 listed=1 confirmed_on=2025-08-22T10:55:54 confirmed_idx=0 pb_use_attempts=20.000000 pb_use_successes=20.000000 pb_circ_attempts=45.000000 pb_circ_successes=45.000000 pb_successful_circuits_closed=45.000000
 Guard in=default rsa_id=D4C435E046B2113CDC624D743A98D699950AC5E8 nickname=exit45 sampled_on=2025-08-21T22:00:06 sampled_idx=2 sampled_by=0.4.8.14 listed=1 confirmed_on=2025-08-22T17:18:21 confirmed_idx=2 pb_use_attempts=11.000000 pb_use_successes=11.000000 pb_circ_attempts=55.000000 pb_circ_successes=53.000000 pb_successful_circuits_closed=53.000000
 Guard in=default rsa_id=861BCFDD148973985E7FE97C7455C9E4AC4E13BE nickname=itomori sampled_on=2025-08-22T07:13:15 sampled_idx=3 sampled_by=0.4.8.14 listed=1
 Guard in=default rsa_id=D16AEF62181187D63DA3832DD0A968BC210090DD nickname=bauruine sampled_on=2025-08-18T17:33:15 sampled_idx=4 sampled_by=0.4.8.14 listed=1
@@ -128,7 +128,7 @@ Guard in=default rsa_id=E0EB3BE838545255C4DB3991F473FD7D78A73A40 nickname=astonm
 Guard in=default rsa_id=D8514224881C60572E06351F2BD650BA14ACA75C nickname=experiment626 sampled_on=2025-08-19T14:53:07 sampled_idx=17 sampled_by=0.4.8.14 listed=1
 Guard in=default rsa_id=A4385564CBF372B86C793B1EEB643E60CC426431 nickname=fluffypancakes001nl sampled_on=2025-08-22T06:55:23 sampled_idx=18 sampled_by=0.4.8.14 listed=1
 Guard in=default rsa_id=E6686415D2AC96C7E029ACBA9C303A80672EB0D5 nickname=prsv sampled_on=2025-08-21T16:50:01 sampled_idx=19 sampled_by=0.4.8.14 listed=1
-LastWritten 2025-08-24 04:38:08
-MinutesSinceUserActivity 1
+LastWritten 2025-08-24 04:56:23
+MinutesSinceUserActivity 4
 TorVersion Tor 0.4.8.14
-TotalBuildTimes 208
+TotalBuildTimes 209
