@@ -1,5 +1,6 @@
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 import random
+import math
 from io import BytesIO
 import time
 import hashlib
@@ -47,6 +48,64 @@ class OneClickCaptcha:
         }
         
         return color_map[hue_choice]
+
+    def _draw_target_shape(self, draw, cx, cy, r, shape_type, color, bg_color):
+        """Draw different target shapes for variety."""
+        if shape_type == 'pacman':
+            # Classic Pac-Man with random direction
+            cut_start = random.randint(0, 359)
+            cut_angle = random.randint(40, 80)
+            cut_end = (cut_start + cut_angle) % 360
+            draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=color)
+            draw.pieslice((cx - r, cy - r, cx + r, cy + r), cut_start, cut_end, fill=bg_color)
+            
+        elif shape_type == 'pizza':
+            # Pizza slice (multiple cuts)
+            draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=color)
+            num_slices = random.randint(6, 8)
+            for i in range(0, 360, 360 // num_slices):
+                draw.line([(cx, cy), (cx + r * math.cos(math.radians(i)), 
+                          cy + r * math.sin(math.radians(i)))], fill=bg_color, width=2)
+            # Remove one slice
+            slice_start = random.randint(0, 359)
+            slice_angle = 360 // num_slices
+            draw.pieslice((cx - r, cy - r, cx + r, cy + r), slice_start, 
+                         slice_start + slice_angle, fill=bg_color)
+                         
+        elif shape_type == 'star':
+            # Star shape
+            points = []
+            num_points = 5
+            for i in range(num_points * 2):
+                angle = i * math.pi / num_points
+                if i % 2 == 0:
+                    radius = r
+                else:
+                    radius = r * 0.5
+                points.append((cx + radius * math.cos(angle), cy + radius * math.sin(angle)))
+            draw.polygon(points, fill=color)
+            
+        elif shape_type == 'donut':
+            # Donut (circle with hole)
+            draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=color)
+            inner_r = r // 2
+            draw.ellipse((cx - inner_r, cy - inner_r, cx + inner_r, cy + inner_r), fill=bg_color)
+            
+        elif shape_type == 'crescent':
+            # Crescent moon
+            draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=color)
+            offset = r // 3
+            draw.ellipse((cx - r + offset, cy - r, cx + r + offset, cy + r), fill=bg_color)
+            
+        elif shape_type == 'diamond':
+            # Diamond shape
+            points = [
+                (cx, cy - r),  # top
+                (cx + r, cy),  # right
+                (cx, cy + r),  # bottom
+                (cx - r, cy)   # left
+            ]
+            draw.polygon(points, fill=color)
 
     def generate(self, request):
         """Generate a new CAPTCHA image and store the solution in session."""
@@ -97,9 +156,9 @@ class OneClickCaptcha:
         target_idx = random.randrange(len(circles))
         tx, ty, tr = circles[target_idx]
 
-        # Random cut angle (makes Pac-Man face different directions)
-        cut_start = random.randint(0, 359)
-        cut_end = (cut_start + self.cut_angle) % 360
+        # Choose a random shape type for the target
+        shape_types = ['pacman', 'pizza', 'star', 'donut', 'crescent', 'diamond']
+        target_shape = random.choice(shape_types)
 
         # Draw all circles
         for idx, (cx, cy, r) in enumerate(circles):
@@ -108,23 +167,35 @@ class OneClickCaptcha:
                 (cx - r - 1, cy - r - 1, cx + r + 1, cy + r + 1), 
                 fill=(0, 0, 0, 50)  # Subtle shadow
             )
-            draw.ellipse(
-                (cx - r, cy - r, cx + r, cy + r), 
-                fill=circle_color
-            )
             
-            # Cut out slice only on target
             if idx == target_idx:
-                # Make the cut more visible
-                draw.pieslice(
+                # Draw the special target shape
+                self._draw_target_shape(draw, cx, cy, r, target_shape, circle_color, bg_color)
+            else:
+                # Draw normal circle
+                draw.ellipse(
                     (cx - r, cy - r, cx + r, cy + r), 
-                    cut_start, 
-                    cut_end, 
-                    fill=bg_color
+                    fill=circle_color
                 )
 
-        # Add subtle noise and distortions
+        # Add enhanced noise and distortions for better bot protection
         if self.use_noise:
+            # Add background texture first
+            for _ in range(random.randint(15, 25)):
+                shape_type = random.choice(['ellipse', 'rectangle'])
+                x = random.randint(0, self.width)
+                y = random.randint(0, self.height)
+                size = random.randint(10, 30)
+                noise_color = (
+                    random.randint(200, 240),
+                    random.randint(200, 240),
+                    random.randint(200, 240)
+                )
+                
+                if shape_type == 'ellipse':
+                    draw.ellipse((x, y, x + size, y + size), fill=noise_color, outline=None)
+                else:
+                    draw.rectangle((x, y, x + size, y + size), fill=noise_color, outline=None)
             # Random dots with varying opacity
             for _ in range(random.randint(30, 60)):
                 nx = random.randint(0, self.width - 1)
@@ -176,6 +247,7 @@ class OneClickCaptcha:
             'x': tx,
             'y': ty,
             'r': tr,
+            'shape': target_shape,
             'timestamp': time.time(),
             'attempts': 0,  # Track failed attempts
         }
