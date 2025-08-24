@@ -147,6 +147,51 @@ def ensure_all_tables():
     except Exception as e:
         print(f"Migration warning (can be ignored): {e}")
 
+def ensure_orders_schema():
+    """Ensure orders_order table has all required columns"""
+    import sqlite3
+    conn = sqlite3.connect('db.sqlite3')
+    cursor = conn.cursor()
+    
+    try:
+        # Check if table exists first
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='orders_order'")
+        if cursor.fetchone():
+            # Check existing columns
+            cursor.execute("PRAGMA table_info(orders_order)")
+            existing_columns = {col[1]: col for col in cursor.fetchall()}
+            
+            # Define all required columns
+            required_columns = {
+                'vendor_id': 'CHAR(32) REFERENCES vendors_vendor(id)',
+                'buyer_wallet_id': 'INTEGER REFERENCES wallets_wallet(id)',
+                'currency_used': 'VARCHAR(3)',
+                'quantity': 'INTEGER DEFAULT 1',
+                'locked_at': 'DATETIME',
+                'shipped_at': 'DATETIME',
+                'completed_at': 'DATETIME',
+                'refunded_at': 'DATETIME',
+                'escrow_released': 'BOOLEAN DEFAULT 0',
+                'auto_finalize_at': 'DATETIME'
+            }
+            
+            # Add missing columns
+            for col_name, col_def in required_columns.items():
+                if col_name not in existing_columns:
+                    print(f"Adding {col_name} column to orders_order...")
+                    try:
+                        cursor.execute(f"ALTER TABLE orders_order ADD COLUMN {col_name} {col_def}")
+                        conn.commit()
+                        print(f"✓ Added {col_name}")
+                    except sqlite3.OperationalError as e:
+                        if "duplicate column" not in str(e).lower():
+                            print(f"Note: Could not add {col_name}: {e}")
+            
+    except Exception as e:
+        print(f"Note: Could not update orders table: {e}")
+    finally:
+        conn.close()
+
 def main():
     print("Initializing database...")
     
@@ -158,6 +203,9 @@ def main():
     
     # Run migrations with fake-initial
     ensure_all_tables()
+    
+    # Ensure orders schema is correct
+    ensure_orders_schema()
     
     # Mark all migrations as applied
     mark_migrations_as_applied()
