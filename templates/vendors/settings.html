@@ -2,27 +2,73 @@
 {% block title %}Vendor Settings{% endblock %}
 {% block content %}
 <div class="container">
-    <h1>Vendor Settings</h1>
+    <h1>⚙️ Vendor Settings</h1>
     
     <form method="post" class="settings-form">
         {% csrf_token %}
         
-        <div class="form-group">
-            {{ form.description.label_tag }}
-            {{ form.description }}
-            {% if form.description.errors %}
-                <div class="error">{{ form.description.errors.0 }}</div>
-            {% endif %}
+        <div class="settings-section">
+            <h2>Basic Information</h2>
+            
+            <div class="form-group">
+                {{ form.description.label_tag }}
+                {{ form.description }}
+                <small class="help-text">Describe your business and what you sell</small>
+                {% if form.description.errors %}
+                    <div class="error">{{ form.description.errors.0 }}</div>
+                {% endif %}
+            </div>
         </div>
         
-        <div class="form-group">
-            {{ form.response_time.label_tag }}
-            {{ form.response_time }}
-            <small>Expected response time for customer messages</small>
-            {% if form.response_time.errors %}
-                <div class="error">{{ form.response_time.errors.0 }}</div>
-            {% endif %}
+        <div class="settings-section">
+            <h2>Profile Customization (BBCode Supported)</h2>
+            
+            <div class="form-group">
+                {{ form.profile_header.label_tag }}
+                {{ form.profile_header }}
+                <small class="help-text">Custom header for your vendor profile page</small>
+                {% if form.profile_header.errors %}
+                    <div class="error">{{ form.profile_header.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.terms_conditions.label_tag }}
+                {{ form.terms_conditions }}
+                <small class="help-text">Your terms and conditions for buyers</small>
+                {% if form.terms_conditions.errors %}
+                    <div class="error">{{ form.terms_conditions.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.shipping_info.label_tag }}
+                {{ form.shipping_info }}
+                <small class="help-text">Shipping methods, times, and policies</small>
+                {% if form.shipping_info.errors %}
+                    <div class="error">{{ form.shipping_info.errors.0 }}</div>
+                {% endif %}
+            </div>
         </div>
+        
+        <div class="settings-section">
+            <h2>Security</h2>
+            
+            <div class="form-group">
+                {{ form.pgp_key.label_tag }}
+                {{ form.pgp_key }}
+                <small class="help-text">Your PGP public key for secure communication</small>
+                {% if form.pgp_key.errors %}
+                    <div class="error">{{ form.pgp_key.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if bbcode_help %}
+        <div class="bbcode-reference">
+            {{ bbcode_help|safe }}
+        </div>
+        {% endif %}
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Save Settings</button>
@@ -31,35 +77,124 @@
     </form>
     
     <div class="vacation-mode">
-        <h3>Vacation Mode</h3>
-        <p>Temporarily disable all your products</p>
+        <h3>🏖️ Vacation Mode</h3>
+        <p>Temporarily disable all your products while you're away</p>
         <form method="post" action="{% url 'vendors:vacation_mode' %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-warning">Toggle Vacation Mode</button>
+            <button type="submit" class="btn btn-warning">
+                {% if vendor.vacation_mode %}Disable{% else %}Enable{% endif %} Vacation Mode
+            </button>
         </form>
     </div>
 </div>
 
 <style>
     .settings-form {
-        max-width: 600px;
-        background: #1a1a1a;
-        padding: 30px;
-        border-radius: 8px;
-        margin-bottom: 30px;
+        max-width: 800px;
+        margin: 0 auto;
     }
     
-    .vacation-mode {
-        max-width: 600px;
-        background: #1a1a1a;
-        padding: 30px;
+    .settings-section {
+        background: rgba(31, 41, 55, 0.5);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .settings-section h2 {
+        margin-bottom: 1.5rem;
+        color: #a78bfa;
+        font-size: 1.25rem;
+    }
+    
+    .form-group {
+        margin-bottom: 2rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #e5e7eb;
+        font-weight: 500;
+    }
+    
+    .form-group textarea {
+        width: 100%;
+        background: rgba(17, 24, 39, 0.8);
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        color: #e5e7eb;
+        padding: 0.75rem;
         border-radius: 8px;
+        resize: vertical;
+    }
+    
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #8b5cf6;
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+    
+    .help-text {
+        display: block;
+        margin-top: 0.25rem;
+        color: #9ca3af;
+        font-size: 0.875rem;
+    }
+    
+    .bbcode-reference {
+        background: rgba(17, 24, 39, 0.5);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .bbcode-help h4 {
+        color: #a78bfa;
+        margin-bottom: 1rem;
+    }
+    
+    .bbcode-help ul {
+        list-style: none;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 0.5rem;
+    }
+    
+    .bbcode-help li {
+        padding: 0.5rem;
+        background: rgba(31, 41, 55, 0.5);
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 0.875rem;
     }
     
     .form-actions {
         display: flex;
-        gap: 15px;
-        margin-top: 20px;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+    
+    .vacation-mode {
+        background: rgba(251, 191, 36, 0.1);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+        padding: 2rem;
+        border-radius: 12px;
+        margin-top: 3rem;
+        text-align: center;
+    }
+    
+    .vacation-mode h3 {
+        color: #fbbf24;
+        margin-bottom: 1rem;
+    }
+    
+    .vacation-mode p {
+        color: #fef3c7;
+        margin-bottom: 1.5rem;
     }
 </style>
 {% endblock %}

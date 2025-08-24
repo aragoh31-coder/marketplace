@@ -25,7 +25,7 @@
                 </div>
                 <div class="status-item">
                     <span class="label">Trust Level:</span>
-                    <span class="value trust-{{ vendor.trust_level }}">{{ vendor.trust_level }}/10</span>
+                    <span class="value trust-{{ vendor.trust_level }}">{{ stats.trust_level }}/10 ({{ vendor.get_trust_level_display }})</span>
                 </div>
                 <div class="status-item">
                     <span class="label">Member Since:</span>
@@ -38,25 +38,45 @@
             <h2>Quick Stats</h2>
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-value">{{ vendor.products.count }}</div>
-                    <div class="stat-label">Total Products</div>
-                </div>
-                <div class="stat-card">
-                    {% with active_products=vendor.products.all %}
-                        <div class="stat-value">{{ active_products|length }}</div>
-                    {% endwith %}
+                    <div class="stat-value">{{ active_products }}</div>
                     <div class="stat-label">Active Products</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">0</div>
-                    <div class="stat-label">Orders Today</div>
+                    <div class="stat-value">{{ stats.total_orders }}</div>
+                    <div class="stat-label">Total Orders</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.completed_orders }}</div>
+                    <div class="stat-label">Completed Orders</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ pending_orders }}</div>
+                    <div class="stat-label">Pending Orders</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="rating-stats">
+            <h2>Rating & Reviews</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.average_rating|floatformat:2 }}/5</div>
+                    <div class="stat-label">Average Rating</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.total_reviews }}</div>
+                    <div class="stat-label">Total Reviews</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.disputed_orders }}</div>
+                    <div class="stat-label">Disputed Orders</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value crypto-earnings">
-                        <div class="btc-amount">₿ {{ metrics.total_earnings_btc|floatformat:8 }}</div>
-                        <div class="xmr-amount">ɱ {{ metrics.total_earnings_xmr|floatformat:4 }}</div>
+                        <div class="btc-amount">₿ {{ total_revenue_btc|floatformat:8 }}</div>
+                        <div class="xmr-amount">ɱ {{ total_revenue_xmr|floatformat:4 }}</div>
                     </div>
-                    <div class="stat-label">Total Earnings</div>
+                    <div class="stat-label">Total Revenue</div>
                 </div>
             </div>
         </div>

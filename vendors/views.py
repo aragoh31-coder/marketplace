@@ -65,6 +65,9 @@ def vendor_dashboard(request):
         return redirect("vendors:apply")
 
     vendor = request.user.vendor
+    
+    # Calculate and update trust level
+    vendor.update_stats()
 
     if vendor.is_on_vacation:
         messages.warning(
@@ -104,6 +107,15 @@ def vendor_dashboard(request):
         escrow_btc=Sum("total_btc"), escrow_xmr=Sum("total_xmr")
     )
 
+    # Get disputed orders
+    disputed_orders = vendor_orders.filter(status="DISPUTED").count()
+    
+    # Get average rating and review stats
+    from vendors.models import VendorRating
+    ratings = VendorRating.objects.filter(vendor=vendor)
+    average_rating = ratings.aggregate(avg=Avg('rating'))['avg'] or Decimal('0')
+    total_reviews = ratings.count()
+
     context = {
         "vendor": vendor,
         "total_sales": total_sales,
@@ -118,6 +130,15 @@ def vendor_dashboard(request):
         "low_stock": low_stock,
         "escrow_btc": escrow_stats["escrow_btc"] or Decimal("0"),
         "escrow_xmr": escrow_stats["escrow_xmr"] or Decimal("0"),
+        "stats": {
+            "total_orders": vendor.total_orders,
+            "completed_orders": vendor.completed_orders,
+            "disputed_orders": vendor.disputed_orders,
+            "average_rating": vendor.average_rating,
+            "total_reviews": vendor.total_reviews,
+            "trust_level": vendor.trust_score,
+            "trust_level_label": vendor.get_trust_level_display(),
+        }
     }
 
     return render(request, "vendors/dashboard.html", context)
@@ -406,6 +427,10 @@ def vendor_settings(request):
             return redirect("vendors:dashboard")
     else:
         form = VendorSettingsForm(instance=vendor)
+    
+    # Import BBCode parser for reference
+    from vendors.utils import BBCodeParser
+    parser = BBCodeParser()
 
     return render(
         request,
@@ -413,6 +438,7 @@ def vendor_settings(request):
         {
             "form": form,
             "vendor": vendor,
+            "bbcode_help": parser.get_preview_html(),
         },
     )
 

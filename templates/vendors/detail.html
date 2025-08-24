@@ -23,10 +23,36 @@
         </div>
         
         <div class="vendor-details">
+            {% if vendor.profile_header %}
+            <div class="vendor-profile-header">
+                {{ vendor.get_parsed_profile_header|safe }}
+            </div>
+            {% endif %}
+            
             <div class="vendor-description">
                 <h2>About This Vendor</h2>
-                <p>{{ vendor.description|default:"No description provided." }}</p>
+                <div class="bbcode-content">
+                    {{ vendor.get_parsed_description|safe|default:"<p>No description provided.</p>" }}
+                </div>
             </div>
+            
+            {% if vendor.shipping_info %}
+            <div class="vendor-shipping">
+                <h2>📦 Shipping Information</h2>
+                <div class="bbcode-content">
+                    {{ vendor.get_parsed_shipping_info|safe }}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if vendor.terms_conditions %}
+            <div class="vendor-terms">
+                <h2>📋 Terms & Conditions</h2>
+                <div class="bbcode-content">
+                    {{ vendor.get_parsed_terms|safe }}
+                </div>
+            </div>
+            {% endif %}
             
             <div class="vendor-stats">
                 <h2>Vendor Statistics</h2>
@@ -344,6 +370,106 @@
         text-align: center;
         padding: 40px;
         color: #666;
+    }
+    
+    /* BBCode Content Styles */
+    .vendor-profile-header {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .bbcode-content {
+        color: #e5e7eb;
+        line-height: 1.6;
+    }
+    
+    .bbcode-content strong {
+        color: #f3f4f6;
+        font-weight: 600;
+    }
+    
+    .bbcode-content em {
+        color: #d1d5db;
+        font-style: italic;
+    }
+    
+    .bbcode-content u {
+        text-decoration: underline;
+        text-decoration-color: #8b5cf6;
+    }
+    
+    .bbcode-content s {
+        text-decoration: line-through;
+        opacity: 0.7;
+    }
+    
+    .bbcode-content blockquote {
+        border-left: 4px solid #8b5cf6;
+        padding-left: 1rem;
+        margin: 1rem 0;
+        color: #d1d5db;
+        font-style: italic;
+    }
+    
+    .bbcode-content pre {
+        background: rgba(17, 24, 39, 0.8);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        padding: 1rem;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-family: monospace;
+        font-size: 0.875rem;
+    }
+    
+    .bbcode-content ul, .bbcode-content ol {
+        margin: 1rem 0;
+        padding-left: 2rem;
+    }
+    
+    .bbcode-content li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .bbcode-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+    }
+    
+    .bbcode-content th, .bbcode-content td {
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        padding: 0.5rem;
+        text-align: left;
+    }
+    
+    .bbcode-content th {
+        background: rgba(139, 92, 246, 0.1);
+        font-weight: 600;
+    }
+    
+    .bbcode-content a {
+        color: #8b5cf6;
+        text-decoration: none;
+    }
+    
+    .bbcode-content a:hover {
+        text-decoration: underline;
+    }
+    
+    .vendor-shipping, .vendor-terms {
+        background: rgba(31, 41, 55, 0.5);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .vendor-shipping h2, .vendor-terms h2 {
+        color: #a78bfa;
+        margin-bottom: 1rem;
     }
     
     @media (max-width: 768px) {

@@ -106,9 +106,13 @@ class ProductForm(forms.ModelForm):
 class VendorSettingsForm(forms.ModelForm):
     class Meta:
         model = Vendor
-        fields = ["description"]
+        fields = ["description", "profile_header", "terms_conditions", "shipping_info", "pgp_key"]
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 5, "class": "form-input"}),
+            "description": forms.Textarea(attrs={"rows": 5, "class": "form-input", "placeholder": "Describe your business..."}),
+            "profile_header": forms.Textarea(attrs={"rows": 5, "class": "form-input", "placeholder": "Your profile header (BBCode supported)..."}),
+            "terms_conditions": forms.Textarea(attrs={"rows": 5, "class": "form-input", "placeholder": "Your terms and conditions (BBCode supported)..."}),
+            "shipping_info": forms.Textarea(attrs={"rows": 5, "class": "form-input", "placeholder": "Shipping information (BBCode supported)..."}),
+            "pgp_key": forms.Textarea(attrs={"rows": 8, "class": "form-input", "style": "font-family: monospace;", "placeholder": "Your PGP public key..."}),
         }
 
 
