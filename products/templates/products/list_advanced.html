@@ -202,7 +202,7 @@
             <div class="product-actions">
                 <a href="{% url 'products:detail' product.id %}" class="btn btn-outline btn-sm">View Details</a>
                 {% if product.stock_quantity > 0 %}
-                <form method="post" action="{% url 'orders:add_to_cart' product.id %}" style="display: inline;">
+                <form method="post" action="{% url 'orders:add_to_cart' product.id %}" class="action-form">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-primary btn-sm">Add to Cart</button>
                 </form>
@@ -564,12 +564,30 @@
 }
 
 .product-actions {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
+    align-items: stretch;
+}
+
+.product-actions .action-form {
+    display: flex;
 }
 
 .product-actions .btn {
     flex: 1;
+    width: 100%;
+    text-align: center;
+    white-space: nowrap;
+    padding: 0.5rem 0.75rem;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-actions .btn-sm {
+    font-size: 0.875rem;
 }
 
 /* Empty State */
