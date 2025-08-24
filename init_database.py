@@ -59,62 +59,84 @@ def mark_migrations_as_applied():
                 print(f"Warning: Could not process migrations for {app}: {e}")
 
 def ensure_wallet_schema():
-    """Ensure wallet table has all required columns"""
-    conn = sqlite3.connect('/workspace/db.sqlite3')
+    """Ensure wallets_wallet table has all required columns"""
+    import sqlite3
+    conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
     
-    # Check if table exists
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='wallets_wallet';")
-    if not cursor.fetchone():
-        print("Creating wallets_wallet table...")
-        cursor.execute("""
-            CREATE TABLE wallets_wallet (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER UNIQUE REFERENCES auth_user(id),
-                balance_btc DECIMAL(16, 8) DEFAULT 0.00000000,
-                balance_xmr DECIMAL(16, 12) DEFAULT 0.000000000000,
-                escrow_btc DECIMAL(16, 8) DEFAULT 0.00000000,
-                escrow_xmr DECIMAL(16, 12) DEFAULT 0.000000000000,
-                withdrawal_pin VARCHAR(128),
-                two_fa_enabled BOOLEAN DEFAULT 0,
-                two_fa_secret VARCHAR(32),
-                daily_withdrawal_limit_btc DECIMAL(16, 8) DEFAULT 1.00000000,
-                daily_withdrawal_limit_xmr DECIMAL(16, 12) DEFAULT 100.000000000000,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                last_activity DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-    else:
-        # Add missing columns
-        cursor.execute("PRAGMA table_info(wallets_wallet);")
-        existing_columns = [col[1] for col in cursor.fetchall()]
+    try:
+        # Check if table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='wallets_wallet'")
+        if not cursor.fetchone():
+            print("Creating wallets_wallet table...")
+            cursor.execute("""
+                CREATE TABLE wallets_wallet (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER UNIQUE NOT NULL,
+                    balance_btc DECIMAL(16, 8) DEFAULT 0.00000000,
+                    balance_xmr DECIMAL(16, 12) DEFAULT 0.000000000000,
+                    escrow_btc DECIMAL(16, 8) DEFAULT 0.00000000,
+                    escrow_xmr DECIMAL(16, 12) DEFAULT 0.000000000000,
+                    withdrawal_pin VARCHAR(128),
+                    two_fa_enabled BOOLEAN DEFAULT 0,
+                    two_fa_secret VARCHAR(32),
+                    daily_withdrawal_limit_btc DECIMAL(16, 8) DEFAULT 1.00000000,
+                    daily_withdrawal_limit_xmr DECIMAL(16, 12) DEFAULT 100.000000000000,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    last_activity DATETIME,
+                    is_active BOOLEAN NOT NULL DEFAULT 1,
+                    currency VARCHAR(3),
+                    address VARCHAR(255),
+                    private_key TEXT,
+                    balance DECIMAL,
+                    FOREIGN KEY (user_id) REFERENCES auth_user (id)
+                )
+            """)
         
-        columns_to_add = [
-            ('balance_btc', 'DECIMAL(16, 8) DEFAULT 0.00000000'),
-            ('balance_xmr', 'DECIMAL(16, 12) DEFAULT 0.000000000000'),
-            ('escrow_btc', 'DECIMAL(16, 8) DEFAULT 0.00000000'),
-            ('escrow_xmr', 'DECIMAL(16, 12) DEFAULT 0.000000000000'),
-            ('withdrawal_pin', 'VARCHAR(128)'),
-            ('two_fa_enabled', 'BOOLEAN DEFAULT 0'),
-            ('two_fa_secret', 'VARCHAR(32)'),
-            ('daily_withdrawal_limit_btc', 'DECIMAL(16, 8) DEFAULT 1.00000000'),
-            ('daily_withdrawal_limit_xmr', 'DECIMAL(16, 12) DEFAULT 100.000000000000'),
-            ('created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP'),
-            ('updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP'),
-            ('last_activity', 'DATETIME')
+        # Ensure all columns exist with proper defaults
+        columns_to_check = [
+            ('balance_btc', 'DECIMAL(16, 8)', '0.00000000'),
+            ('balance_xmr', 'DECIMAL(16, 12)', '0.000000000000'),
+            ('escrow_btc', 'DECIMAL(16, 8)', '0.00000000'),
+            ('escrow_xmr', 'DECIMAL(16, 12)', '0.000000000000'),
+            ('withdrawal_pin', 'VARCHAR(128)', 'NULL'),
+            ('two_fa_enabled', 'BOOLEAN', '0'),
+            ('two_fa_secret', 'VARCHAR(32)', 'NULL'),
+            ('daily_withdrawal_limit_btc', 'DECIMAL(16, 8)', '1.00000000'),
+            ('daily_withdrawal_limit_xmr', 'DECIMAL(16, 12)', '100.000000000000'),
+            ('created_at', 'DATETIME', "datetime('now')"),
+            ('updated_at', 'DATETIME', "datetime('now')"),
+            ('last_activity', 'DATETIME', 'NULL'),
+            ('is_active', 'BOOLEAN', '1'),
+            ('currency', 'VARCHAR(3)', 'NULL'),
+            ('address', 'VARCHAR(255)', 'NULL'),
+            ('private_key', 'TEXT', 'NULL'),
+            ('balance', 'DECIMAL', 'NULL')
         ]
         
-        for col_name, col_def in columns_to_add:
-            if col_name not in existing_columns:
-                try:
-                    cursor.execute(f"ALTER TABLE wallets_wallet ADD COLUMN {col_name} {col_def};")
-                    print(f"Added column: {col_name}")
-                except sqlite3.OperationalError:
-                    pass
-    
-    conn.commit()
-    conn.close()
+        for col_name, col_type, default_val in columns_to_check:
+            cursor.execute(f"PRAGMA table_info(wallets_wallet)")
+            columns = {row[1]: row for row in cursor.fetchall()}
+            
+            if col_name not in columns:
+                print(f"Adding column {col_name} to wallets_wallet...")
+                if default_val == 'NULL':
+                    cursor.execute(f"ALTER TABLE wallets_wallet ADD COLUMN {col_name} {col_type}")
+                else:
+                    cursor.execute(f"ALTER TABLE wallets_wallet ADD COLUMN {col_name} {col_type} DEFAULT {default_val}")
+        
+        # Update existing rows to have is_active = 1 if NULL
+        cursor.execute("UPDATE wallets_wallet SET is_active = 1 WHERE is_active IS NULL")
+        
+        conn.commit()
+        print("✓ Wallet schema updated successfully")
+        
+    except Exception as e:
+        print(f"Error updating wallet schema: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
 
 def ensure_all_tables():
     """Run migrate with fake-initial to ensure all tables exist"""
