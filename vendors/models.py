@@ -21,9 +21,26 @@ class Vendor(PrivacyModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="vendor")
     vendor_name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
+    
+    # BBCode support fields
+    profile_header = models.TextField(blank=True, help_text="BBCode supported for rich formatting")
+    terms_conditions = models.TextField(blank=True, help_text="Your terms and conditions (BBCode supported)")
+    shipping_info = models.TextField(blank=True, help_text="Shipping information (BBCode supported)")
+    
+    # Trust and rating
     trust_level = models.CharField(max_length=20, choices=TRUST_LEVELS, default="NEW")
+    trust_score = models.IntegerField(default=1, help_text="Calculated trust score (1-10)")
     total_sales = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    average_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    total_reviews = models.IntegerField(default=0)
+    
+    # Order statistics
+    total_orders = models.IntegerField(default=0)
+    completed_orders = models.IntegerField(default=0)
+    disputed_orders = models.IntegerField(default=0)
+    
+    # Status flags
     is_approved = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     low_stock_threshold = models.IntegerField(default=5)
@@ -68,12 +85,85 @@ class Vendor(PrivacyModel):
         self.vacation_ends = None
         self.save()
 
+    def calculate_trust_level(self):
+        """Calculate trust level based on multiple factors"""
+        score = 0
+        
+        # Orders completed
+        if self.completed_orders >= 100:
+            score += 2
+        elif self.completed_orders >= 50:
+            score += 1
+            
+        # Average rating
+        if self.average_rating >= Decimal('4.5'):
+            score += 2
+        elif self.average_rating >= Decimal('4.0'):
+            score += 1
+            
+        # Approval status
+        if self.is_approved:
+            score += 1
+            
+        # Account age
+        age_days = (timezone.now() - self.created_at).days
+        if age_days >= 180:
+            score += 2
+        elif age_days >= 90:
+            score += 1
+            
+        # No disputes bonus
+        if self.disputed_orders == 0 and self.completed_orders >= 10:
+            score += 1
+            
+        # Reviews count
+        if self.total_reviews >= 50:
+            score += 1
+            
+        # Cap at 10
+        self.trust_score = min(10, max(1, score))
+        
+        # Update trust level based on score
+        if self.trust_score >= 8:
+            self.trust_level = "PREMIUM"
+        elif self.trust_score >= 6:
+            self.trust_level = "VERIFIED"
+        elif self.trust_score >= 3:
+            self.trust_level = "TRUSTED"
+        else:
+            self.trust_level = "NEW"
+            
+        self.save(update_fields=['trust_score', 'trust_level'])
+        return self.trust_score
+    
+    def update_stats(self):
+        """Update vendor statistics from orders"""
+        from orders.models import Order
+        from .models import VendorRating
+        
+        # Update order counts
+        orders = Order.objects.filter(vendor=self)
+        self.total_orders = orders.count()
+        self.completed_orders = orders.filter(status='COMPLETED').count()
+        self.disputed_orders = orders.filter(status='DISPUTED').count()
+        
+        # Update ratings
+        ratings = VendorRating.objects.filter(vendor=self)
+        if ratings.exists():
+            avg = ratings.aggregate(avg=models.Avg('rating'))['avg']
+            self.average_rating = Decimal(str(avg)) if avg else Decimal('0')
+            self.total_reviews = ratings.count()
+        
+        self.save()
+        self.calculate_trust_level()
+
     class Meta:
         indexes = [
             models.Index(fields=["is_approved", "is_active"]),
             models.Index(fields=["trust_level"]),
             models.Index(fields=["rating"]),
             models.Index(fields=["vacation_mode"]),
+            models.Index(fields=["trust_score"]),
         ]
 
 
