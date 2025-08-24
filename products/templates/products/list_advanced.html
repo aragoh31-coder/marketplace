@@ -1,0 +1,648 @@
+{% extends "base_tor_safe.html" %}
+
+{% block title %}Products - God's Eye{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="title-container mb-4">
+        <h1 class="register-title">
+            <span class="title-icon">🛍️</span>
+            <span class="title-text">Marketplace</span>
+        </h1>
+        <div class="title-underline"></div>
+    </div>
+
+    <!-- Advanced Search Section -->
+    <div class="box-glow card-elevation-3 mb-4">
+        <form method="get" action="{% url 'products:list' %}" class="search-form">
+            <!-- Main Search Bar -->
+            <div class="search-header mb-3">
+                <div class="search-input-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" 
+                           name="search" 
+                           placeholder="Search products, vendors, categories..." 
+                           value="{{ request.GET.search }}"
+                           class="search-input"
+                           autocomplete="off">
+                    <button type="submit" class="search-button">Search</button>
+                </div>
+                
+                <!-- Quick Suggestions -->
+                {% if not request.GET.search %}
+                <div class="search-suggestions mt-2">
+                    <small class="text-muted">Popular: </small>
+                    <a href="?search=gift+card" class="suggestion-tag">gift card</a>
+                    <a href="?search=steam" class="suggestion-tag">steam</a>
+                    <a href="?search=amazon" class="suggestion-tag">amazon</a>
+                    <a href="?search=premium" class="suggestion-tag">premium</a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Advanced Filters Toggle -->
+            <div class="filter-toggle-wrapper">
+                <input type="checkbox" id="show-filters" class="filter-checkbox" {% if request.GET.category or request.GET.min_price or request.GET.max_price %}checked{% endif %}>
+                <label for="show-filters" class="filter-toggle">
+                    <span class="filter-icon">⚙️</span> Advanced Filters
+                    <span class="toggle-arrow">▼</span>
+                </label>
+                
+                <!-- Advanced Filters Content -->
+                <div class="advanced-filters">
+                    <div class="filter-grid">
+                        <!-- Category Filter -->
+                        <div class="filter-group">
+                            <label class="filter-label">Category</label>
+                            <select name="category" class="filter-select">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ category.name }} ({{ category.product_count }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Price Range -->
+                        <div class="filter-group">
+                            <label class="filter-label">Price Range (BTC)</label>
+                            <div class="price-range">
+                                <input type="number" 
+                                       name="min_price" 
+                                       placeholder="Min" 
+                                       value="{{ request.GET.min_price }}"
+                                       step="0.00001"
+                                       class="price-input">
+                                <span class="range-separator">-</span>
+                                <input type="number" 
+                                       name="max_price" 
+                                       placeholder="Max" 
+                                       value="{{ request.GET.max_price }}"
+                                       step="0.00001"
+                                       class="price-input">
+                            </div>
+                        </div>
+
+                        <!-- Sort Options -->
+                        <div class="filter-group">
+                            <label class="filter-label">Sort By</label>
+                            <select name="sort" class="filter-select">
+                                <option value="">Default</option>
+                                <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                                <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                                <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>Newest First</option>
+                                <option value="popular" {% if request.GET.sort == 'popular' %}selected{% endif %}>Most Popular</option>
+                                <option value="rating" {% if request.GET.sort == 'rating' %}selected{% endif %}>Highest Rated</option>
+                            </select>
+                        </div>
+
+                        <!-- Stock Filter -->
+                        <div class="filter-group">
+                            <label class="filter-label">Availability</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="in_stock" {% if request.GET.in_stock %}checked{% endif %}>
+                                    <span>In Stock Only</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Actions -->
+                    <div class="filter-actions">
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        <a href="{% url 'products:list' %}" class="btn btn-outline">Clear All</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Active Filters Display -->
+    {% if request.GET.search or request.GET.category or request.GET.min_price or request.GET.max_price or request.GET.in_stock %}
+    <div class="active-filters mb-3">
+        <span class="filter-label">Active Filters:</span>
+        {% if request.GET.search %}
+        <span class="active-filter-tag">
+            Search: "{{ request.GET.search }}"
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'search' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="remove-filter">×</a>
+        </span>
+        {% endif %}
+        {% if request.GET.category %}
+        <span class="active-filter-tag">
+            Category: {{ categories|dictsort:"id"|selectattr:"id"|selectattr:"id" }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'category' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="remove-filter">×</a>
+        </span>
+        {% endif %}
+        {% if request.GET.min_price or request.GET.max_price %}
+        <span class="active-filter-tag">
+            Price: {{ request.GET.min_price|default:"0" }} - {{ request.GET.max_price|default:"∞" }} BTC
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'min_price' and key != 'max_price' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="remove-filter">×</a>
+        </span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Results Count -->
+    <div class="results-info mb-3">
+        <span class="results-count">{{ page_obj.paginator.count }} products found</span>
+        {% if request.GET.search %}
+        <span class="search-query">for "{{ request.GET.search }}"</span>
+        {% endif %}
+    </div>
+
+    <!-- Product Grid -->
+    <div class="products-grid">
+        {% for product in page_obj %}
+        <div class="product-card box-glow">
+            <!-- Product Image/Icon -->
+            <div class="product-image">
+                <span class="category-icon">
+                    {% if 'steam' in product.category.name|lower %}🎮
+                    {% elif 'amazon' in product.category.name|lower %}📦
+                    {% elif 'google' in product.category.name|lower %}📱
+                    {% elif 'apple' in product.category.name|lower %}🍎
+                    {% else %}🎁{% endif %}
+                </span>
+            </div>
+
+            <!-- Product Info -->
+            <div class="product-info">
+                <h3 class="product-title">{{ product.name|truncatechars:50 }}</h3>
+                <div class="product-meta">
+                    <span class="meta-item">
+                        <span class="meta-icon">👤</span>
+                        <a href="{% url 'vendors:profile' product.vendor.id %}" class="vendor-link">
+                            {{ product.vendor.vendor_name }}
+                            {% if product.vendor.trust_level > 80 %}
+                            <span class="verified-badge">✓</span>
+                            {% endif %}
+                        </a>
+                    </span>
+                    <span class="meta-item">
+                        <span class="meta-icon">📦</span>
+                        {% if product.stock_quantity > 0 %}
+                        <span class="text-success">{{ product.stock_quantity }} in stock</span>
+                        {% else %}
+                        <span class="text-danger">Out of stock</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Product Price -->
+            <div class="product-price">
+                <div class="price-btc">{{ product.price_btc|floatformat:8 }} BTC</div>
+                <div class="price-usd">≈ ${{ product.price_btc|floatformat:2 }} USD</div>
+            </div>
+
+            <!-- Product Actions -->
+            <div class="product-actions">
+                <a href="{% url 'products:detail' product.id %}" class="btn btn-outline btn-sm">View Details</a>
+                {% if product.stock_quantity > 0 %}
+                <form method="post" action="{% url 'orders:add_to_cart' product.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-sm">Add to Cart</button>
+                </form>
+                {% else %}
+                <button class="btn btn-secondary btn-sm" disabled>Out of Stock</button>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <h3>No products found</h3>
+            <p>Try adjusting your search or filters</p>
+            <a href="{% url 'products:list' %}" class="btn btn-primary">View All Products</a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-wrapper">
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">« First</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">‹ Previous</a>
+            {% endif %}
+            
+            <span class="page-current">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Next ›</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Last »</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Advanced Search Styles */
+.search-form {
+    position: relative;
+}
+
+.search-header {
+    position: relative;
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.search-input-wrapper:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+.search-icon {
+    font-size: 1.25rem;
+    margin-right: 0.75rem;
+    opacity: 0.7;
+}
+
+.search-input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    outline: none;
+}
+
+.search-button {
+    background: var(--primary);
+    color: var(--bg-primary);
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.search-button:hover {
+    background: var(--primary-dim);
+}
+
+.search-suggestions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.suggestion-tag {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+}
+
+.suggestion-tag:hover {
+    background: var(--primary);
+    color: var(--bg-primary);
+}
+
+/* Advanced Filters */
+.filter-toggle-wrapper {
+    margin-top: 1rem;
+}
+
+.filter-checkbox {
+    display: none;
+}
+
+.filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: var(--primary);
+    font-weight: 600;
+    padding: 0.5rem 0;
+}
+
+.toggle-arrow {
+    transition: transform 0.3s ease;
+}
+
+.filter-checkbox:checked ~ .filter-toggle .toggle-arrow {
+    transform: rotate(180deg);
+}
+
+.advanced-filters {
+    display: none;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.filter-checkbox:checked ~ .advanced-filters {
+    display: block;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-select, .price-input {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.price-range {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.price-input {
+    flex: 1;
+}
+
+.range-separator {
+    color: var(--text-dim);
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+/* Active Filters */
+.active-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.active-filter-tag {
+    background: var(--primary);
+    color: var(--bg-primary);
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.remove-filter {
+    color: var(--bg-primary);
+    text-decoration: none;
+    font-weight: bold;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.remove-filter:hover {
+    opacity: 1;
+}
+
+/* Results Info */
+.results-info {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.results-count {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Product Grid */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.product-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.product-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+}
+
+.product-image {
+    text-align: center;
+    padding: 2rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.category-icon {
+    font-size: 3rem;
+}
+
+.product-info {
+    flex: 1;
+}
+
+.product-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+}
+
+.product-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.meta-icon {
+    opacity: 0.7;
+}
+
+.vendor-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.vendor-link:hover {
+    color: var(--primary);
+}
+
+.verified-badge {
+    background: #10b981;
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.25rem;
+    border-radius: 4px;
+    margin-left: 0.25rem;
+}
+
+.product-price {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.price-btc {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary);
+    font-family: monospace;
+}
+
+.price-usd {
+    font-size: 0.875rem;
+    color: var(--text-dim);
+    margin-top: 0.25rem;
+}
+
+.product-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.product-actions .btn {
+    flex: 1;
+}
+
+/* Empty State */
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+/* Pagination */
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.page-link, .page-current {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.page-link {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+.page-link:hover {
+    background: var(--primary);
+    color: var(--bg-primary);
+    border-color: var(--primary);
+}
+
+.page-current {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .pagination {
+        font-size: 0.875rem;
+    }
+    
+    .page-link, .page-current {
+        padding: 0.375rem 0.75rem;
+    }
+}
+</style>
+{% endblock %}
