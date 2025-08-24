@@ -979,7 +979,9 @@
         }
         
         .dropdown-label {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
             padding: 0.5rem 1rem;
             color: var(--text-primary);
             cursor: pointer;
@@ -993,6 +995,24 @@
         .dropdown-label:hover {
             background: rgba(139, 92, 246, 0.1);
             color: var(--primary);
+        }
+        
+        /* Dropdown arrow animation */
+        .dropdown-arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            font-size: 0.8rem;
+            margin-left: 0.25rem;
+            color: var(--text-secondary);
+        }
+        
+        .dropdown-label:hover .dropdown-arrow {
+            color: var(--primary);
+        }
+        
+        .nav-dropdown:hover .dropdown-arrow,
+        .nav-dropdown.active .dropdown-arrow {
+            transform: rotate(180deg);
         }
         
         .dropdown-menu {
@@ -1279,7 +1299,7 @@
                     <!-- User Dropdown -->
                     <div class="nav-dropdown">
                         <span class="dropdown-label">
-                            👤 {{ user.username|truncatechars:15 }} ▼
+                            👤 {{ user.username|truncatechars:15 }} <span class="dropdown-arrow">▼</span>
                         </span>
                         <div class="dropdown-menu">
                             <a href="{% url 'accounts:profile' %}" class="dropdown-item">🔧 Profile Settings</a>
