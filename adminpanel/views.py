@@ -489,9 +489,11 @@ def admin_users(request):
 
     context = {
         "page_obj": page_obj,
+        "search": search_query,  # Changed to match template
         "search_query": search_query,
         "status_filter": status_filter,
         "vendor_filter": vendor_filter,
+        "user_type": vendor_filter,  # Added to match template
         "total_users": users.count(),
     }
     return render(request, "adminpanel/users.html", context)
@@ -564,17 +566,77 @@ def admin_user_detail(request, username):
 
     buyer_disputes = user.filed_disputes.order_by("-created_at")[:5]
     vendor_disputes = user.received_disputes.order_by("-created_at")[:5]
+    
+    # Get deposits and withdrawals
+    deposits = Transaction.objects.filter(
+        user=user,
+        type='deposit'
+    ).order_by('-created_at')
+    
+    withdrawals_list = Transaction.objects.filter(
+        user=user,
+        type='withdrawal'
+    ).order_by('-created_at')
+    
+    # Calculate totals
+    deposit_totals = deposits.aggregate(
+        btc=Sum('amount', filter=Q(currency='BTC')),
+        xmr=Sum('amount', filter=Q(currency='XMR'))
+    )
+    
+    withdrawal_totals = withdrawals_list.aggregate(
+        btc=Sum('amount', filter=Q(currency='BTC')),
+        xmr=Sum('amount', filter=Q(currency='XMR'))
+    )
+    
+    # Get order statistics
+    order_stats = user.orders.aggregate(
+        total=Count('id'),
+        completed=Count('id', filter=Q(status='COMPLETED')),
+        disputed=Count('id', filter=Q(status='DISPUTED')),
+        total_spent_btc=Sum('total_btc'),
+        total_spent_xmr=Sum('total_xmr')
+    )
+    
+    # Get disputes
+    disputes = Dispute.objects.filter(
+        Q(order__user=user) | Q(order__vendor__user=user)
+    ).distinct().order_by('-created_at')
+    
+    # Get vendor info if applicable
+    vendor = None
+    vendor_stats = None
+    if hasattr(user, 'vendor'):
+        vendor = user.vendor
+        vendor_orders = Order.objects.filter(vendor=vendor)
+        vendor_stats = {
+            'total_sales': vendor_orders.filter(status='COMPLETED').count(),
+            'total_revenue_btc': vendor_orders.filter(status='COMPLETED').aggregate(
+                total=Sum('total_btc'))['total'] or Decimal('0'),
+            'total_revenue_xmr': vendor_orders.filter(status='COMPLETED').aggregate(
+                total=Sum('total_xmr'))['total'] or Decimal('0'),
+            'active_products': Product.objects.filter(vendor=vendor, is_active=True).count(),
+        }
+    
+    # Get messages count
+    messages_sent = Message.objects.filter(sender=user).count()
+    messages_received = Message.objects.filter(recipient=user).count()
 
     context = {
+        "user": user,  # Changed from user_detail to match template
         "user_detail": user,
         "wallet": wallet,
         "btc_balance": btc_balance,
         "xmr_balance": xmr_balance,
         "btc_escrow": btc_escrow,
         "xmr_escrow": xmr_escrow,
-        "withdrawals": withdrawals,
+        "withdrawals": withdrawals[:20],  # Last 20
+        "deposits": deposits[:20],  # Last 20
+        "deposit_totals": deposit_totals,
+        "withdrawal_totals": withdrawal_totals,
         "transactions": transactions,
-        "orders": orders,
+        "orders": orders[:20],  # Last 20
+        "order_stats": order_stats,
         "total_orders": total_orders,
         "completed_orders": completed_orders,
         "total_deposits_btc": total_deposits_btc,
@@ -586,6 +648,13 @@ def admin_user_detail(request, username):
         "security_alerts": security_alerts,
         "buyer_disputes": buyer_disputes,
         "vendor_disputes": vendor_disputes,
+        "disputes": disputes[:10],  # Last 10
+        "vendor": vendor,
+        "vendor_stats": vendor_stats,
+        "messages_sent": messages_sent,
+        "messages_received": messages_received,
+        "last_login": user.last_login,
+        "date_joined": user.date_joined,
     }
 
     return render(request, "adminpanel/user_detail.html", context)
@@ -778,12 +847,13 @@ def admin_user_action(request, username):
     if request.method == "GET":
         # Show confirmation page for dangerous actions
         action = request.GET.get("action")
-        if action in ["ban", "make_staff", "remove_staff", "reset_2fa"]:
+        if action in ["ban", "make_staff", "remove_staff", "reset_2fa", "make_vendor"]:
             action_descriptions = {
                 "ban": "ban this user",
                 "make_staff": "grant staff privileges",
                 "remove_staff": "remove staff privileges",
-                "reset_2fa": "reset 2FA"
+                "reset_2fa": "reset 2FA",
+                "make_vendor": "make this user a vendor"
             }
             context = {
                 "target_user": user,
@@ -826,6 +896,10 @@ def admin_user_action(request, username):
             user.pgp_public_key = ""
             user.pgp_fingerprint = ""
             user.pgp_login_enabled = False
+            # Reset TOTP as well
+            if hasattr(user, 'totp_secret'):
+                user.totp_secret = ''
+                user.totp_enabled = False
             user.save()
             AdminLog.objects.create(
                 admin_user=request.user,
@@ -862,6 +936,49 @@ def admin_user_action(request, username):
                 ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',
             )
             messages.success(request, f"Staff privileges removed from {user.username}.")
+            
+        elif action == "make_vendor":
+            if not hasattr(user, "vendor"):
+                vendor_name = f"{user.username}_vendor"
+                # Make sure vendor name is unique
+                counter = 1
+                while Vendor.objects.filter(vendor_name=vendor_name).exists():
+                    vendor_name = f"{user.username}_vendor_{counter}"
+                    counter += 1
+                    
+                Vendor.objects.create(
+                    user=user,
+                    vendor_name=vendor_name,
+                    description="Admin-created vendor account",
+                    is_approved=True
+                )
+                user.is_vendor = True
+                user.save()
+                AdminLog.objects.create(
+                    admin_user=request.user,
+                    action_type="CREATE",
+                    target_model="Vendor",
+                    target_id=str(user.id),
+                    description=f"Created vendor account for {user.username}",
+                    ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',
+                )
+                messages.success(request, f"{user.username} is now a vendor.")
+            else:
+                messages.info(request, f"{user.username} is already a vendor.")
+                
+        elif action == "toggle_active":
+            user.is_active = not user.is_active
+            user.save()
+            status = "activated" if user.is_active else "deactivated"
+            AdminLog.objects.create(
+                admin_user=request.user,
+                action_type="UPDATE",
+                target_model="User",
+                target_id=str(user.id),
+                description=f"User {user.username} has been {status}",
+                ip_address=request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session',
+            )
+            messages.success(request, f"User {user.username} has been {status}.")
 
     return redirect("adminpanel:user_detail", username=username)
 
@@ -920,25 +1037,86 @@ def delete_product(request, product_id):
 
 
 @login_required
-def orders_list(request):
+def admin_orders(request):
+    """View all orders with filtering"""
     if not request.user.is_superuser:
         messages.error(request, "Admin access required.")
         return redirect("accounts:home")
 
     orders = Order.objects.all().order_by("-created_at")
-    context = {"orders": orders}
+    
+    # Filter by status
+    status = request.GET.get('status')
+    if status:
+        orders = orders.filter(status=status)
+    
+    # Search
+    search = request.GET.get('q')
+    if search:
+        orders = orders.filter(
+            Q(id__icontains=search) |
+            Q(user__username__icontains=search)
+        )
+    
+    # Pagination
+    paginator = Paginator(orders, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        "page_obj": page_obj,
+        "orders": orders,
+        "status": status,
+        "search": search,
+    }
     return render(request, "adminpanel/orders.html", context)
 
 
+orders_list = admin_orders
+
+
 @login_required
-def disputes_list(request):
+def admin_order_detail(request, order_id):
+    """View order details"""
+    if not request.user.is_superuser:
+        messages.error(request, "Admin access required.")
+        return redirect("accounts:home")
+        
+    order = get_object_or_404(Order, id=order_id)
+    
+    return render(request, "adminpanel/order_detail.html", {
+        "order": order,
+    })
+
+
+@login_required
+def admin_disputes(request):
+    """View all disputes"""
     if not request.user.is_superuser:
         messages.error(request, "Admin access required.")
         return redirect("accounts:home")
 
     disputes = Dispute.objects.all().order_by("-created_at")
-    context = {"disputes": disputes}
+    
+    # Filter by status
+    status = request.GET.get('status')
+    if status:
+        disputes = disputes.filter(status=status)
+    
+    # Pagination
+    paginator = Paginator(disputes, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        "page_obj": page_obj,
+        "disputes": disputes,
+        "status": status,
+    }
     return render(request, "adminpanel/disputes.html", context)
+
+
+disputes_list = admin_disputes
 
 
 @login_required

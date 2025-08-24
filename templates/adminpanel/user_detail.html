@@ -34,6 +34,12 @@
             <a href="{% url 'adminpanel:user_action' user.username %}?action=reset_2fa" class="btn btn-warning">
                 🔄 Reset 2FA
             </a>
+            
+            {% if not vendor %}
+                <a href="{% url 'adminpanel:user_action' user.username %}?action=make_vendor" class="btn btn-primary">
+                    🏪 Make Vendor
+                </a>
+            {% endif %}
         </div>
     </div>
 
@@ -62,6 +68,10 @@
             <div class="detail-row">
                 <span class="label">Last Login:</span>
                 <span class="value">{{ user.last_login|date:"M d, Y H:i"|default:"Never" }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Messages:</span>
+                <span class="value">{{ messages_sent }} sent / {{ messages_received }} received</span>
             </div>
         </div>
 
