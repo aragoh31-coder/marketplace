@@ -427,10 +427,110 @@
             margin-bottom: 1rem;
         }
         
+        .card-body {
+            padding: 0;
+        }
+        
         .card-title {
             font-size: 1.25rem;
             font-weight: 600;
             color: var(--text-primary);
+        }
+        
+        /* Profile sections */
+        .profile-section {
+            margin-bottom: 2rem;
+        }
+        
+        .profile-section .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Info boxes */
+        .info-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        /* Status items */
+        .security-status,
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .status-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .status-item.active {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .status-icon {
+            display: block;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-item.active .status-icon {
+            color: #10b981;
+        }
+        
+        .status-text {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .pgp-info,
+        .vendor-security-notice {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .pgp-info code {
+            display: block;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.875rem;
+            word-break: break-all;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .detail-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
         }
         
         /* Forms */
@@ -671,6 +771,43 @@
         
         .breadcrumb-separator {
             color: var(--text-dim);
+        }
+        
+        /* List items and rows */
+        .list-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        
+        .list-item:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--primary);
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .detail-value {
+            color: var(--text-primary);
+            font-weight: 600;
         }
         
         /* Grid System */
