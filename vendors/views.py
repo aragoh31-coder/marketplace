@@ -496,7 +496,7 @@ def vendor_profile(request, vendor_id):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    total_sales = Order.objects.filter(items__product__vendor=vendor, status="completed").distinct().count()
+    total_sales = Order.objects.filter(vendor=vendor, status="COMPLETED").distinct().count()
 
     return render(
         request,

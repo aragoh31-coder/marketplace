@@ -1,0 +1,45 @@
+# Tor configuration for marketplace hidden service
+
+# Basic configuration
+DataDirectory /workspace/tor-data
+PidFile /workspace/tor.pid
+RunAsDaemon 0
+
+# Network settings
+SocksPort 9050
+SocksPolicy accept 127.0.0.1
+SocksPolicy reject *
+
+# Control port for monitoring
+ControlPort 9051
+CookieAuthentication 1
+
+# Hidden service configuration
+HiddenServiceDir /workspace/tor-data/marketplace/
+HiddenServicePort 80 127.0.0.1:8000
+HiddenServiceVersion 3
+
+# Security settings
+SafeLogging 1
+AvoidDiskWrites 1
+DisableDebuggerAttachment 1
+
+# Performance settings
+NumEntryGuards 3
+NumDirectoryGuards 3
+GuardLifetime 2 months
+
+# Circuit settings
+CircuitBuildTimeout 30
+LearnCircuitBuildTimeout 1
+CircuitStreamTimeout 30
+ClientOnly 1
+
+# Relay settings (disabled for hidden service)
+ORPort 0
+DirPort 0
+ExitRelay 0
+
+# Logging
+Log notice file /workspace/logs/tor-notices.log
+Log debug file /workspace/logs/tor-debug.log

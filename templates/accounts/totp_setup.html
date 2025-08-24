@@ -20,7 +20,7 @@
                 <p>Use your authenticator app (Google Authenticator, Authy, etc.) to scan this QR code:</p>
                 
                 <div class="qr-code-container" style="text-align: center; margin: 2rem 0;">
-                    <img src="data:image/png;base64,{{ qr_code }}" alt="TOTP QR Code" style="border: 2px solid var(--border); padding: 1rem; background: white;">
+                    <img src="data:image/png;base64,{{ qr_code }}" alt="TOTP QR Code" class="qr-code-img">
                 </div>
                 
                 <div class="manual-entry">
@@ -58,6 +58,37 @@
 </div>
 
 <style>
+.qr-code-img {
+    border: 2px solid var(--border);
+    padding: 0.5rem;
+    background: white;
+    max-width: 200px;
+    width: 100%;
+    height: auto;
+}
+
+/* Mobile responsive */
+@media (max-width: 576px) {
+    .qr-code-img {
+        max-width: 150px;
+        padding: 0.25rem;
+    }
+    
+    .manual-code {
+        font-size: 1rem;
+        word-break: break-all;
+        letter-spacing: 0.1em;
+    }
+    
+    .container {
+        padding: 0.5rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+}
+
 .manual-code {
     background: var(--bg-secondary);
     padding: 1rem;

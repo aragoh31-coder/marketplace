@@ -69,12 +69,12 @@ class OneClickCaptchaMixin:
                 captcha_service = OneClickCaptcha()
                 if not captcha_service.validate(self.request, captcha_x, captcha_y, captcha_token):
                     raise ValidationError(
-                        'Invalid CAPTCHA. Please click on the circle with the missing slice (like Pac-Man).',
+                        'Invalid CAPTCHA. Please click on the shape that looks different from the others.',
                         code='invalid_captcha'
                     )
             else:
                 raise ValidationError(
-                    'Please complete the CAPTCHA by clicking on the circle with the missing slice.',
+                    'Please complete the CAPTCHA by clicking on the shape that looks different.',
                     code='missing_captcha'
                 )
         
@@ -86,17 +86,17 @@ class OneClickCaptchaMixin:
         return f'''
         <div class="captcha-widget">
             <p class="captcha-instruction">
-                🔐 Click the circle with the missing slice (like Pac-Man):
+                🔐 Click the shape that looks different from the others:
             </p>
             <input type="image" 
                    name="captcha" 
                    src="/captcha/generate/" 
-                   alt="Click the circle with the gap"
+                   alt="Click the unique shape"
                    class="captcha-image"
                    style="border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
             <input type="hidden" name="captcha_token" value="{token}">
             <p class="captcha-help">
-                <small>This helps us prevent automated spam while keeping you anonymous.</small>
+                <small>Look for: Pac-Man, pizza slice, star, donut, crescent, or diamond among circles.</small>
             </p>
         </div>
         '''

@@ -1,0 +1,83 @@
+{% extends "base_tor_safe.html" %}
+
+{% block title %}Disable TOTP Authentication{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card card-elevation-3">
+        <div class="card-header">
+            <h2>🔓 Disable TOTP Authentication</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <strong>⚠️ Warning:</strong> Disabling TOTP will make your account less secure. We strongly recommend keeping it enabled.
+            </div>
+            
+            <p>Are you sure you want to disable Two-Factor Authentication (TOTP) for your account?</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="password">Confirm your password to proceed:</label>
+                    <input type="password" 
+                           class="form-control" 
+                           id="password" 
+                           name="password" 
+                           required
+                           autocomplete="current-password">
+                </div>
+                
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-danger">Disable TOTP</button>
+                    <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+            
+            <div class="info-box mt-4">
+                <h4>What happens when you disable TOTP?</h4>
+                <ul>
+                    <li>You won't need to enter a 6-digit code when logging in</li>
+                    <li>Your backup codes will be deleted</li>
+                    <li>Your account will be less secure</li>
+                    <li>You can re-enable TOTP anytime from your profile</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.info-box {
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--warning);
+}
+
+.info-box h4 {
+    color: var(--warning);
+    margin-bottom: 1rem;
+}
+
+.info-box ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+@media (max-width: 576px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .action-buttons .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

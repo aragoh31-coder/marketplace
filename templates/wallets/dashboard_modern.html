@@ -1,0 +1,557 @@
+{% extends "base_tor_safe.html" %}
+{% load static %}
+
+{% block title %}Wallet Dashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Modern Wallet Dashboard Styles */
+    .wallet-dashboard {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    /* Page Header */
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+        color: var(--text-secondary);
+        font-size: 1rem;
+    }
+
+    /* Balance Cards Grid */
+    .balance-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .balance-card {
+        background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .balance-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        border-color: var(--primary);
+    }
+
+    .balance-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+        opacity: 0.1;
+        transform: translate(30%, -30%);
+    }
+
+    .currency-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--primary);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .currency-label {
+        font-size: 0.875rem;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .balance-amount {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+    }
+
+    .balance-usd {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .quick-actions h2 {
+        font-size: 1.25rem;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+    }
+
+    .action-buttons {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .action-btn {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        text-decoration: none;
+        color: var(--text-primary);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-btn:hover {
+        background: var(--bg-tertiary);
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+    }
+
+    .action-btn .icon {
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
+        display: block;
+    }
+
+    .action-btn .title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        display: block;
+    }
+
+    .action-btn .description {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    /* Security Status */
+    .security-status {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .security-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .security-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .security-item:hover {
+        background: var(--bg-tertiary);
+    }
+
+    .security-icon {
+        font-size: 1.5rem;
+        margin-right: 1rem;
+        width: 40px;
+        text-align: center;
+    }
+
+    .security-icon.enabled {
+        color: #10b981;
+    }
+
+    .security-icon.disabled {
+        color: #ef4444;
+    }
+
+    .security-text {
+        flex: 1;
+    }
+
+    .security-text .label {
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .security-text .status {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    /* Recent Transactions */
+    .recent-transactions {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .transactions-header {
+        padding: 2rem 2rem 1rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .transactions-header h2 {
+        font-size: 1.25rem;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .transactions-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .transaction-item {
+        padding: 1.25rem 2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: background 0.2s ease;
+    }
+
+    .transaction-item:hover {
+        background: rgba(139, 92, 246, 0.05);
+    }
+
+    .transaction-item:last-child {
+        border-bottom: none;
+    }
+
+    .transaction-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .transaction-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .transaction-icon.deposit {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .transaction-icon.withdrawal {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    .transaction-icon.conversion {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .transaction-details {
+        flex: 1;
+    }
+
+    .transaction-type {
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .transaction-meta {
+        font-size: 0.875rem;
+        color: var(--text-dim);
+    }
+
+    .transaction-amount {
+        text-align: right;
+    }
+
+    .amount-value {
+        font-weight: 600;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+        margin-bottom: 0.25rem;
+    }
+
+    .amount-value.positive {
+        color: #10b981;
+    }
+
+    .amount-value.negative {
+        color: #ef4444;
+    }
+
+    .amount-currency {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-dim);
+    }
+
+    .empty-state .icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* View All Link */
+    .view-all-link {
+        display: block;
+        padding: 1.25rem 2rem;
+        text-align: center;
+        border-top: 1px solid var(--border);
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .view-all-link:hover {
+        background: rgba(139, 92, 246, 0.05);
+        color: var(--primary-dim);
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+        .wallet-dashboard {
+            padding: 1rem;
+        }
+
+        .balance-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .action-buttons {
+            grid-template-columns: 1fr;
+        }
+
+        .security-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wallet-dashboard">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>💰 Wallet Dashboard</h1>
+        <p>Manage your cryptocurrency balances and transactions securely</p>
+    </div>
+
+    <!-- Balance Cards -->
+    <div class="balance-grid">
+        <!-- Bitcoin Available -->
+        <div class="balance-card">
+            <div class="currency-icon">₿</div>
+            <div class="currency-label">Bitcoin Available</div>
+            <div class="balance-amount">{{ btc_available|floatformat:8 }}</div>
+            <div class="balance-usd">≈ ${{ btc_available|floatformat:2 }} USD</div>
+        </div>
+
+        <!-- Bitcoin in Escrow -->
+        <div class="balance-card">
+            <div class="currency-icon" style="background: #f59e0b;">🔒</div>
+            <div class="currency-label">Bitcoin in Escrow</div>
+            <div class="balance-amount">{{ wallet.escrow_btc|floatformat:8 }}</div>
+            <div class="balance-usd">≈ ${{ wallet.escrow_btc|floatformat:2 }} USD</div>
+        </div>
+
+        <!-- Monero Available -->
+        <div class="balance-card">
+            <div class="currency-icon" style="background: #ff6600;">Ɱ</div>
+            <div class="currency-label">Monero Available</div>
+            <div class="balance-amount">{{ xmr_available|floatformat:12 }}</div>
+            <div class="balance-usd">≈ ${{ xmr_available|floatformat:2 }} USD</div>
+        </div>
+
+        <!-- Monero in Escrow -->
+        <div class="balance-card">
+            <div class="currency-icon" style="background: #dc2626;">🔒</div>
+            <div class="currency-label">Monero in Escrow</div>
+            <div class="balance-amount">{{ wallet.escrow_xmr|floatformat:12 }}</div>
+            <div class="balance-usd">≈ ${{ wallet.escrow_xmr|floatformat:2 }} USD</div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <h2>Quick Actions</h2>
+        <div class="action-buttons">
+            <a href="{% url 'wallets:deposit' %}" class="action-btn">
+                <span class="icon">📥</span>
+                <span class="title">Deposit</span>
+                <span class="description">Add funds to wallet</span>
+            </a>
+
+            <a href="{% url 'wallets:withdraw' %}" class="action-btn">
+                <span class="icon">📤</span>
+                <span class="title">Withdraw</span>
+                <span class="description">Send to external wallet</span>
+            </a>
+
+            <a href="{% url 'wallets:convert' %}" class="action-btn">
+                <span class="icon">🔄</span>
+                <span class="title">Convert</span>
+                <span class="description">Exchange BTC ↔ XMR</span>
+            </a>
+
+            <a href="{% url 'wallets:transactions' %}" class="action-btn">
+                <span class="icon">📊</span>
+                <span class="title">History</span>
+                <span class="description">View all transactions</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Security Status -->
+    <div class="security-status">
+        <h2>🛡️ Security Status</h2>
+        <div class="security-grid">
+            <div class="security-item">
+                <div class="security-icon {% if wallet.two_fa_enabled %}enabled{% else %}disabled{% endif %}">
+                    {% if wallet.two_fa_enabled %}✅{% else %}❌{% endif %}
+                </div>
+                <div class="security-text">
+                    <div class="label">Two-Factor Authentication</div>
+                    <div class="status">
+                        {% if wallet.two_fa_enabled %}
+                            Enabled and Active
+                        {% else %}
+                            <a href="{% url 'wallets:security_settings' %}" style="color: var(--primary);">Enable Now →</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="security-item">
+                <div class="security-icon {% if wallet.withdrawal_pin %}enabled{% else %}disabled{% endif %}">
+                    {% if wallet.withdrawal_pin %}✅{% else %}❌{% endif %}
+                </div>
+                <div class="security-text">
+                    <div class="label">Withdrawal PIN</div>
+                    <div class="status">
+                        {% if wallet.withdrawal_pin %}
+                            Protected
+                        {% else %}
+                            <a href="{% url 'wallets:security_settings' %}" style="color: var(--primary);">Setup PIN →</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="security-item">
+                <div class="security-icon enabled">✅</div>
+                <div class="security-text">
+                    <div class="label">Tor Network</div>
+                    <div class="status">Connected & Protected</div>
+                </div>
+            </div>
+
+            <div class="security-item">
+                <div class="security-icon {% if security_score >= 80 %}enabled{% else %}disabled{% endif %}">
+                    {% if security_score >= 80 %}✅{% elif security_score >= 50 %}⚠️{% else %}❌{% endif %}
+                </div>
+                <div class="security-text">
+                    <div class="label">Security Score</div>
+                    <div class="status">{{ security_score }}/100</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="recent-transactions">
+        <div class="transactions-header">
+            <h2>Recent Transactions</h2>
+        </div>
+        
+        {% if recent_transactions %}
+            <div class="transactions-list">
+                {% for transaction in recent_transactions %}
+                <div class="transaction-item">
+                    <div class="transaction-info">
+                        <div class="transaction-icon {{ transaction.type }}">
+                            {% if transaction.type == 'deposit' %}📥
+                            {% elif transaction.type == 'withdrawal' %}📤
+                            {% elif transaction.type == 'conversion' %}🔄
+                            {% else %}💰{% endif %}
+                        </div>
+                        <div class="transaction-details">
+                            <div class="transaction-type">
+                                {{ transaction.get_type_display|default:transaction.type|title }}
+                            </div>
+                            <div class="transaction-meta">
+                                {{ transaction.created_at|date:"M d, Y g:i A" }}
+                                {% if transaction.reference %} • {{ transaction.reference|truncatechars:20 }}{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="transaction-amount">
+                        <div class="amount-value {% if transaction.type == 'deposit' %}positive{% else %}negative{% endif %}">
+                            {% if transaction.type == 'deposit' %}+{% else %}-{% endif %}
+                            {{ transaction.amount|floatformat:8 }}
+                        </div>
+                        <div class="amount-currency">{{ transaction.currency|upper }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <a href="{% url 'wallets:transactions' %}" class="view-all-link">
+                View All Transactions →
+            </a>
+        {% else %}
+            <div class="empty-state">
+                <div class="icon">📊</div>
+                <h3>No transactions yet</h3>
+                <p>Your transaction history will appear here</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

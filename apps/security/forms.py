@@ -283,6 +283,8 @@ class SecureRegistrationForm(NoJSCaptchaMixin, UserCreationForm):
         fields = ("username", "email", "password1", "password2")
 
     def __init__(self, *args, **kwargs):
+        # Extract request before calling super() to ensure NoJSCaptchaMixin gets it
+        self.request = kwargs.get('request', None)
         super().__init__(*args, **kwargs)
 
         self.fields["username"].widget.attrs.update({"class": "form-control", "placeholder": "Username"})

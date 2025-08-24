@@ -197,7 +197,8 @@ SOCIAL_AUTH_DISABLED = True
 # Tor-specific context processor
 TEMPLATES[0]['OPTIONS']['context_processors'].extend([
     'core.context_processors.tor_safe_context',
-    'marketplace.context_processors.static_file_versions'
+    'marketplace.context_processors.static_file_versions',
+    'orders.context_processors.cart_context'
 ])
 
 # Add Tor security middleware
@@ -361,6 +362,11 @@ LOGGING = {
         },
         "accounts": {
             "handlers": ["pgp_file", "console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "captcha": {
+            "handlers": ["console", "file"],
             "level": "DEBUG",
             "propagate": True,
         },
