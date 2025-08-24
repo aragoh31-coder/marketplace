@@ -87,20 +87,22 @@ def advanced_challenge_verify(request):
 @csrf_protect
 @require_http_methods(["GET", "POST"])
 def pow_challenge_verify(request):
-    """Handle Proof of Work challenge verification"""
+    """Handle Proof of Work challenge verification with dedicated launcher"""
     
     if request.method == "POST":
         # Get PoW data
-        challenge = request.POST.get('pow_challenge')
-        signature = request.POST.get('pow_signature')
+        challenge_id = request.POST.get('challenge_id')
         nonce = request.POST.get('nonce', '').strip()
         
-        if not challenge or not signature or not nonce:
+        if not challenge_id or not nonce:
             messages.error(request, "Invalid PoW data")
             return redirect(request.session.get('ddos_redirect_after', '/'))
         
-        # Verify PoW solution
-        if ProofOfWork.verify_solution(challenge, signature, nonce):
+        # Import the PoW service
+        from core.pow_launcher import TorPoWService
+        
+        # Verify PoW solution using the service
+        if TorPoWService.verify_solution(challenge_id, nonce):
             # Generate token for successful PoW
             from core.antiddos_advanced import TorCircuitAwareness
             circuit_id = TorCircuitAwareness.get_circuit_id(request)
@@ -130,12 +132,23 @@ def pow_challenge_verify(request):
         else:
             messages.error(request, "Invalid Proof of Work solution")
     
-    # Generate new PoW challenge
-    challenge_data = AdvancedDDoSProtection.issue_challenge(request, 'pow')
+    # Generate new PoW challenge using the launcher service
+    from core.pow_launcher import TorPoWService
+    from core.antiddos_advanced import TorCircuitAwareness
     
-    return render(request, 'security/pow_challenge.html', {
+    circuit_id = TorCircuitAwareness.get_circuit_id(request)
+    session_id = request.session.session_key if hasattr(request, 'session') else circuit_id
+    
+    # Issue challenge with launcher
+    challenge_data = TorPoWService.issue_challenge(session_id, 'rate_limit')
+    
+    return render(request, 'security/pow_challenge_launcher.html', {
         'challenge': challenge_data,
-        'difficulty': challenge_data['challenge'].get('pow_data', {}).get('difficulty', 4)
+        'challenge_id': challenge_data['challenge_id'],
+        'difficulty': challenge_data['difficulty'],
+        'launcher_url': challenge_data['launcher_url'],
+        'download_url': challenge_data.get('download_url'),
+        'expires': challenge_data.get('expires', 0)
     })
 
 
@@ -280,3 +293,99 @@ def token_usage_example(request):
     return render(request, 'security/token_usage.html', {
         'example_code': example_code
     })
+
+
+@require_http_methods(["GET"])
+def pow_launcher(request, challenge_id):
+    """Display PoW launcher page"""
+    from core.pow_launcher import TorPoWLauncher, TorPoWService
+    
+    # Get challenge data
+    time_window = int(time.time() // 300)
+    challenge_data = {
+        'challenge_id': challenge_id,
+        'time_window': time_window,
+        'difficulty': 4,
+        'expires': (time_window + 1) * 300
+    }
+    
+    # Generate launcher HTML
+    launcher_html = TorPoWLauncher.create_web_launcher(challenge_data)
+    
+    return HttpResponse(launcher_html, content_type='text/html')
+
+
+@require_http_methods(["GET"])
+def pow_download_solver(request, challenge_id):
+    """Download PoW solver script"""
+    from core.pow_launcher import TorPoWLauncher
+    
+    # Generate solver script
+    script = TorPoWLauncher.get_launcher_script(challenge_id)
+    
+    response = HttpResponse(script, content_type='text/plain')
+    response['Content-Disposition'] = f'attachment; filename="pow_solver_{challenge_id}.py"'
+    
+    return response
+
+
+@require_http_methods(["GET"])
+def pow_get_solution(request, challenge_id):
+    """Get pre-computed solution if available"""
+    from django.core.cache import cache
+    
+    solution_key = f"pow:solution:{challenge_id}"
+    solution = cache.get(solution_key)
+    
+    if solution:
+        return JsonResponse({
+            'status': 'ready',
+            'challenge_id': challenge_id,
+            'nonce': solution['nonce'],
+            'hash': solution['hash'],
+            'computed_at': solution['computed_at']
+        })
+    else:
+        # Try to compute it now
+        from core.pow_launcher import TorPoWLauncher
+        
+        time_window = int(time.time() // 300)
+        solution = TorPoWLauncher._compute_solution(challenge_id, time_window, 4)
+        
+        if solution:
+            return JsonResponse({
+                'status': 'computed',
+                'challenge_id': challenge_id,
+                'nonce': solution['nonce'],
+                'hash': solution['hash']
+            })
+        else:
+            return JsonResponse({
+                'status': 'pending',
+                'message': 'Solution not yet available. Please use the solver.'
+            }, status=202)
+
+
+@require_http_methods(["GET"])
+def pow_solve_endpoint(request, challenge_id):
+    """Endpoint that returns a solver script for curl|python3"""
+    from core.pow_launcher import TorPoWLauncher
+    
+    # Return a minimal solver that outputs just the nonce
+    script = f"""
+import hashlib
+challenge_id = "{challenge_id}"
+time_window = {int(time.time() // 300)}
+difficulty = 4
+challenge = f"{{challenge_id}}:{{time_window}}:{{difficulty}}"
+target = '0' * difficulty
+nonce = 0
+while True:
+    solution = f"{{challenge}}:{{nonce}}"
+    if hashlib.sha256(solution.encode()).hexdigest().startswith(target):
+        print(nonce)
+        break
+    nonce += 1
+"""
+    
+    return HttpResponse(script, content_type='text/plain')

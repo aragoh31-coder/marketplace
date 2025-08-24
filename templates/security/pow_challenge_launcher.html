@@ -1,0 +1,253 @@
+{% extends "base_tor_safe.html" %}
+{% block title %}Proof of Work Challenge{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card card-elevation-3" style="max-width: 900px; margin: 0 auto;">
+        <div class="card-header">
+            <h2>⚡ Proof of Work Challenge</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <h4>🛡️ Enhanced Security Required</h4>
+                <p>Complete this Proof of Work challenge to continue.</p>
+                <small class="text-muted">Challenge ID: {{ challenge_id|slice:":8" }}...</small>
+            </div>
+            
+            <div class="launcher-section">
+                <h3>🚀 Automated PoW Launcher</h3>
+                <p>We provide multiple ways to solve this challenge automatically:</p>
+                
+                <div class="launcher-options">
+                    <!-- Option 1: Web Launcher -->
+                    <div class="launcher-option">
+                        <h4>Option 1: Web-Based Launcher</h4>
+                        <p>Open our dedicated launcher page that provides solving tools:</p>
+                        <a href="{{ launcher_url }}" class="btn btn-primary" target="_blank">
+                            🌐 Open PoW Launcher
+                        </a>
+                        <small class="text-muted">Opens in new tab/window</small>
+                    </div>
+                    
+                    <!-- Option 2: Download Script -->
+                    {% if download_url %}
+                    <div class="launcher-option">
+                        <h4>Option 2: Download Solver Script</h4>
+                        <p>Download a Python script that solves the PoW locally:</p>
+                        <a href="{{ download_url }}" class="btn btn-secondary" download>
+                            📥 Download Solver
+                        </a>
+                        <div class="code-example">
+                            <pre>python3 pow_solver_{{ challenge_id|slice:":8" }}.py</pre>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Option 3: One-Line Command -->
+                    <div class="launcher-option">
+                        <h4>Option 3: Terminal One-Liner</h4>
+                        <p>Run this command in your terminal:</p>
+                        <div class="code-example">
+                            <pre>curl -s {{ request.get_host }}/security/pow/solve/{{ challenge_id }}/ | python3</pre>
+                        </div>
+                        <small class="text-muted">This will output the nonce when found</small>
+                    </div>
+                    
+                    <!-- Option 4: Check Pre-computed -->
+                    <div class="launcher-option">
+                        <h4>Option 4: Check for Pre-computed Solution</h4>
+                        <p>We may have already solved this challenge:</p>
+                        <a href="/security/pow/solution/{{ challenge_id }}/" class="btn btn-info" target="_blank">
+                            🔍 Check Solution
+                        </a>
+                        <small class="text-muted">If available, you'll get the nonce immediately</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="manual-submission">
+                <h3>📝 Submit Your Solution</h3>
+                <p>Once you have the nonce (from any method above), submit it here:</p>
+                
+                <form method="post" action="{% url 'security:pow_verify' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="challenge_id" value="{{ challenge_id }}">
+                    
+                    <div class="form-group">
+                        <label for="nonce">Solution Nonce:</label>
+                        <input type="text" 
+                               id="nonce" 
+                               name="nonce" 
+                               class="form-input" 
+                               placeholder="Enter the nonce number"
+                               autocomplete="off"
+                               pattern="[0-9]+"
+                               required>
+                        <small class="form-text text-muted">
+                            The nonce is a number that produces {{ difficulty }} leading zeros in the hash.
+                        </small>
+                    </div>
+                    
+                    <div class="challenge-details">
+                        <h4>Challenge Details:</h4>
+                        <ul>
+                            <li><strong>Challenge ID:</strong> <code>{{ challenge_id }}</code></li>
+                            <li><strong>Difficulty:</strong> {{ difficulty }} ({{ difficulty }} leading zeros)</li>
+                            <li><strong>Type:</strong> {{ challenge.type|default:"time_based" }}</li>
+                            {% if expires %}
+                            <li><strong>Expires:</strong> <span class="countdown" data-expires="{{ expires }}">in 5 minutes</span></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-primary">
+                            ⚡ Submit Solution
+                        </button>
+                        <a href="/" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="pow-faq">
+                <h4>❓ Frequently Asked Questions</h4>
+                <details>
+                    <summary>What is Proof of Work?</summary>
+                    <p>Proof of Work requires computational effort to find a specific hash pattern. It's designed to be expensive for attackers but manageable for legitimate users.</p>
+                </details>
+                <details>
+                    <summary>Why am I seeing this?</summary>
+                    <p>Your browsing pattern triggered our anti-DDoS protection. This is a one-time challenge to verify you're a legitimate user.</p>
+                </details>
+                <details>
+                    <summary>How long does it take?</summary>
+                    <p>With difficulty {{ difficulty }}, it typically takes 10-60 seconds on a modern computer.</p>
+                </details>
+                <details>
+                    <summary>Is this anonymous?</summary>
+                    <p>Yes! The PoW challenge doesn't collect any personal information. It's purely computational.</p>
+                </details>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.launcher-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.launcher-options {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.launcher-option {
+    padding: 1.5rem;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+.launcher-option h4 {
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+.code-example {
+    background: var(--bg-tertiary);
+    padding: 1rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+    overflow-x: auto;
+}
+
+.code-example pre {
+    margin: 0;
+    color: var(--text-primary);
+    font-family: monospace;
+}
+
+.manual-submission {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: rgba(139, 92, 246, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.challenge-details {
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+}
+
+.challenge-details ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.challenge-details code {
+    background: rgba(139, 92, 246, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.pow-faq {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.pow-faq details {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.pow-faq summary {
+    font-weight: bold;
+    color: var(--primary);
+    padding: 0.5rem;
+}
+
+.pow-faq details[open] summary {
+    margin-bottom: 0.5rem;
+}
+
+.countdown {
+    color: var(--warning);
+    font-weight: bold;
+    font-family: monospace;
+}
+
+/* Button styles */
+.launcher-option .btn {
+    margin-top: 0.5rem;
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+    .launcher-options {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+
+<!-- Meta refresh as backup -->
+{% if expires %}
+<meta http-equiv="refresh" content="300;url={% url 'security:pow_verify' %}">
+{% endif %}
+{% endblock %}

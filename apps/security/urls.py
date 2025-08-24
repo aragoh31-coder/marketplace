@@ -29,4 +29,10 @@ urlpatterns = [
     path('challenge/dual/', views_advanced.dual_challenge_verify, name='dual_challenge_verify'),
     path('api/token/', views_advanced.get_auth_token, name='get_auth_token'),
     path('token-usage/', views_advanced.token_usage_example, name='token_usage'),
+    
+    # PoW Launcher URLs
+    path('pow/launcher/<str:challenge_id>/', views_advanced.pow_launcher, name='pow_launcher'),
+    path('pow/download/<str:challenge_id>/', views_advanced.pow_download_solver, name='pow_download'),
+    path('pow/solution/<str:challenge_id>/', views_advanced.pow_get_solution, name='pow_solution'),
+    path('pow/solve/<str:challenge_id>/', views_advanced.pow_solve_endpoint, name='pow_solve'),
 ]
