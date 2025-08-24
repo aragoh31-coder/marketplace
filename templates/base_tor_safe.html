@@ -841,10 +841,6 @@
             display: inline-block;
         }
         
-        .dropdown-toggle {
-            display: none;
-        }
-        
         .dropdown-label {
             display: inline-block;
             padding: 0.5rem 1rem;
@@ -880,12 +876,15 @@
                         0 0 40px rgba(139, 92, 246, 0.1);
             backdrop-filter: blur(10px);
             z-index: 1000;
+            pointer-events: none;
         }
         
-        .dropdown-toggle:checked ~ .dropdown-menu {
+        /* Show dropdown on hover */
+        .nav-dropdown:hover .dropdown-menu {
             opacity: 1;
             visibility: visible;
             transform: translateY(0);
+            pointer-events: auto;
         }
         
         .dropdown-item {
@@ -953,7 +952,9 @@
                 background: rgba(139, 92, 246, 0.05);
             }
             
-            .dropdown-toggle:checked ~ .dropdown-menu {
+            /* On mobile, clicking dropdown label toggles menu */
+            .nav-dropdown:focus-within .dropdown-menu,
+            .nav-dropdown.active .dropdown-menu {
                 display: block;
             }
         }
@@ -1096,6 +1097,28 @@
             }
         }
     </style>
+    
+    <script>
+        // Mobile dropdown toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdownLabel = document.querySelector('.dropdown-label');
+            const navDropdown = document.querySelector('.nav-dropdown');
+            
+            if (dropdownLabel && navDropdown) {
+                dropdownLabel.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    navDropdown.classList.toggle('active');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!navDropdown.contains(e.target)) {
+                        navDropdown.classList.remove('active');
+                    }
+                });
+            }
+        });
+    </script>
 </head>
 <body>
     <!-- Header with Smooth Toolbar -->
@@ -1118,10 +1141,9 @@
                     
                     <!-- User Dropdown -->
                     <div class="nav-dropdown">
-                        <input type="checkbox" id="user-dropdown-toggle" class="dropdown-toggle">
-                        <label for="user-dropdown-toggle" class="dropdown-label">
+                        <span class="dropdown-label">
                             👤 {{ user.username|truncatechars:15 }} ▼
-                        </label>
+                        </span>
                         <div class="dropdown-menu">
                             <a href="{% url 'accounts:profile' %}" class="dropdown-item">🔧 Profile Settings</a>
                             <a href="{% url 'messaging:inbox' %}" class="dropdown-item">📬 Messages</a>
