@@ -14,7 +14,7 @@
     </div>
     
     {% if cart_items %}
-    <div class="cart-wrapper">
+    <div class="cart-wrapper box-glow card-elevation-3">
         <table class="cart-table">
             <thead>
                 <tr>
@@ -62,6 +62,52 @@
             </tbody>
         </table>
         
+        <!-- Mobile Cart Items -->
+        <div class="mobile-cart-items">
+            {% for item in cart_items %}
+            <div class="mobile-cart-item">
+                <div class="mobile-product-header">
+                    <div class="mobile-product-name">{{ item.product.name }}</div>
+                </div>
+                
+                <div class="mobile-product-details">
+                    <div class="mobile-detail-item">
+                        <span class="mobile-detail-label">Category</span>
+                        <span>{{ item.product.category.name }}</span>
+                    </div>
+                    <div class="mobile-detail-item">
+                        <span class="mobile-detail-label">Vendor</span>
+                        <a href="{% url 'vendors:profile' item.product.vendor.id %}">
+                            {{ item.product.vendor.vendor_name }}
+                        </a>
+                    </div>
+                    <div class="mobile-detail-item">
+                        <span class="mobile-detail-label">Price (BTC)</span>
+                        <span class="price-btc">₿ {{ item.product.price_btc }}</span>
+                    </div>
+                    <div class="mobile-detail-item">
+                        <span class="mobile-detail-label">Price (XMR)</span>
+                        <span class="price-xmr">ɱ {{ item.product.price_xmr }}</span>
+                    </div>
+                </div>
+                
+                <div class="mobile-cart-actions">
+                    <form method="post" action="{% url 'orders:update_cart' item.product.id %}" class="inline-form" style="display: flex; gap: 0.5rem; flex: 1;">
+                        {% csrf_token %}
+                        <input type="hidden" name="honeypot_field" class="honeypot">
+                        <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product.stock_quantity }}" class="quantity-input">
+                        <button type="submit" class="btn-update">Update</button>
+                    </form>
+                    <form method="post" action="{% url 'orders:remove_from_cart' item.product.id %}" class="inline-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="honeypot_field" class="honeypot">
+                        <button type="submit" class="btn-remove">×</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
         <div class="cart-actions">
             <a href="{% url 'products:list' %}" class="btn btn-secondary">Continue Shopping</a>
             
@@ -77,7 +123,8 @@
         </div>
     </div>
     {% else %}
-    <div class="empty-cart">
+    <div class="empty-cart box-glow card-elevation-3">
+        <div class="empty-icon">🛒</div>
         <h3>Your cart is empty</h3>
         <p>Browse our products to add items to your cart.</p>
         <a href="{% url 'products:list' %}" class="btn btn-primary">Browse Products</a>
@@ -87,37 +134,73 @@
 
 <style>
     .cart-wrapper {
-        background: #1a1a1a;
-        padding: 30px;
-        border-radius: 8px;
-        border: 1px solid #333;
+        background: var(--bg-card);
+        padding: 2rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        overflow-x: auto;
     }
     
     .cart-table {
         width: 100%;
-        margin-bottom: 30px;
+        margin-bottom: 2rem;
+        table-layout: fixed;
+        border-collapse: collapse;
     }
     
     .cart-table th {
-        background: #2a2a2a;
-        padding: 15px;
+        background: var(--bg-secondary);
+        padding: 1rem;
         text-align: left;
-        border-bottom: 2px solid #444;
+        border-bottom: 2px solid var(--border);
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
     }
     
     .cart-table td {
-        padding: 20px 15px;
-        border-bottom: 1px solid #333;
+        padding: 1.25rem 1rem;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
     }
+    
+    /* Column widths */
+    .cart-table th:nth-child(1),
+    .cart-table td:nth-child(1) { width: 35%; }
+    .cart-table th:nth-child(2),
+    .cart-table td:nth-child(2) { width: 20%; }
+    .cart-table th:nth-child(3),
+    .cart-table td:nth-child(3) { width: 12%; }
+    .cart-table th:nth-child(4),
+    .cart-table td:nth-child(4) { width: 12%; }
+    .cart-table th:nth-child(5),
+    .cart-table td:nth-child(5) { width: 13%; }
+    .cart-table th:nth-child(6),
+    .cart-table td:nth-child(6) { width: 8%; }
     
     .product-info {
         display: flex;
         flex-direction: column;
+        gap: 0.25rem;
+        max-width: 100%;
+        overflow: hidden;
+    }
+    
+    .product-info strong {
+        color: var(--text-primary);
+        font-size: 1rem;
+        line-height: 1.4;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
     
     .product-info small {
-        color: #888;
-        margin-top: 5px;
+        color: var(--text-dim);
+        font-size: 0.875rem;
     }
     
     .price-btc {
@@ -195,15 +278,107 @@
     
     .empty-cart {
         text-align: center;
-        padding: 60px;
-        background: #1a1a1a;
-        border-radius: 8px;
-        border: 1px solid #333;
+        padding: 4rem 2rem;
+        background: var(--bg-card);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+    
+    .empty-icon {
+        font-size: 4rem;
+        opacity: 0.3;
+        margin-bottom: 1rem;
     }
     
     .honeypot {
         position: absolute;
         left: -9999px;
+    }
+    
+    /* Mobile Responsive Design */
+    @media (max-width: 768px) {
+        .cart-wrapper {
+            padding: 1rem;
+            margin: 0 -1rem;
+            border-radius: 0;
+        }
+        
+        /* Hide table on mobile, show cards instead */
+        .cart-table {
+            display: none;
+        }
+        
+        /* Mobile cart items as cards */
+        .mobile-cart-items {
+            display: block;
+        }
+        
+        .mobile-cart-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .mobile-product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.75rem;
+        }
+        
+        .mobile-product-name {
+            flex: 1;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-right: 1rem;
+            word-break: break-word;
+        }
+        
+        .mobile-product-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .mobile-detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .mobile-detail-label {
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .mobile-cart-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .mobile-cart-actions .quantity-input {
+            flex: 0 0 60px;
+        }
+        
+        .mobile-cart-actions .btn-update {
+            flex: 1;
+        }
+        
+        .mobile-cart-actions .btn-remove {
+            flex: 0 0 auto;
+        }
+    }
+    
+    /* Desktop only */
+    @media (min-width: 769px) {
+        .mobile-cart-items {
+            display: none;
+        }
     }
 </style>
 {% endblock %}
