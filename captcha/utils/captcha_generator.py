@@ -16,9 +16,9 @@ class OneClickCaptcha:
         width=300,          # Slightly larger for better touch targets
         height=150,
         count=6,
-        radius_range=(20, 28),  # Larger circles for accessibility
+        radius_range=(25, 35),  # Even larger circles for easier clicking
         cut_angle=60,
-        margin=25,          # More margin to prevent edge touches
+        margin=30,          # More margin to prevent edge touches
         use_noise=True,
         max_attempts=1000,
         timeout_seconds=300,  # 5 minute timeout
@@ -233,10 +233,12 @@ class OneClickCaptcha:
         dy = click_y - data['y']
         dist_sq = dx * dx + dy * dy
         
-        # Allow slight margin of error (2 pixels)
-        is_valid = dist_sq <= (data['r'] + 2) ** 2
+        # Allow generous margin of error (50% of radius + 5 pixels)
+        # This makes it much more forgiving for users
+        margin = int(data['r'] * 0.5) + 5
+        is_valid = dist_sq <= (data['r'] + margin) ** 2
         
-        logger.info(f"Click validation - Distance squared: {dist_sq}, Required: {(data['r'] + 2) ** 2}, Valid: {is_valid}")
+        logger.info(f"Click validation - Distance squared: {dist_sq}, Required: {(data['r'] + margin) ** 2}, Margin: {margin}, Valid: {is_valid}")
         
         if is_valid:
             # Success - clean up
