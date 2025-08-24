@@ -5,6 +5,7 @@ from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.core.exceptions import ValidationError
 
 from .models import User
+from .totp_service import TOTPService
 
 
 class UserProfileForm(forms.ModelForm):
@@ -127,3 +128,71 @@ class DeleteAccountForm(forms.Form):
         if confirm != "DELETE":
             raise forms.ValidationError("Please type DELETE to confirm")
         return confirm
+
+
+class TOTPSetupForm(forms.Form):
+    """Form for setting up TOTP authentication"""
+    token = forms.CharField(
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter 6-digit code',
+            'autocomplete': 'off',
+            'maxlength': '6',
+            'pattern': '[0-9]{6}'
+        }),
+        help_text="Enter the 6-digit code from your authenticator app"
+    )
+    
+    def __init__(self, *args, **kwargs):
+        self.secret = kwargs.pop('secret', None)
+        super().__init__(*args, **kwargs)
+    
+    def clean_token(self):
+        token = self.cleaned_data.get('token')
+        if token and self.secret:
+            if not TOTPService.verify_token(self.secret, token):
+                raise ValidationError("Invalid verification code. Please try again.")
+        return token
+
+
+class TOTPVerificationForm(forms.Form):
+    """Form for verifying TOTP tokens during login"""
+    token = forms.CharField(
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter 6-digit code',
+            'autocomplete': 'off',
+            'maxlength': '6',
+            'pattern': '[0-9]{6}'
+        }),
+        help_text="Enter the 6-digit code from your authenticator app",
+        required=False
+    )
+    backup_code = forms.CharField(
+        max_length=9,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'XXXX-XXXX',
+            'autocomplete': 'off',
+            'pattern': '[A-Z0-9]{4}-[A-Z0-9]{4}'
+        }),
+        help_text="Or enter a backup code",
+        required=False
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        token = cleaned_data.get('token')
+        backup_code = cleaned_data.get('backup_code')
+        
+        if not token and not backup_code:
+            raise ValidationError("Please enter either a verification code or a backup code.")
+        
+        if token and backup_code:
+            raise ValidationError("Please enter only one: either a verification code or a backup code.")
+        
+        return cleaned_data

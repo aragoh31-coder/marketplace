@@ -17,6 +17,11 @@ class User(AbstractUser, PrivacyModel):
     pgp_login_enabled = models.BooleanField(default=False)
     pgp_challenge = models.TextField(blank=True, null=True)
     pgp_challenge_expires = models.DateTimeField(null=True, blank=True)
+    
+    # TOTP 2FA fields
+    totp_enabled = models.BooleanField(default=False)
+    totp_secret = models.CharField(max_length=32, blank=True, null=True)
+    totp_backup_codes = models.JSONField(default=list, blank=True)
 
     panic_password = models.CharField(max_length=255, blank=True, null=True)
     session_fingerprints = models.JSONField(default=dict)
@@ -41,6 +46,14 @@ class User(AbstractUser, PrivacyModel):
     is_vendor = models.BooleanField(default=False)
     account_created = models.DateTimeField(auto_now_add=True)
     last_activity = models.DateTimeField(default=timezone.now)
+
+    def has_2fa_enabled(self):
+        """Check if user has any 2FA method enabled"""
+        return self.pgp_login_enabled or self.totp_enabled
+    
+    def requires_both_2fa(self):
+        """Check if user requires both 2FA methods (vendors must have both)"""
+        return self.is_vendor
 
     def get_trust_level(self):
         """Calculate trust level based on trades and feedback"""

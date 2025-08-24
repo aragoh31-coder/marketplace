@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import views
 from . import views_oneclick
+from . import views_2fa
 
 app_name = "accounts"
 
@@ -20,4 +21,12 @@ urlpatterns = [
     path("profile/login-history/", views.login_history_view, name="login_history"),
     path("pgp-challenge/", views.pgp_challenge_view, name="pgp_challenge"),
     path("test-pgp/", views.test_pgp_encryption, name="test_pgp"),
+    
+    # TOTP 2FA URLs
+    path("profile/totp/setup/", views.totp_setup, name="totp_setup"),
+    path("profile/totp/disable/", views.totp_disable, name="totp_disable"),
+    path("profile/totp/backup-codes/", views.totp_backup_codes, name="totp_backup_codes"),
+    
+    # 2FA verification
+    path("2fa/verify/", views_2fa.two_factor_verify, name="2fa_verify"),
 ]

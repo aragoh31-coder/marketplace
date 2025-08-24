@@ -127,9 +127,23 @@ class SecureLoginViewOneClick(FormView):
         user = authenticate(self.request, username=username, password=password)
         
         if user:
-            login(self.request, user)
-            messages.success(self.request, f'Welcome back, {user.username}!')
-            return super().form_valid(form)
+            # Check if user has 2FA enabled
+            if user.has_2fa_enabled():
+                # Store user ID and next URL in session for 2FA flow
+                self.request.session['2fa_user_id'] = str(user.id)
+                self.request.session['2fa_next_url'] = self.get_success_url()
+                
+                # Initialize 2FA verification status
+                self.request.session['2fa_pgp_verified'] = False
+                self.request.session['2fa_totp_verified'] = False
+                
+                # Redirect to 2FA verification
+                return redirect('accounts:2fa_verify')
+            else:
+                # No 2FA, proceed with regular login
+                login(self.request, user)
+                messages.success(self.request, f'Welcome back, {user.username}!')
+                return super().form_valid(form)
         else:
             messages.error(self.request, 'Invalid username or password.')
             return self.form_invalid(form)

@@ -18,9 +18,10 @@ from apps.security.forms import SecureLoginForm, SecureRegistrationForm
 from core.utils.cache import log_event
 from products.models import Product
 
-from .forms import CustomPasswordChangeForm, DeleteAccountForm, PGPKeyForm, UserProfileForm
+from .forms import CustomPasswordChangeForm, DeleteAccountForm, PGPKeyForm, UserProfileForm, TOTPSetupForm, TOTPVerificationForm
 from .models import LoginHistory, User
 from .pgp_service import PGPService
+from .totp_service import TOTPService
 
 User = get_user_model()
 
@@ -758,3 +759,102 @@ def pgp_challenge_view(request):
             "time_remaining": time_remaining,
         },
     )
+
+
+@login_required
+def totp_setup(request):
+    """Setup TOTP for the user"""
+    if request.user.totp_enabled:
+        messages.warning(request, "TOTP is already enabled for your account.")
+        return redirect("accounts:profile")
+    
+    # Get or create TOTP setup data from session
+    if 'totp_setup' not in request.session:
+        setup_data = TOTPService.setup_totp(request.user)
+        request.session['totp_setup'] = setup_data
+    else:
+        setup_data = request.session['totp_setup']
+    
+    if request.method == "POST":
+        form = TOTPSetupForm(request.POST, secret=setup_data['secret'])
+        if form.is_valid():
+            # Enable TOTP for the user
+            request.user.totp_secret = setup_data['secret']
+            request.user.totp_backup_codes = setup_data['backup_codes']
+            request.user.totp_enabled = True
+            request.user.save()
+            
+            # Clear setup data from session
+            del request.session['totp_setup']
+            
+            messages.success(request, "TOTP authentication has been successfully enabled!")
+            
+            # Check if user is vendor and needs to enable PGP as well
+            if request.user.is_vendor and not request.user.pgp_login_enabled:
+                messages.warning(request, "As a vendor, you must also enable PGP authentication.")
+                return redirect("accounts:pgp_settings")
+            
+            return redirect("accounts:totp_backup_codes")
+    else:
+        form = TOTPSetupForm()
+    
+    context = {
+        'form': form,
+        'qr_code': setup_data['qr_code'],
+        'secret': setup_data['secret'],
+        'is_vendor': request.user.is_vendor
+    }
+    
+    return render(request, "accounts/totp_setup.html", context)
+
+
+@login_required
+def totp_disable(request):
+    """Disable TOTP for the user"""
+    if not request.user.totp_enabled:
+        messages.warning(request, "TOTP is not enabled for your account.")
+        return redirect("accounts:profile")
+    
+    # Vendors cannot disable TOTP
+    if request.user.is_vendor:
+        messages.error(request, "Vendors are required to have TOTP enabled.")
+        return redirect("accounts:profile")
+    
+    if request.method == "POST":
+        password = request.POST.get("password")
+        user = authenticate(username=request.user.username, password=password)
+        if user is not None:
+            request.user.totp_enabled = False
+            request.user.totp_secret = None
+            request.user.totp_backup_codes = []
+            request.user.save()
+            
+            messages.success(request, "TOTP authentication has been disabled.")
+            return redirect("accounts:profile")
+        else:
+            messages.error(request, "Incorrect password.")
+    
+    return render(request, "accounts/totp_disable.html")
+
+
+@login_required
+def totp_backup_codes(request):
+    """Display TOTP backup codes"""
+    if not request.user.totp_enabled:
+        messages.warning(request, "TOTP is not enabled for your account.")
+        return redirect("accounts:profile")
+    
+    if request.method == "POST":
+        # Generate new backup codes
+        new_codes = TOTPService.generate_backup_codes()
+        request.user.totp_backup_codes = new_codes
+        request.user.save()
+        
+        messages.success(request, "New backup codes have been generated.")
+        return redirect("accounts:totp_backup_codes")
+    
+    context = {
+        'backup_codes': request.user.totp_backup_codes
+    }
+    
+    return render(request, "accounts/totp_backup_codes.html", context)
