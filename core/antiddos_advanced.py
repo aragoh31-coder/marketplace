@@ -532,7 +532,22 @@ class AdvancedDDoSProtection:
         circuit_id = TorCircuitAwareness.get_circuit_id(request)
         session_id = request.session.session_key if hasattr(request, 'session') else circuit_id
         
-        # Generate challenge
+        # For PoW challenges, use the dedicated launcher
+        if challenge_type == 'pow':
+            from core.pow_launcher import TorPoWService
+            
+            # Determine reason based on circuit reputation
+            reputation_key = f"circuit:{circuit_id}:reputation"
+            reputation = cache.get(reputation_key, 100)
+            reason = 'attack' if reputation < 30 else 'rate_limit'
+            
+            # Issue PoW challenge with launcher
+            challenge_data = TorPoWService.issue_challenge(session_id, reason)
+            logger.info(f"Issued PoW challenge with launcher for session {session_id[:8]}")
+            
+            return challenge_data
+        
+        # For other challenges, use HMAC chain
         challenge_data = HMACChallengeChain.generate_challenge(
             session_id,
             challenge_type
