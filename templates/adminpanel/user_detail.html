@@ -113,6 +113,80 @@
             {% endif %}
         </div>
 
+        <!-- Recent Deposits -->
+        <div class="detail-card full-width">
+            <h3>💵 Recent Deposits</h3>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Currency</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>TX ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for deposit in deposits %}
+                        <tr>
+                            <td>{{ deposit.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>{{ deposit.currency }}</td>
+                            <td>{{ deposit.amount|floatformat:8 }}</td>
+                            <td>
+                                <span class="status-badge status-{{ deposit.status|lower }}">
+                                    {{ deposit.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="tx-id">{{ deposit.tx_id|truncatechars:20 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No deposits found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Withdrawals -->
+        <div class="detail-card full-width">
+            <h3>💸 Recent Withdrawals</h3>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Currency</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for withdrawal in withdrawals %}
+                        <tr>
+                            <td>{{ withdrawal.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>{{ withdrawal.currency }}</td>
+                            <td>{{ withdrawal.amount|floatformat:8 }}</td>
+                            <td>
+                                <span class="status-badge status-{{ withdrawal.status|lower }}">
+                                    {{ withdrawal.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="address">{{ withdrawal.to_address|truncatechars:20 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No withdrawals found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Security Information Card -->
         <div class="detail-card">
             <h3>🔐 Security Settings</h3>
@@ -149,50 +223,50 @@
         </div>
 
         <!-- Vendor Information Card -->
-        {% if vendor_info %}
+        {% if vendor %}
         <div class="detail-card">
             <h3>🏪 Vendor Information</h3>
             <div class="detail-row">
                 <span class="label">Vendor Name:</span>
-                <span class="value">{{ vendor_info.vendor_name }}</span>
+                <span class="value">{{ vendor.vendor_name }}</span>
             </div>
             <div class="detail-row">
                 <span class="label">Trust Level:</span>
-                <span class="value trust-{{ vendor_info.trust_level|lower }}">{{ vendor_info.get_trust_level_display }}</span>
+                <span class="value trust-{{ vendor.trust_level|lower }}">{{ vendor.trust_score }}/10 ({{ vendor.get_trust_level_display }})</span>
             </div>
             <div class="detail-row">
                 <span class="label">Approved:</span>
-                <span class="value status-{{ vendor_stats.is_approved|yesno:'approved,pending' }}">
-                    {{ vendor_stats.is_approved|yesno:"Yes,Pending" }}
+                <span class="value status-{{ vendor.is_approved|yesno:'approved,pending' }}">
+                    {{ vendor.is_approved|yesno:"Yes,Pending" }}
                 </span>
             </div>
             <div class="detail-row">
                 <span class="label">Vacation Mode:</span>
-                <span class="value status-{{ vendor_stats.vacation_mode|yesno:'vacation,active' }}">
-                    {{ vendor_stats.vacation_mode|yesno:"On Vacation,Active" }}
+                <span class="value status-{{ vendor.vacation_mode|yesno:'vacation,active' }}">
+                    {{ vendor.vacation_mode|yesno:"On Vacation,Active" }}
                 </span>
             </div>
             <div class="detail-row">
                 <span class="label">Rating:</span>
-                <span class="value">{{ vendor_stats.vendor_rating|floatformat:1 }}/5.0</span>
+                <span class="value">{{ vendor.average_rating|floatformat:2 }}/5.0 ({{ vendor.total_reviews }} reviews)</span>
             </div>
             
             <div class="vendor-stats">
                 <div class="stat-row">
-                    <span class="label">Total Products:</span>
-                    <span class="value">{{ vendor_stats.total_products }}</span>
+                    <span class="label">Total Sales:</span>
+                    <span class="value">{{ vendor_stats.total_sales }}</span>
                 </div>
                 <div class="stat-row">
                     <span class="label">Active Products:</span>
                     <span class="value">{{ vendor_stats.active_products }}</span>
                 </div>
                 <div class="stat-row">
-                    <span class="label">Total Sales:</span>
-                    <span class="value">{{ vendor_stats.total_sales }}</span>
+                    <span class="label">BTC Revenue:</span>
+                    <span class="value">₿ {{ vendor_stats.total_revenue_btc|floatformat:8 }}</span>
                 </div>
                 <div class="stat-row">
-                    <span class="label">Pending Orders:</span>
-                    <span class="value">{{ vendor_stats.pending_orders }}</span>
+                    <span class="label">XMR Revenue:</span>
+                    <span class="value">ɱ {{ vendor_stats.total_revenue_xmr|floatformat:8 }}</span>
                 </div>
             </div>
         </div>
@@ -200,15 +274,27 @@
 
         <!-- Order History Card -->
         <div class="detail-card full-width">
-            <h3>📦 Order History</h3>
+            <h3>📦 Order History ({{ order_stats.total }})</h3>
             <div class="order-summary">
                 <div class="summary-item">
                     <span class="label">Total Orders:</span>
-                    <span class="value">{{ total_orders }}</span>
+                    <span class="value">{{ order_stats.total|default:0 }}</span>
                 </div>
                 <div class="summary-item">
-                    <span class="label">Completed Orders:</span>
-                    <span class="value">{{ completed_orders }}</span>
+                    <span class="label">Completed:</span>
+                    <span class="value">{{ order_stats.completed|default:0 }}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Disputed:</span>
+                    <span class="value">{{ order_stats.disputed|default:0 }}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Total BTC Spent:</span>
+                    <span class="value">₿ {{ order_stats.total_spent_btc|default:"0"|floatformat:8 }}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Total XMR Spent:</span>
+                    <span class="value">ɱ {{ order_stats.total_spent_xmr|default:"0"|floatformat:8 }}</span>
                 </div>
             </div>
             
@@ -595,6 +681,12 @@
     
     .btn:hover {
         opacity: 0.8;
+    }
+    
+    .tx-id, .address {
+        font-family: monospace;
+        font-size: 0.85rem;
+        color: #9ca3af;
     }
 </style>
 {% endblock %}
