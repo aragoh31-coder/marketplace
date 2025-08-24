@@ -1,0 +1,18 @@
+# Tor configuration for hidden service
+HiddenServiceDir /var/lib/tor/django_onion/
+HiddenServicePort 80 127.0.0.1:8080
+
+# Additional security settings
+SocksPort 0
+RunAsDaemon 0
+
+# Logging
+Log notice stdout
+
+# Performance
+CircuitBuildTimeout 10
+LearnCircuitBuildTimeout 0
+ClientOnly 1
+ExcludeNodes {us},{ca},{gb},{au},{nz}
+ExcludeExitNodes {us},{ca},{gb},{au},{nz}
+StrictNodes 1
