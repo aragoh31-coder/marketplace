@@ -753,6 +753,7 @@
                         </label>
                         <div class="dropdown-menu">
                             <a href="{% url 'accounts:profile' %}" class="dropdown-item">🔧 Profile Settings</a>
+                            <a href="{% url 'orders:cart' %}" class="dropdown-item">🛒 Cart</a>
                             {% if user.vendor %}
                                 <a href="{% url 'vendors:dashboard' %}" class="dropdown-item">🏪 Vendor Dashboard</a>
                             {% endif %}
