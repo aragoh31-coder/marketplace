@@ -1034,14 +1034,16 @@
             backdrop-filter: blur(10px);
             z-index: 1000;
             pointer-events: none;
+            display: block; /* Ensure it's not display: none */
         }
         
         /* Show dropdown on hover */
         .nav-dropdown:hover .dropdown-menu {
-            opacity: 1;
-            visibility: visible;
+            opacity: 1 !important;
+            visibility: visible !important;
             transform: translateY(0);
-            pointer-events: auto;
+            pointer-events: auto !important;
+            display: block !important;
         }
         
         .dropdown-item {
@@ -1112,7 +1114,9 @@
             /* On mobile, clicking dropdown label toggles menu */
             .nav-dropdown:focus-within .dropdown-menu,
             .nav-dropdown.active .dropdown-menu {
-                display: block;
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
             }
         }
         
