@@ -56,7 +56,7 @@
                     <h3>Vendor Information</h3>
                     <div class="vendor-info">
                         <div class="vendor-name">
-                            <a href="{% url 'vendors:detail' product.vendor.id %}">{{ product.vendor.vendor_name }}</a>
+                            <a href="{% url 'vendors:profile' product.vendor.id %}">{{ product.vendor.vendor_name }}</a>
                         </div>
                         <div class="vendor-trust">Trust Level: {{ product.vendor.trust_level }}</div>
                         {% if product.vendor.is_approved %}

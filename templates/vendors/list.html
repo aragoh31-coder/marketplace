@@ -10,7 +10,7 @@
         {% for vendor in vendors %}
         <div class="vendor-card">
             <div class="vendor-header">
-                <h3><a href="{% url 'vendors:detail' vendor.id %}">{{ vendor.vendor_name }}</a></h3>
+                <h3><a href="{% url 'vendors:profile' vendor.id %}">{{ vendor.vendor_name }}</a></h3>
                 {% if vendor.is_approved %}
                     <span class="verified-badge">✓ Verified</span>
                 {% endif %}
@@ -36,7 +36,7 @@
             </div>
             
             <div class="vendor-actions">
-                <a href="{% url 'vendors:detail' vendor.id %}" class="btn btn-primary">View Store</a>
+                <a href="{% url 'vendors:profile' vendor.id %}" class="btn btn-primary">View Store</a>
                 <a href="{% url 'messaging:compose' %}?to={{ vendor.user.username }}" class="btn btn-secondary">Message</a>
             </div>
         </div>
