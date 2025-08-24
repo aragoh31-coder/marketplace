@@ -89,7 +89,7 @@ class EscrowService:
         # Determine amount and fee
         if order.currency_used == 'BTC':
             amount = order.total_btc
-            fee = amount * Decimal('0.02')  # 2% marketplace fee
+            fee = amount * Decimal('0.05')  # 5% marketplace fee
             vendor_amount = amount - fee
             
             # Move from buyer's escrow to vendor's balance
@@ -98,7 +98,7 @@ class EscrowService:
             
         elif order.currency_used == 'XMR':
             amount = order.total_xmr
-            fee = amount * Decimal('0.02')  # 2% marketplace fee
+            fee = amount * Decimal('0.05')  # 5% marketplace fee
             vendor_amount = amount - fee
             
             # Move from buyer's escrow to vendor's balance
