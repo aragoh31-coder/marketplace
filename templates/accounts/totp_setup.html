@@ -1,0 +1,80 @@
+{% extends "base_tor_safe.html" %}
+
+{% block title %}Setup TOTP Authentication{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card card-elevation-3">
+        <div class="card-header">
+            <h2>🔐 Setup TOTP Authentication</h2>
+        </div>
+        <div class="card-body">
+            {% if is_vendor %}
+            <div class="alert alert-warning">
+                <strong>⚠️ Vendor Requirement:</strong> As a vendor, you must enable both TOTP and PGP authentication.
+            </div>
+            {% endif %}
+            
+            <div class="setup-steps">
+                <h3>Step 1: Scan QR Code</h3>
+                <p>Use your authenticator app (Google Authenticator, Authy, etc.) to scan this QR code:</p>
+                
+                <div class="qr-code-container" style="text-align: center; margin: 2rem 0;">
+                    <img src="data:image/png;base64,{{ qr_code }}" alt="TOTP QR Code" style="border: 2px solid var(--border); padding: 1rem; background: white;">
+                </div>
+                
+                <div class="manual-entry">
+                    <h4>Can't scan? Enter manually:</h4>
+                    <div class="manual-code">
+                        <code>{{ secret }}</code>
+                    </div>
+                    <p class="text-muted">Account: {{ user.username }}<br>Issuer: SecureMarket</p>
+                </div>
+                
+                <h3>Step 2: Verify Code</h3>
+                <p>Enter the 6-digit code from your authenticator app to complete setup:</p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        {{ form.token.label_tag }}
+                        {{ form.token }}
+                        {% if form.token.errors %}
+                            <div class="text-danger">{{ form.token.errors.0 }}</div>
+                        {% endif %}
+                        {% if form.token.help_text %}
+                            <small class="form-text text-muted">{{ form.token.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-primary">Verify & Enable TOTP</button>
+                        <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.manual-code {
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    margin: 1rem 0;
+    text-align: center;
+    letter-spacing: 0.2em;
+}
+
+.setup-steps h3 {
+    color: var(--primary);
+    margin-top: 2rem;
+}
+
+.setup-steps h3:first-child {
+    margin-top: 0;
+}
+</style>
+{% endblock %}

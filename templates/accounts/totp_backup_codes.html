@@ -1,0 +1,87 @@
+{% extends "base_tor_safe.html" %}
+
+{% block title %}TOTP Backup Codes{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card card-elevation-3">
+        <div class="card-header">
+            <h2>🔑 TOTP Backup Codes</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <strong>⚠️ Important:</strong> Save these backup codes in a secure location. Each code can only be used once.
+            </div>
+            
+            <p>Use these codes if you lose access to your authenticator app:</p>
+            
+            <div class="backup-codes-grid">
+                {% for code in backup_codes %}
+                <div class="backup-code">{{ code }}</div>
+                {% endfor %}
+            </div>
+            
+            <div class="action-buttons">
+                <form method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('Are you sure? This will invalidate your current backup codes.')">
+                        Generate New Codes
+                    </button>
+                </form>
+                <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">Back to Profile</a>
+            </div>
+            
+            <div class="security-note">
+                <h4>Security Tips:</h4>
+                <ul>
+                    <li>Print these codes and store them in a safe place</li>
+                    <li>Do not store them on your computer or online</li>
+                    <li>Each code can only be used once</li>
+                    <li>Generate new codes if you suspect they've been compromised</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.backup-codes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+    padding: 2rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.backup-code {
+    font-family: monospace;
+    font-size: 1.1rem;
+    padding: 0.5rem;
+    text-align: center;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    letter-spacing: 0.1em;
+}
+
+.security-note {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+.security-note h4 {
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+.security-note ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+</style>
+{% endblock %}

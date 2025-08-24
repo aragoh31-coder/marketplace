@@ -1,0 +1,194 @@
+{% extends "base_tor_safe.html" %}
+
+{% block title %}Two-Factor Authentication{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card card-elevation-3">
+        <div class="card-header">
+            <h2>🔐 Two-Factor Authentication</h2>
+        </div>
+        <div class="card-body">
+            <p class="text-center mb-4">Welcome back, <strong>{{ user.username }}</strong>. Please complete the security verification.</p>
+            
+            {% if is_vendor %}
+            <div class="alert alert-info">
+                <strong>ℹ️ Vendor Account:</strong> Both PGP and TOTP verification required.
+            </div>
+            {% endif %}
+            
+            <!-- Progress Indicator -->
+            <div class="progress-steps">
+                {% if requires_pgp %}
+                <div class="progress-step {% if pgp_verified %}completed{% elif not totp_verified or not requires_totp %}active{% endif %}">
+                    <span class="step-icon">{% if pgp_verified %}✓{% else %}1{% endif %}</span>
+                    <span class="step-text">PGP Verification</span>
+                </div>
+                {% endif %}
+                
+                {% if requires_pgp and requires_totp %}
+                <div class="progress-line"></div>
+                {% endif %}
+                
+                {% if requires_totp %}
+                <div class="progress-step {% if totp_verified %}completed{% elif pgp_verified or not requires_pgp %}active{% endif %}">
+                    <span class="step-icon">{% if totp_verified %}✓{% else %}{% if requires_pgp %}2{% else %}1{% endif %}{% endif %}</span>
+                    <span class="step-text">TOTP Verification</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- PGP Verification -->
+            {% if requires_pgp and not pgp_verified %}
+            <div class="verification-section">
+                <h3>🔑 PGP Verification</h3>
+                <p>Decrypt this challenge with your PGP private key:</p>
+                
+                <div class="pgp-challenge">
+                    <pre>{{ encrypted_challenge }}</pre>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        {{ pgp_form.pgp_response.label_tag }}
+                        {{ pgp_form.pgp_response }}
+                        {% if pgp_form.pgp_response.errors %}
+                            <div class="text-danger">{{ pgp_form.pgp_response.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <button type="submit" name="verify_pgp" class="btn btn-primary">Verify PGP</button>
+                </form>
+            </div>
+            {% endif %}
+            
+            <!-- TOTP Verification -->
+            {% if requires_totp and not totp_verified and (pgp_verified or not requires_pgp) %}
+            <div class="verification-section">
+                <h3>📱 TOTP Verification</h3>
+                <p>Enter the code from your authenticator app:</p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        {{ totp_form.token.label_tag }}
+                        {{ totp_form.token }}
+                        {% if totp_form.token.errors %}
+                            <div class="text-danger">{{ totp_form.token.errors.0 }}</div>
+                        {% endif %}
+                        {% if totp_form.token.help_text %}
+                            <small class="form-text text-muted">{{ totp_form.token.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ totp_form.backup_code.label_tag }}
+                        {{ totp_form.backup_code }}
+                        {% if totp_form.backup_code.errors %}
+                            <div class="text-danger">{{ totp_form.backup_code.errors.0 }}</div>
+                        {% endif %}
+                        {% if totp_form.backup_code.help_text %}
+                            <small class="form-text text-muted">{{ totp_form.backup_code.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    {% if totp_form.non_field_errors %}
+                        <div class="text-danger mb-3">{{ totp_form.non_field_errors.0 }}</div>
+                    {% endif %}
+                    
+                    <button type="submit" name="verify_totp" class="btn btn-primary">Verify TOTP</button>
+                </form>
+            </div>
+            {% endif %}
+            
+            <!-- Waiting Message -->
+            {% if pgp_verified and requires_totp and not totp_verified %}
+            <div class="alert alert-success">
+                ✓ PGP verification completed. Please proceed with TOTP verification.
+            </div>
+            {% endif %}
+            
+            {% if totp_verified and requires_pgp and not pgp_verified %}
+            <div class="alert alert-success">
+                ✓ TOTP verification completed. Please proceed with PGP verification.
+            </div>
+            {% endif %}
+            
+            <div class="text-center mt-4">
+                <a href="{% url 'accounts:logout' %}" class="btn btn-secondary">Cancel & Logout</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.progress-steps {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 2rem 0;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.step-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.progress-step.active .step-icon {
+    background: linear-gradient(135deg, #8b5cf6, #60a5fa);
+    border-color: #8b5cf6;
+    color: white;
+}
+
+.progress-step.completed .step-icon {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: white;
+}
+
+.verification-section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.verification-section h3 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.pgp-challenge {
+    background: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 4px;
+    margin: 1rem 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.pgp-challenge pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+</style>
+{% endblock %}
