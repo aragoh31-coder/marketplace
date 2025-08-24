@@ -488,7 +488,17 @@ def vendor_apply(request):
 
 
 def vendor_profile(request, vendor_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id, is_active=True)
+    # Check if vendor exists
+    try:
+        vendor = Vendor.objects.get(id=vendor_id)
+    except Vendor.DoesNotExist:
+        messages.error(request, f"Vendor not found.")
+        return redirect("vendors:list")
+    
+    # Check if vendor is active
+    if not vendor.is_active:
+        messages.error(request, "This vendor is currently inactive.")
+        return redirect("vendors:list")
 
     products = Product.objects.filter(vendor=vendor, is_active=True).order_by("-created_at")
 
