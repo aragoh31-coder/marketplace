@@ -586,13 +586,151 @@
                 display: block;
             }
         }
+        
+        /* Scary Dragon Logo Styles */
+        .logo {
+            font-size: 1.75rem;
+            font-weight: 900;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dragon-logo {
+            font-size: 2.5rem;
+            display: inline-block;
+            filter: 
+                drop-shadow(0 0 3px #ff0000)
+                drop-shadow(0 0 6px #8b5cf6)
+                drop-shadow(0 0 12px rgba(139, 92, 246, 0.6));
+            animation: dragonPulse 2s ease-in-out infinite;
+            transform-origin: center;
+        }
+        
+        @keyframes dragonPulse {
+            0%, 100% {
+                transform: scale(1) rotate(0deg);
+                filter: 
+                    drop-shadow(0 0 3px #ff0000)
+                    drop-shadow(0 0 6px #8b5cf6)
+                    drop-shadow(0 0 12px rgba(139, 92, 246, 0.6));
+            }
+            25% {
+                transform: scale(1.1) rotate(-5deg);
+                filter: 
+                    drop-shadow(0 0 6px #ff0000)
+                    drop-shadow(0 0 12px #8b5cf6)
+                    drop-shadow(0 0 20px rgba(139, 92, 246, 0.8));
+            }
+            50% {
+                transform: scale(1.05) rotate(3deg);
+            }
+            75% {
+                transform: scale(1.15) rotate(-3deg);
+                filter: 
+                    drop-shadow(0 0 8px #ff0000)
+                    drop-shadow(0 0 15px #8b5cf6)
+                    drop-shadow(0 0 25px rgba(139, 92, 246, 1));
+            }
+        }
+        
+        .logo-text {
+            font-family: 'Arial Black', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--primary);
+            text-shadow: 
+                0 0 10px rgba(139, 92, 246, 0.8),
+                0 0 20px rgba(139, 92, 246, 0.6),
+                0 0 30px rgba(139, 92, 246, 0.4),
+                2px 2px 4px rgba(0, 0, 0, 0.8);
+            position: relative;
+        }
+        
+        .logo-text::after {
+            content: "God's Eye";
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: #ff0000;
+            opacity: 0;
+            animation: glitch 3s ease-in-out infinite;
+            text-shadow: none;
+        }
+        
+        @keyframes glitch {
+            0%, 90%, 100% {
+                opacity: 0;
+                transform: translate(0);
+            }
+            92% {
+                opacity: 0.8;
+                transform: translate(-2px, -2px);
+                filter: blur(1px);
+            }
+            94% {
+                opacity: 0.8;
+                transform: translate(2px, 2px);
+                filter: blur(1px);
+            }
+            96% {
+                opacity: 0.8;
+                transform: translate(-1px, 1px);
+            }
+        }
+        
+        .logo:hover .dragon-logo {
+            animation: dragonRoar 0.5s ease-in-out;
+            filter: 
+                drop-shadow(0 0 10px #ff0000)
+                drop-shadow(0 0 20px #8b5cf6)
+                drop-shadow(0 0 30px rgba(139, 92, 246, 1))
+                drop-shadow(0 0 40px rgba(255, 0, 0, 0.5));
+        }
+        
+        @keyframes dragonRoar {
+            0% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.3) rotate(-10deg); }
+            50% { transform: scale(1.4) rotate(5deg); }
+            75% { transform: scale(1.2) rotate(-5deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        
+        .logo:hover .logo-text {
+            animation: textShake 0.5s ease-in-out;
+            color: #ff0000;
+            text-shadow: 
+                0 0 15px rgba(255, 0, 0, 0.8),
+                0 0 25px rgba(139, 92, 246, 0.8),
+                0 0 35px rgba(255, 0, 0, 0.6),
+                3px 3px 6px rgba(0, 0, 0, 1);
+        }
+        
+        @keyframes textShake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+            20%, 40%, 60%, 80% { transform: translateX(2px); }
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .dragon-logo {
+                font-size: 2rem;
+            }
+            .logo-text {
+                font-size: 1.2rem;
+                letter-spacing: 1px;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Header with Smooth Toolbar -->
     <header class="header toolbar">
         <div class="header-content toolbar-inner container" style="position: relative;">
-            <a href="{% url 'home' %}" class="logo">🐲 God's Eye</a>
+            <a href="{% url 'home' %}" class="logo"><span class="dragon-logo">🐉</span> <span class="logo-text">God's Eye</span></a>
             
             <!-- Mobile Navigation Toggle (CSS-only) -->
             <input type="checkbox" id="mobile-menu-toggle" class="mobile-menu-toggle">
