@@ -52,9 +52,9 @@ def product_list(request):
         if product_ids:
             case = []
             for i, pid in enumerate(product_ids):
-                case.append(models.When(pk=pid, then=i))
+                case.append(When(pk=pid, then=i))
             products = products.annotate(
-                search_order=models.Case(*case, output_field=models.IntegerField())
+                search_order=Case(*case, output_field=IntegerField())
             ).order_by('search_order')
     else:
         # Basic filtering
@@ -87,7 +87,6 @@ def product_list(request):
         products = products.order_by('-created_at')
     elif sort_by == 'popular':
         # Order by order count (requires annotation)
-        from django.db.models import Count
         products = products.annotate(
             order_count=Count('orderitem', distinct=True)
         ).order_by('-order_count')
@@ -103,7 +102,7 @@ def product_list(request):
     
     # Get categories with product count
     categories = Category.objects.annotate(
-        product_count=Count('product', filter=models.Q(product__is_available=True))
+        product_count=Count('products', filter=Q(products__is_available=True))
     ).filter(product_count__gt=0).order_by('name')
     
     # Paginate

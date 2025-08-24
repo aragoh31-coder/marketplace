@@ -132,7 +132,7 @@
         {% endif %}
         {% if request.GET.category %}
         <span class="active-filter-tag">
-            Category: {{ categories|dictsort:"id"|selectattr:"id"|selectattr:"id" }}
+            Category: {% for cat in categories %}{% if cat.id|stringformat:"s" == request.GET.category %}{{ cat.name }}{% endif %}{% endfor %}
             <a href="?{% for key, value in request.GET.items %}{% if key != 'category' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="remove-filter">×</a>
         </span>
         {% endif %}
