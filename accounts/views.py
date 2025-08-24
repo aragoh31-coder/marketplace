@@ -261,6 +261,7 @@ def login_view(request):
 def logout_view(request):
     if request.user.is_authenticated:
         # log_event("user_logout", {"user_id": str(request.user.id), "username": request.user.username})
+        pass
     logout(request)
     return redirect("/")
 
