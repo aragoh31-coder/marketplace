@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';">
+    <title>Home - Secure Marketplace</title>
+    
+    <!-- Load external CSS files -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/enhancements.css">
+    <link rel="stylesheet" href="/static/css/tor_safe_enhanced.css">
+    
+    <style>
+        /* Additional Tor-Safe Inline CSS - Overrides for maximum compatibility */
+        :root {
+            --primary: #8b5cf6;  /* Medium purple */
+            --primary-dim: #7c3aed;  /* Darker purple */
+            --secondary: #60a5fa;  /* Light blue accent */
+            --accent: #3b82f6;  /* Blue accent */
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            
+            --bg-primary: #0f0f0f;  /* Very dark */
+            --bg-secondary: #1a1a1a;  /* Dark neutral */
+            --bg-tertiary: #1e1b4b;  /* Dark purple tint */
+            --bg-card: rgba(26, 26, 26, 0.9);
+            
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;  /* Light gray */
+            --text-dim: #94a3b8;  /* Medium gray */
+            
+            --border: rgba(139, 92, 246, 0.2);  /* Subtle purple border */
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: auto; /* Disable smooth scrolling for Tor */
+        }
+        
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Liberation Sans", Arial, sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            font-size: 16px; /* Ensure readable text in Tor */
+        }
+        
+        /* Static Background - No Animations */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(96, 165, 250, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
+            z-index: -1;
+        }
+        
+        /* Header - Static, No Animations */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(10, 15, 27, 0.95);
+            backdrop-filter: none; /* Disable for Tor compatibility */
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .logo:hover {
+            color: var(--primary-dim);
+        }
+        
+        /* Navigation */
+        .nav {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+        
+        .nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: none; /* No transitions for Tor */
+        }
+        
+        .nav a:hover {
+            background: rgba(139, 92, 246, 0.1);
+            color: #a78bfa;
+            transform: translateX(2px);
+        }
+        
+        .nav a.active {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(96, 165, 250, 0.1));
+            color: #8b5cf6;
+            font-weight: 600;
+        }
+        
+        /* Mobile Navigation - CSS-only, No JavaScript */
+        .mobile-nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-top: 80px;
+            padding: 2rem 1rem;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        
+        .card-header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: none; /* No transitions for Tor */
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: var(--bg-primary);
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dim);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: #6d28d9;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: var(--text-primary);
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: var(--bg-primary);
+        }
+        
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .btn-large {
+            padding: 1rem 2rem;
+            font-size: 1.125rem;
+        }
+        
+        /* Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+        }
+        
+        .alert-success {
+            background: rgba(168, 85, 247, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+        
+        .alert-info {
+            background: rgba(6, 182, 212, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        /* Tables */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+        
+        .table th,
+        .table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .table tr:hover {
+            background: var(--bg-secondary);
+        }
+        
+        /* Grid System */
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+        
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+        
+        .grid-4 {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+        
+        /* Utilities */
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-3 { margin-top: 1.5rem; }
+        .mt-4 { margin-top: 2rem; }
+        
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mb-3 { margin-bottom: 1.5rem; }
+        .mb-4 { margin-bottom: 2rem; }
+        
+        .p-1 { padding: 0.5rem; }
+        .p-2 { padding: 1rem; }
+        .p-3 { padding: 1.5rem; }
+        .p-4 { padding: 2rem; }
+        
+        .hidden { display: none; }
+        .visible { display: block; }
+        
+        /* Tor Browser Specific Optimizations */
+        @media (max-width: 768px) {
+            .nav {
+                display: none;
+            }
+            
+            .mobile-nav-toggle {
+                display: block;
+            }
+            
+            /* CSS-only mobile menu functionality */
+            #mobile-menu-toggle:checked ~ .nav {
+                display: flex !important;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--bg-secondary);
+                flex-direction: column;
+                padding: 1rem;
+                border-top: 2px solid var(--primary);
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                z-index: 1000;
+            }
+            
+            #mobile-menu-toggle:checked ~ .nav a {
+                padding: 0.75rem 1rem;
+                margin: 0.25rem 0;
+                width: 100%;
+                text-align: left;
+            }
+            
+            #mobile-menu-toggle:checked ~ .nav .nav-dropdown {
+                width: 100%;
+            }
+            
+            #mobile-menu-toggle:checked ~ .nav .dropdown-label {
+                width: 100%;
+                padding: 0.75rem 1rem;
+                margin: 0.25rem 0;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+            
+            .grid-2,
+            .grid-3,
+            .grid-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* High Contrast Mode Support */
+        @media (prefers-contrast: high) {
+            :root {
+                --border: rgba(148, 163, 184, 0.5);
+                --shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            }
+            
+            .card {
+                border-width: 2px;
+            }
+            
+            .btn {
+                border: 2px solid currentColor;
+            }
+        }
+        
+        /* Reduced Motion Support */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        /* Print Styles */
+        @media print {
+            .header,
+            .nav,
+            .btn {
+                display: none;
+            }
+            
+            body {
+                background: white;
+                color: black;
+            }
+            
+            .card {
+                border: 1px solid #ccc;
+                box-shadow: none;
+            }
+        }
+        
+        /* Dropdown Menu Styles */
+        .nav-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-toggle {
+            display: none;
+        }
+        
+        .dropdown-label {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(96, 165, 250, 0.05));
+            border: 1px solid transparent;
+        }
+        
+        .dropdown-label:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(96, 165, 250, 0.1));
+            border-color: rgba(139, 92, 246, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            min-width: 200px;
+            background: linear-gradient(135deg, rgba(30, 27, 75, 0.95), rgba(26, 26, 26, 0.98));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            padding: 0.5rem;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4),
+                        0 0 40px rgba(139, 92, 246, 0.1);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+        
+        .dropdown-toggle:checked ~ .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .dropdown-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            margin: 0.25rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .dropdown-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.2), rgba(96, 165, 250, 0.1));
+            transition: width 0.3s ease;
+            z-index: -1;
+        }
+        
+        .dropdown-item:hover::before {
+            width: 100%;
+        }
+        
+        .dropdown-item:hover {
+            color: #a78bfa;
+            transform: translateX(4px);
+            padding-left: 1.25rem;
+        }
+        
+        .dropdown-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), rgba(96, 165, 250, 0.2), transparent);
+            margin: 0.5rem 0;
+        }
+        
+        /* Mobile dropdown adjustments */
+        @media (max-width: 768px) {
+            .nav-dropdown {
+                width: 100%;
+            }
+            
+            .dropdown-label {
+                width: 100%;
+                text-align: left;
+            }
+            
+            .dropdown-menu {
+                position: static;
+                width: 100%;
+                margin-left: 1rem;
+                margin-right: 0;
+                opacity: 1;
+                visibility: visible;
+                transform: none;
+                display: none;
+                box-shadow: none;
+                border: none;
+                background: rgba(139, 92, 246, 0.05);
+            }
+            
+            .dropdown-toggle:checked ~ .dropdown-menu {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header with Smooth Toolbar -->
+    <header class="header toolbar">
+        <div class="header-content toolbar-inner container" style="position: relative;">
+            <a href="/" class="logo">💜 SecureMarket</a>
+            
+            <!-- Mobile Navigation Toggle (CSS-only) -->
+            <input type="checkbox" id="mobile-menu-toggle" class="mobile-menu-toggle">
+            <label for="mobile-menu-toggle" class="mobile-nav-toggle" aria-label="Toggle navigation">☰</label>
+            
+            <!-- Desktop Navigation -->
+            <nav class="nav">
+                <a href="/" class="active">🏠 Home</a>
+                <a href="/products/" class="">📦 Products</a>
+                <a href="/vendors/" class="">🏪 Vendors</a>
+                
+                    <a href="/accounts/login/">🔑 Login</a>
+                    <a href="/accounts/register/">📝 Register</a>
+                
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Messages -->
+        
+
+        <!-- Page Content -->
+        
+<div class="card">
+    <h1>Welcome to Secure Marketplace</h1>
+    <p>Your trusted platform for secure gift card transactions with cryptocurrency payments.</p>
+    
+    
+        <p>Please login or register to start shopping.</p>
+        <a href="/accounts/login/" class="btn">Login</a>
+        <a href="/accounts/register/" class="btn">Register</a>
+    
+</div>
+
+
+
+    </main>
+
+    <!-- Simple Footer -->
+    <footer class="section">
+        <div class="container text-center">
+            <!-- Footer space -->
+        </div>
+    </footer>
+</body>
+</html>

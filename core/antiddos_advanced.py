@@ -409,7 +409,7 @@ class TorCircuitAwareness:
             request.META.get('HTTP_ACCEPT_LANGUAGE', ''),
             request.META.get('HTTP_ACCEPT_ENCODING', ''),
             # Session ID is our primary identifier
-            request.session.session_key if hasattr(request, 'session') else '',
+            str(request.session.session_key if hasattr(request, 'session') and request.session.session_key else 'no-session'),
         ]
         
         # Create a fingerprint

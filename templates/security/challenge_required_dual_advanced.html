@@ -1,0 +1,197 @@
+{% extends "base_tor_safe.html" %}
+{% load static %}
+
+{% block title %}Security Challenge{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card text-center card-elevation-3">
+                <div class="card-body p-5">
+                    <h1 class="card-title mb-4">
+                        <span style="font-size: 2.5rem;">🛡️</span><br>
+                        Dual Security Challenge
+                    </h1>
+                    
+                    <p class="mb-4">Please complete both challenges to continue.</p>
+                    
+                    <form method="post" action="{% url 'security:dual_challenge_verify' %}">
+                        {% csrf_token %}
+                        
+                        <!-- Progress Indicator -->
+                        <div class="progress-steps mb-5">
+                            <div class="progress-step {% if math_completed %}completed{% else %}active{% endif %}">
+                                <span class="step-number">1</span>
+                                <span class="step-label">Math Challenge</span>
+                            </div>
+                            <div class="progress-line"></div>
+                            <div class="progress-step {% if math_completed %}{% if visual_completed %}completed{% else %}active{% endif %}{% endif %}">
+                                <span class="step-number">2</span>
+                                <span class="step-label">Visual Challenge</span>
+                            </div>
+                        </div>
+                        
+                        {% if not math_completed %}
+                        <!-- Math Challenge -->
+                        <div class="challenge-section">
+                            <h3 class="mb-3">Step 1: Solve the Math Problem</h3>
+                            
+                            <!-- Store challenge data in hidden fields (stateless) -->
+                            <input type="hidden" name="challenge_data" value="{{ math_challenge.challenge_data }}">
+                            <input type="hidden" name="challenge_hmac" value="{{ math_challenge.challenge_hmac }}">
+                            
+                            <div class="math-display mb-4">
+                                <h2 class="display-4">{{ math_challenge.question }}</h2>
+                            </div>
+                            
+                            <div class="form-group">
+                                <input type="number" 
+                                       name="answer" 
+                                       class="form-control form-control-lg text-center" 
+                                       placeholder="Your answer"
+                                       required
+                                       {% if visual_completed %}autofocus{% endif %}>
+                            </div>
+                            
+                            <button type="submit" name="verify_math" class="btn btn-primary btn-lg mt-3">
+                                Verify Math Answer
+                            </button>
+                        </div>
+                        
+                        {% else %}
+                        <!-- Visual Challenge -->
+                        <div class="challenge-section">
+                            <h3 class="mb-3">Step 2: Visual Challenge</h3>
+                            
+                            <div class="alert alert-success mb-4">
+                                ✅ Math challenge completed successfully!
+                            </div>
+                            
+                            <p class="text-muted mb-4">
+                                Click on the circle with the missing slice (like Pac-Man) to continue:
+                            </p>
+                            
+                            <div class="captcha-container text-center">
+                                <img name="captcha" 
+                                     src="/captcha/generate/?token={{ form.captcha_token.value|default:form.captcha_token.initial }}"
+                                     alt="Click the circle with the gap"
+                                     class="captcha-image"
+                                     style="cursor: pointer; max-width: 400px; border-radius: 12px;">
+                                
+                                <!-- Hidden fields for One-Click CAPTCHA -->
+                                <input type="hidden" name="captcha_x" value="" id="id_captcha_x">
+                                <input type="hidden" name="captcha_y" value="" id="id_captcha_y">
+                                <input type="hidden" name="captcha_token" value="{{ form.captcha_token.value|default:form.captcha_token.initial }}" id="id_captcha_token">
+                            </div>
+                            
+                            {% if form.non_field_errors %}
+                            <div class="alert alert-danger mt-3">
+                                {{ form.non_field_errors|first }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </form>
+                    
+                    <div class="mt-5 text-muted">
+                        <small>
+                            <p class="mb-2">🔒 Advanced Anti-DDoS Protection</p>
+                            <p class="mb-0">This dual challenge helps protect against automated attacks.</p>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.challenge-section {
+    padding: 2rem 0;
+}
+
+.math-display {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(96, 165, 250, 0.05));
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.progress-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(107, 114, 128, 0.2);
+    border: 2px solid rgba(107, 114, 128, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active .step-number {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(96, 165, 250, 0.1));
+    border-color: rgba(139, 92, 246, 0.5);
+    color: #a78bfa;
+}
+
+.progress-step.completed .step-number {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #22c55e;
+}
+
+.progress-line {
+    width: 100px;
+    height: 2px;
+    background: rgba(107, 114, 128, 0.2);
+    position: relative;
+}
+
+.step-label {
+    font-size: 0.875rem;
+    color: #9ca3af;
+}
+
+.captcha-image:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+    transition: all 0.3s ease;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const captchaImage = document.querySelector('img[name="captcha"]');
+    if (captchaImage) {
+        captchaImage.addEventListener('click', function(e) {
+            const rect = this.getBoundingClientRect();
+            const x = Math.round(e.clientX - rect.left);
+            const y = Math.round(e.clientY - rect.top);
+            
+            document.getElementById('id_captcha_x').value = x;
+            document.getElementById('id_captcha_y').value = y;
+            
+            // Auto-submit the form
+            this.closest('form').submit();
+        });
+    }
+});
+</script>
+{% endblock %}
