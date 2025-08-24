@@ -31,13 +31,13 @@ celery -A marketplace worker -l info --detach
 echo "Starting Celery beat..."
 celery -A marketplace beat -l info --detach
 
+# Initialize database (replaces migrations)
+echo "Initializing database..."
+python /workspace/init_database.py
+
 # Collect static files
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
-
-# Run migrations
-echo "Running migrations..."
-python manage.py migrate --noinput
 
 # Start Gunicorn
 echo "Starting Gunicorn..."
