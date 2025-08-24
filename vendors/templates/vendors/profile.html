@@ -59,7 +59,7 @@
         <div class="vendor-actions">
             <a href="#products" class="btn btn-primary">View Products</a>
             {% if user.is_authenticated %}
-                <button class="btn btn-outline" disabled>Message Vendor</button>
+                <a href="{% url 'messaging:compose' %}?to={{ vendor.user.username }}" class="btn btn-outline">Message Vendor</a>
             {% endif %}
         </div>
     </div>

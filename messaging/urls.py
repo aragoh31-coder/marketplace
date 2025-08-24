@@ -6,6 +6,7 @@ app_name = "messaging"
 
 urlpatterns = [
     path("", views.message_list, name="list"),
+    path("inbox/", views.message_list, name="inbox"),  # Alias for inbox
     path("compose/", views.compose_message, name="compose"),
     path("conversation/<uuid:user_id>/", views.conversation_view, name="conversation"),
     path("send/<uuid:user_id>/", views.send_message, name="send"),

@@ -10,7 +10,7 @@ from django.contrib.auth import authenticate, get_user_model, login, logout, upd
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Q, F
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -577,7 +577,7 @@ def delete_account(request):
                 from orders.models import Order
 
                 active_orders = Order.objects.filter(
-                    buyer=request.user, status__in=["created", "paid", "shipped"]
+                    user=request.user, status__in=["PENDING", "LOCKED", "SHIPPED"]
                 ).exists()
 
                 if active_orders:
@@ -589,10 +589,34 @@ def delete_account(request):
             with transaction.atomic():
                 user = request.user
 
+                # Log the deletion event before deleting
                 log_event("account_deleted", {"user_id": str(user.id), "username": user.username})
 
+                # Clear any vendor data if exists
+                if hasattr(user, 'vendor'):
+                    user.vendor.is_active = False
+                    user.vendor.save()
+
+                # Clear any wallet data if exists
+                try:
+                    from wallets.models import Wallet
+                    Wallet.objects.filter(user=user).delete()
+                except:
+                    pass
+
+                # Clear messages
+                from messaging.models import Message
+                Message.objects.filter(Q(sender=user) | Q(recipient=user)).update(
+                    sender=None if Message.objects.filter(sender=user).exists() else F('sender'),
+                    recipient=None if Message.objects.filter(recipient=user).exists() else F('recipient')
+                )
+
+                # Logout before deletion
                 logout(request)
 
+                # Finally delete the user
+                user.is_active = False
+                user.save()
                 user.delete()
 
                 messages.success(request, "Account deleted successfully")
