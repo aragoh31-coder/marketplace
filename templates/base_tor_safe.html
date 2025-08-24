@@ -848,14 +848,14 @@
             cursor: pointer;
             border-radius: 8px;
             transition: all 0.3s ease;
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(96, 165, 250, 0.05));
+            background: transparent;
             border: 1px solid transparent;
+            position: relative;
         }
         
         .dropdown-label:hover {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(96, 165, 250, 0.1));
-            border-color: rgba(139, 92, 246, 0.3);
-            transform: translateY(-1px);
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--primary);
         }
         
         .dropdown-menu {
@@ -1127,7 +1127,7 @@
             <a href="{% url 'home' %}" class="logo"><span class="dragon-logo">🐉</span> <span class="logo-text">God's Eye</span></a>
             
             <!-- Mobile Navigation Toggle (CSS-only) -->
-            <input type="checkbox" id="mobile-menu-toggle" class="mobile-menu-toggle">
+            <input type="checkbox" id="mobile-menu-toggle" class="mobile-menu-toggle" style="display: none;">
             <label for="mobile-menu-toggle" class="mobile-nav-toggle" aria-label="Toggle navigation">☰</label>
             
             <!-- Desktop Navigation -->
