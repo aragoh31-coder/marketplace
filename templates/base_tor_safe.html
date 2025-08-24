@@ -237,6 +237,140 @@
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
         }
         
+        /* Section Divider */
+        .section-divider {
+            position: relative;
+            text-align: center;
+            margin: 2rem 0;
+        }
+        
+        .section-divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--border);
+        }
+        
+        .section-divider.with-text::before {
+            left: 0;
+            right: 0;
+        }
+        
+        .section-divider-text {
+            background: var(--bg-card);
+            padding: 0 1rem;
+            position: relative;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        
+        /* Progress Steps */
+        .progress-steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+        }
+        
+        .progress-step {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            border: 2px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-dim);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .progress-step.active {
+            background: var(--primary);
+            color: var(--bg-primary);
+            border-color: var(--primary);
+        }
+        
+        .progress-line {
+            width: 100px;
+            height: 2px;
+            background: var(--border);
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Accordion */
+        .accordion {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .accordion-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .accordion-toggle {
+            display: none;
+        }
+        
+        .accordion-header {
+            display: block;
+            padding: 1rem 1.5rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .accordion-header::after {
+            content: '▼';
+            position: absolute;
+            right: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: transform 0.3s ease;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+        
+        .accordion-toggle:checked + .accordion-header::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+        
+        .accordion-header:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .accordion-toggle:checked ~ .accordion-content {
+            max-height: 200px;
+            padding: 0 1.5rem 1rem;
+        }
+        
+        .accordion-content p {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
         /* Title styles */
         .title-container {
             text-align: center;
@@ -330,6 +464,39 @@
         .form-textarea {
             min-height: 100px;
             resize: vertical;
+        }
+        
+        /* Alerts */
+        .alert {
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            border: 1px solid;
+            position: relative;
+        }
+        
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+        
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+        
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.3);
+            color: #f59e0b;
+        }
+        
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.3);
+            color: #3b82f6;
         }
         
         /* Buttons */
