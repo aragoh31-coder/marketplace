@@ -1,0 +1,198 @@
+{% extends "base_tor_safe.html" %}
+
+{% block title %}Raise Dispute - Order #{{ order.id|slice:":8" }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card card-elevation-3">
+                <div class="card-body p-4">
+                    <h1 class="h2 mb-4">
+                        <span style="font-size: 2rem;">⚠️</span>
+                        Raise Dispute
+                    </h1>
+                    
+                    <div class="alert alert-info mb-4">
+                        <h5 class="alert-heading">Before You Proceed</h5>
+                        <p class="mb-2">Please try to resolve the issue directly with the {% if request.user == order.user %}vendor{% else %}buyer{% endif %} first.</p>
+                        <p class="mb-0">Disputes should only be raised for serious issues such as:</p>
+                        <ul class="mt-2 mb-0">
+                            <li>Product not as described</li>
+                            <li>Order not received within reasonable time</li>
+                            <li>Communication breakdown</li>
+                            <li>Quality issues</li>
+                        </ul>
+                    </div>
+
+                    <!-- Order Summary -->
+                    <div class="order-summary mb-4">
+                        <h3 class="h5 mb-3">Order Information</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Order ID:</label>
+                                <span>{{ order.id|slice:":8" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Date:</label>
+                                <span>{{ order.created_at|date:"Y-m-d H:i" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Amount:</label>
+                                <span>
+                                    {% if order.currency_used == 'BTC' %}
+                                        ₿{{ order.total_btc }}
+                                    {% else %}
+                                        XMR {{ order.total_xmr }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <label>Status:</label>
+                                <span class="status-badge status-{{ order.status|lower }}">
+                                    {{ order.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dispute Form -->
+                    <form method="post" action="{% url 'orders:raise_dispute' order.id %}">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="reason" class="form-label">
+                                <strong>Describe the Issue</strong>
+                                <span class="text-danger">*</span>
+                            </label>
+                            <textarea 
+                                name="reason" 
+                                id="reason" 
+                                class="form-control" 
+                                rows="8" 
+                                required
+                                placeholder="Please provide a detailed description of the issue...">{{ request.POST.reason }}</textarea>
+                            <small class="form-text text-muted">
+                                Be as detailed as possible. This will help admins understand and resolve the dispute fairly.
+                            </small>
+                        </div>
+
+                        <div class="form-actions mt-4">
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                ⚠️ Submit Dispute
+                            </button>
+                            <a href="{% url 'orders:detail' order.id %}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+
+                    <div class="mt-5 text-muted">
+                        <h5>What Happens Next?</h5>
+                        <ol class="small">
+                            <li>Your dispute will be reviewed by an admin</li>
+                            <li>The {% if request.user == order.user %}vendor{% else %}buyer{% endif %} will be notified and asked to respond</li>
+                            <li>You may be asked to provide additional evidence</li>
+                            <li>An admin will make a final decision based on the evidence</li>
+                            <li>Funds will be released according to the admin's decision</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    background: rgba(31, 41, 55, 0.5);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.info-item label {
+    color: #9ca3af;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
+
+.info-item span {
+    color: #e5e7eb;
+    font-weight: 500;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-locked { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.status-shipped { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+.status-processing { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+.form-group {
+    margin-top: 2rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #e5e7eb;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    background: rgba(31, 41, 55, 0.5);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 8px;
+    color: #e5e7eb;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: rgba(139, 92, 246, 0.5);
+    background: rgba(31, 41, 55, 0.8);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.btn-lg {
+    padding: 0.75rem 2rem;
+}
+
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
