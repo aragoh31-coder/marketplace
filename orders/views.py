@@ -52,6 +52,53 @@ def add_to_cart(request, product_id):
 
 
 @login_required
+@require_POST
+def update_cart(request, product_id):
+    """Update quantity of item in cart"""
+    product = get_object_or_404(Product, id=product_id)
+    cart = get_object_or_404(Cart, user=request.user)
+    
+    try:
+        quantity = int(request.POST.get('quantity', 1))
+        if quantity < 1:
+            messages.error(request, "Quantity must be at least 1")
+            return redirect('orders:cart')
+            
+        cart_item = get_object_or_404(CartItem, cart=cart, product=product)
+        
+        if quantity > product.stock_quantity:
+            messages.error(request, f"Only {product.stock_quantity} items available")
+            cart_item.quantity = product.stock_quantity
+        else:
+            cart_item.quantity = quantity
+            
+        cart_item.save()
+        messages.success(request, f"Updated quantity for {product.name}")
+        
+    except ValueError:
+        messages.error(request, "Invalid quantity")
+        
+    return redirect('orders:cart')
+
+
+@login_required
+@require_POST
+def remove_from_cart(request, product_id):
+    """Remove item from cart"""
+    product = get_object_or_404(Product, id=product_id)
+    cart = get_object_or_404(Cart, user=request.user)
+    
+    cart_item = CartItem.objects.filter(cart=cart, product=product).first()
+    if cart_item:
+        cart_item.delete()
+        messages.success(request, f"{product.name} removed from cart")
+    else:
+        messages.error(request, "Item not found in cart")
+        
+    return redirect('orders:cart')
+
+
+@login_required
 @transaction.atomic
 def create_order(request):
     """Create order from cart and lock funds"""

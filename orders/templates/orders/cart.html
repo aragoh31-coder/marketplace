@@ -1,6 +1,6 @@
-{% extends "base.html" %}
+{% extends "base_tor_safe.html" %}
 
-{% block title %}Shopping Cart - Secure Marketplace{% endblock %}
+{% block title %}Shopping Cart - God's Eye{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -59,7 +59,7 @@
             <a href="{% url 'products:list' %}" class="btn btn-secondary">Continue Shopping</a>
             
             {% if user.is_authenticated %}
-            <form method="post" action="{% url 'orders:checkout' %}" class="inline-form">
+            <form method="post" action="{% url 'orders:create' %}" class="inline-form">
                 {% csrf_token %}
                 <input type="hidden" name="honeypot_field" class="honeypot">
                 <button type="submit" class="btn btn-primary">Proceed to Checkout</button>
