@@ -104,7 +104,7 @@ def dashboard(request):
         }
     )
 
-    return render(request, "wallets/dashboard_modern.html", context)
+    return render(request, "wallets/dashboard_clean.html", context)
 
 
 @login_required
