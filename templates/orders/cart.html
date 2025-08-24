@@ -1,10 +1,17 @@
 {% extends "base_tor_safe.html" %}
 
-{% block title %}Shopping Cart - Secure Marketplace{% endblock %}
+{% block title %}Shopping Cart - God's Eye{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1>🛒 Shopping Cart</h1>
+    <!-- Page Header -->
+    <div class="title-container mb-4">
+        <h1 class="register-title">
+            <span class="title-icon">🛒</span>
+            <span class="title-text">Shopping Cart</span>
+        </h1>
+        <div class="title-underline"></div>
+    </div>
     
     {% if cart_items %}
     <div class="cart-wrapper">
@@ -59,7 +66,7 @@
             <a href="{% url 'products:list' %}" class="btn btn-secondary">Continue Shopping</a>
             
             {% if user.is_authenticated %}
-            <form method="post" action="{% url 'orders:checkout' %}" class="inline-form">
+            <form method="post" action="{% url 'orders:create' %}" class="inline-form">
                 {% csrf_token %}
                 <input type="hidden" name="honeypot_field" class="honeypot">
                 <button type="submit" class="btn btn-primary">Proceed to Checkout</button>
