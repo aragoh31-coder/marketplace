@@ -17,10 +17,10 @@ fi
 # Start Tor if not running
 if ! pgrep -x "tor" > /dev/null; then
     echo "Starting Tor..."
-    sudo tor -f /workspace/torrc
-    sleep 5
+    tor -f /workspace/torrc &
+    sleep 10
     echo "Tor hidden service address:"
-    sudo cat /var/lib/tor/marketplace/hostname 2>/dev/null || echo "Hidden service not yet initialized"
+    cat /workspace/tor-data/marketplace/hostname 2>/dev/null || echo "Hidden service not yet initialized"
 fi
 
 # Start Celery worker
@@ -57,4 +57,4 @@ sudo nginx -c /workspace/nginx.conf
 
 echo "Marketplace services started!"
 echo "Access the marketplace at: http://localhost"
-echo "Check Tor hidden service address: sudo cat /var/lib/tor/marketplace/hostname"
+echo "Tor hidden service address: $(cat /workspace/tor-data/marketplace/hostname 2>/dev/null || echo 'Not available')"
