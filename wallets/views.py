@@ -457,23 +457,27 @@ def withdrawal_detail(request, request_id):
 
 
 @login_required
-@require_http_methods(["POST"])
 def cancel_withdrawal(request, request_id):
     """Cancel pending withdrawal request"""
     withdrawal_request = get_object_or_404(WithdrawalRequest, id=request_id, user=request.user, status="pending")
 
-    withdrawal_request.status = "cancelled"
-    withdrawal_request.save()
+    if request.method == "GET":
+        # Show confirmation page
+        return render(request, "wallets/cancel_withdrawal_confirm.html", {"withdrawal": withdrawal_request})
+    
+    elif request.method == "POST":
+        withdrawal_request.status = "cancelled"
+        withdrawal_request.save()
 
-    log_user_action(
-        request,
-        "withdrawal_cancelled",
-        {
-            "withdrawal_id": withdrawal_request.id,
-            "amount": str(withdrawal_request.amount),
-            "currency": withdrawal_request.currency,
-        },
-    )
+        log_user_action(
+            request,
+            "withdrawal_cancelled",
+            {
+                "withdrawal_id": withdrawal_request.id,
+                "amount": str(withdrawal_request.amount),
+                "currency": withdrawal_request.currency,
+            },
+        )
 
     messages.success(request, "Withdrawal request cancelled successfully.")
     return redirect("wallets:withdrawal_status")

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_tor_safe.html" %}
 {% block title %}Verify PGP Key{% endblock %}
 {% block content %}
 <div class="container">
@@ -63,9 +63,7 @@
             
             <div class="pgp-message-container">
                 <textarea id="encrypted-message" class="pgp-textarea" readonly>{{ encrypted_message }}</textarea>
-                <button onclick="copyMessage()" class="btn btn-secondary">
-                    📋 Copy Message
-                </button>
+                <p class="help-text">📋 Select the text above and copy it manually (Ctrl+C or Cmd+C)</p>
             </div>
         </div>
         
@@ -193,7 +191,6 @@ Enter only the verification code above.</pre>
     .step.active .step-number {
         background: #ff9800;
         color: #000;
-        animation: pulse 2s infinite;
     }
     
     .step-label {
@@ -356,12 +353,6 @@ Enter only the verification code above.</pre>
         margin-top: 20px;
     }
     
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); }
-    }
-    
     @media (max-width: 768px) {
         .progress-steps {
             padding: 0;
@@ -381,29 +372,4 @@ Enter only the verification code above.</pre>
         }
     }
 </style>
-
-<script>
-function copyMessage() {
-    const textarea = document.getElementById('encrypted-message');
-    textarea.select();
-    document.execCommand('copy');
-    
-    const btn = event.target;
-    const originalText = btn.textContent;
-    btn.textContent = '✓ Copied!';
-    btn.style.background = '#4CAF50';
-    
-    setTimeout(() => {
-        btn.textContent = originalText;
-        btn.style.background = '';
-    }, 2000);
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const input = document.querySelector('.verify-input');
-    if (input && !input.value) {
-        input.focus();
-    }
-});
-</script>
 {% endblock %}

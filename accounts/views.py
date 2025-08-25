@@ -552,6 +552,10 @@ def pgp_remove_key(request):
             messages.success(request, "PGP key removed successfully.")
         else:
             messages.error(request, "Invalid password.")
+            return render(request, "accounts/pgp_remove_confirm.html")
+    else:
+        # Show confirmation page for GET requests
+        return render(request, "accounts/pgp_remove_confirm.html")
 
     return redirect("accounts:pgp_settings")
 

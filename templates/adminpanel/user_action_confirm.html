@@ -1,0 +1,44 @@
+{% extends "base_tor_safe.html" %}
+{% block title %}Confirm Action - Admin Panel{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h1>⚠️ Confirm Action</h1>
+        
+        <div class="alert alert-warning">
+            <h3>Are you sure you want to {{ action_description }}?</h3>
+            <p><strong>User:</strong> {{ target_user.username }}</p>
+            
+            {% if action == 'ban' %}
+                <p>This will:</p>
+                <ul>
+                    <li>Prevent the user from logging in</li>
+                    <li>Disable all their active sessions</li>
+                    <li>Mark their account as inactive</li>
+                </ul>
+            {% elif action == 'make_staff' %}
+                <p>This will grant the user administrative privileges.</p>
+            {% elif action == 'remove_staff' %}
+                <p>This will revoke the user's administrative privileges.</p>
+            {% elif action == 'reset_2fa' %}
+                <p>This will disable two-factor authentication for this user.</p>
+            {% endif %}
+        </div>
+        
+        <form method="post" action="{% url 'adminpanel:user_action' target_user.username %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="{{ action }}">
+            <input type="hidden" name="confirmed" value="true">
+            
+            <div class="button-group">
+                <button type="submit" class="btn btn-danger">
+                    ✅ Yes, {{ action_description }}
+                </button>
+                <a href="{% url 'adminpanel:user_detail' target_user.username %}" class="btn btn-secondary">
+                    ❌ Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
