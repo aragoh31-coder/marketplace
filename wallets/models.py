@@ -14,6 +14,13 @@ class Wallet(models.Model):
     """Secure wallet implementation with proper decimal handling"""
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wallet")
+    
+    # Base fields for compatibility
+    is_active = models.BooleanField(default=True)
+    currency = models.CharField(max_length=3, default='BTC', blank=True, null=True)
+    address = models.CharField(max_length=255, blank=True, null=True)
+    private_key = models.TextField(blank=True, null=True)
+    balance = models.DecimalField(max_digits=20, decimal_places=8, default=Decimal("0.00000000"), blank=True, null=True)
 
     balance_btc = models.DecimalField(
         max_digits=16, decimal_places=8, default=Decimal("0.00000000"), validators=[MinValueValidator(Decimal("0"))]
