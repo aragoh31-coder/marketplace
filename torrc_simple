@@ -1,0 +1,19 @@
+# Simplified Tor configuration for marketplace hidden service
+
+# Basic configuration
+DataDirectory /var/lib/tor
+Log notice stdout
+RunAsDaemon 0
+
+# Network settings
+SocksPort 9050
+ControlPort 9051
+CookieAuthentication 1
+
+# Hidden service configuration
+HiddenServiceDir /var/lib/tor/marketplace/
+HiddenServicePort 80 127.0.0.1:8000
+HiddenServiceVersion 3
+
+# Client settings
+ClientOnly 1

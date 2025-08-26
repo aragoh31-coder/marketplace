@@ -287,7 +287,7 @@ class EnhancedSecurityMiddleware:
             return response
         
         # Check if this is a challenge-related request FIRST
-        if request.path.startswith('/security/challenge') or request.path.startswith('/security/test') or request.path.startswith('/admin') or request.path.startswith('/accounts/'):
+        if request.path.startswith('/security/challenge') or request.path.startswith('/security/test') or request.path.startswith('/admin') or request.path.startswith('/accounts/') or request.path.startswith('/static/') or request.path.startswith('/media/'):
             print("🔍 Challenge-related, admin, or account request, allowing to proceed")
             # Allow challenge-related, admin, and account requests to proceed
             response = self.get_response(request)
