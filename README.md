@@ -2,6 +2,8 @@
 
 A secure, privacy-focused marketplace built with Django and configured for Tor hidden services.
 
+**🎯 Complete Package**: Includes source code, database backup with admin user, and deployment scripts for immediate setup.
+
 ## 🌟 Features
 
 - **🔐 Privacy First**: Designed for Tor hidden services
