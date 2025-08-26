@@ -24,7 +24,8 @@ ALLOWED_HOSTS = env.list(
         "fcmxauihkxovvkjgaysocxpapwmqkxxqvd5m6xaqbwuzohklunjpaead.onion",
         "ifx3c72qzfkriijkr3sljmqnagtbtaw3ynvqzr5sxv72rum4ob3cvbqd.onion",
         "seczzblxgf5cg2srw7tztrd4kyrwilqzroyxpliyuh3mkfcje2lls7id.onion",  # Previous onion address
-        "namn7qry3c6s3oydwfavcdcblh54wdohh3umfd6eeuhgjpgog7rt5vyd.onion",  # Current onion address
+        "namn7qry3c6s3oydwfavcdcblh54wdohh3umfd6eeuhgjpgog7rt5vyd.onion",  # Previous onion address
+        "p4y5gtlfyq4ftfpxqo6mamtcmquo6azvpwlnrj7jxkn743jjwk3ya5id.onion",  # Current onion address
     ],
 )
 
