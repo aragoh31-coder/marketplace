@@ -1,8 +1,7 @@
 # Tor configuration for marketplace hidden service
 
 # Basic configuration
-DataDirectory /workspace/tor-data
-PidFile /workspace/tor.pid
+DataDirectory /var/lib/tor
 RunAsDaemon 0
 
 # Network settings
@@ -15,7 +14,7 @@ ControlPort 9051
 CookieAuthentication 1
 
 # Hidden service configuration
-HiddenServiceDir /workspace/tor-data/marketplace/
+HiddenServiceDir /var/lib/tor/marketplace/
 HiddenServicePort 80 127.0.0.1:8000
 HiddenServiceVersion 3
 
@@ -39,7 +38,3 @@ ClientOnly 1
 ORPort 0
 DirPort 0
 ExitRelay 0
-
-# Logging
-Log notice file /workspace/logs/tor-notices.log
-Log debug file /workspace/logs/tor-debug.log
